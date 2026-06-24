@@ -16,12 +16,20 @@ defineEmits<{ add: [] }>()
 
 <style scoped>
 .header-nav {
-  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 3.5rem;
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 2rem;
+  padding: 0 1.5rem;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-muted);
+  z-index: 30;
+  box-sizing: border-box;
 }
 .header-nav nav a {
   margin-right: 1.5rem;
@@ -39,8 +47,5 @@ defineEmits<{ add: [] }>()
   border-radius: 0.5rem;
   padding: 0.5rem 1rem;
   cursor: pointer;
-}
-@media (min-width: 1024px) {
-  .header-nav { display: flex; }
 }
 </style>
