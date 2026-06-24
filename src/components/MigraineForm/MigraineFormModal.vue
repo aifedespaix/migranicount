@@ -25,14 +25,15 @@ import StepRecap from './StepRecap.vue'
 import { loadDraft, saveDraft, clearDraft } from './draft'
 import { useMigrainesStore } from '../../stores/migraines'
 
+const props = defineProps<{ editId?: string }>()
 const emit = defineEmits<{ close: []; saved: [] }>()
 const migraines = useMigrainesStore()
 
 const steps = [StepWhen, StepIntensity, StepMedocs, StepSymptoms, StepLocationTriggers, StepNotes, StepRecap]
-const stepIndex = ref(0)
-const draft = ref(loadDraft())
+const stepIndex = ref(props.editId ? steps.length - 1 : 0)
+const draft = ref(props.editId ? { ...migraines.getById(props.editId)! } : loadDraft())
 
-watch(draft, (d) => saveDraft(d), { deep: true })
+watch(draft, (d) => { if (!props.editId) saveDraft(d) }, { deep: true })
 
 function close() {
   emit('close')
@@ -40,7 +41,7 @@ function close() {
 
 function submit() {
   migraines.save(draft.value)
-  clearDraft()
+  if (!props.editId) clearDraft()
   emit('saved')
 }
 </script>
