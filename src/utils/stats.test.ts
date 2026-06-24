@@ -88,18 +88,20 @@ describe('frequencyTrendStats', () => {
     expect(result.trendPct).toBeNull()
   })
 
-  it('returns a percentage trend when prior period has data', () => {
+  it('calculates percentage trend when prior period has data', () => {
     const data = [
+      makeMigraine({ date: '2026-01-05' }),
+      makeMigraine({ date: '2026-02-10' }),
       makeMigraine({ date: '2026-04-01' }),
-      makeMigraine({ date: '2026-04-15' }),
+      makeMigraine({ date: '2026-05-15' }),
       makeMigraine({ date: '2026-06-01' }),
       makeMigraine({ date: '2026-06-10' }),
       makeMigraine({ date: '2026-06-20' }),
-      makeMigraine({ date: '2026-06-25' }),
     ]
     const result = frequencyTrendStats(data, new Date(2026, 5, 24))
-    // prior 3 months (Jan+Feb+Mar) = 0, last 3 (Apr+May+Jun) = 6 -> still null since prior3 is 0
-    expect(result.trendPct).toBeNull()
+    // prior 3 months (Jan+Feb+Mar) = 2, last 3 (Apr+May+Jun) = 5
+    // trendPct = Math.round(((5 - 2) / 2) * 100) = Math.round(150) = 150
+    expect(result.trendPct).toBe(150)
   })
 
   it('returns null busiestMonth when there are no migraines', () => {
