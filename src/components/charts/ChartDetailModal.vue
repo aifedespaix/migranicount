@@ -1,5 +1,5 @@
 <template>
-  <div class="chart-detail-overlay" @click.self="$emit('close')" @keydown.esc="$emit('close')">
+  <div class="chart-detail-overlay" @click.self="$emit('close')">
     <div class="chart-detail-panel" role="dialog" aria-modal="true">
       <header class="chart-detail-header">
         <h2>{{ title }}</h2>
@@ -42,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import FrequencyChart from './FrequencyChart.vue'
 import IntensityChart from './IntensityChart.vue'
 import EfficacyChart from './EfficacyChart.vue'
@@ -50,7 +50,14 @@ import { frequencyTrendStats, intensityDistribution, averageIntensity, efficacyR
 import type { Migraine } from '../../types/migraine'
 
 const props = defineProps<{ chart: 'frequency' | 'intensity' | 'efficacy'; migraines: Migraine[] }>()
-defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: [] }>()
+
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') emit('close')
+}
+
+onMounted(() => document.addEventListener('keydown', handleKeydown))
+onUnmounted(() => document.removeEventListener('keydown', handleKeydown))
 
 const title = computed(() => {
   if (props.chart === 'frequency') return 'Fréquence (12 derniers mois)'
