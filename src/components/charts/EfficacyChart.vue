@@ -28,6 +28,7 @@ const chartData = computed(() => {
 const options = computed(() => ({
   indexAxis: 'y' as const,
   responsive: true,
+  maintainAspectRatio: false,
   scales: {
     x: {
       min: 0,

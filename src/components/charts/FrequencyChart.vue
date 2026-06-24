@@ -25,6 +25,7 @@ const chartData = computed(() => {
 
 const options = computed(() => ({
   responsive: true,
+  maintainAspectRatio: false,
   plugins: { legend: { display: false } },
   scales: {
     x: {
