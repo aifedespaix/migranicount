@@ -20,6 +20,13 @@ const formOpen = ref(false)
 
 <style scoped>
 .app-main {
-  padding-bottom: 5rem;
+  margin-top: 3.5rem;
+  height: calc(100dvh - 3.5rem);
+  overflow: hidden;
+}
+@media (max-width: 1023px) {
+  .app-main {
+    height: calc(100dvh - 3.5rem - 3.5rem);
+  }
 }
 </style>
