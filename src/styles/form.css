@@ -1,0 +1,82 @@
+.step h2 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+}
+
+.field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+
+.field-label.inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.pill-btn {
+  padding: 0.45rem 0.9rem;
+  border-radius: 1.5rem;
+  border: 1px solid var(--color-muted);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.pill-btn.active {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  border-color: var(--color-accent);
+}
+
+.form-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-muted);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.recap-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--color-bg);
+}
+
+.recap-icon {
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+
+.recap-content {
+  flex: 1;
+}
+
+.recap-label {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  margin: 0 0 0.15rem;
+}
+
+.recap-value {
+  font-size: 0.95rem;
+}
