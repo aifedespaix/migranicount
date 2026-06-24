@@ -18,13 +18,17 @@ import { ref, watch } from 'vue'
 import StepWhen from './StepWhen.vue'
 import StepIntensity from './StepIntensity.vue'
 import StepMedocs from './StepMedocs.vue'
+import StepSymptoms from './StepSymptoms.vue'
+import StepLocationTriggers from './StepLocationTriggers.vue'
+import StepNotes from './StepNotes.vue'
+import StepRecap from './StepRecap.vue'
 import { loadDraft, saveDraft, clearDraft } from './draft'
 import { useMigrainesStore } from '../../stores/migraines'
 
 const emit = defineEmits<{ close: []; saved: [] }>()
 const migraines = useMigrainesStore()
 
-const steps = [StepWhen, StepIntensity, StepMedocs]
+const steps = [StepWhen, StepIntensity, StepMedocs, StepSymptoms, StepLocationTriggers, StepNotes, StepRecap]
 const stepIndex = ref(0)
 const draft = ref(loadDraft())
 
