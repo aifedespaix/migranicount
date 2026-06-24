@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { todayISO, nowHHmm, formatRelative, formatDuration } from './date'
+import { todayISO, nowHHmm, formatRelative, formatDuration, toISODate, parseLooseISODate, parseLooseTime } from './date'
 
 describe('todayISO', () => {
   it('returns YYYY-MM-DD format', () => {
@@ -41,5 +41,51 @@ describe('formatDuration', () => {
 
   it('formats hours and minutes', () => {
     expect(formatDuration(135)).toBe('2h15')
+  })
+})
+
+describe('toISODate', () => {
+  it('formats a Date as YYYY-MM-DD', () => {
+    expect(toISODate(new Date(2026, 5, 3))).toBe('2026-06-03')
+  })
+})
+
+describe('parseLooseISODate', () => {
+  it('accepts a valid ISO date', () => {
+    expect(parseLooseISODate('2026-06-24')).toBe('2026-06-24')
+  })
+
+  it('accepts a French DD/MM/YYYY date and converts to ISO', () => {
+    expect(parseLooseISODate('24/06/2026')).toBe('2026-06-24')
+  })
+
+  it('rejects an invalid calendar date', () => {
+    expect(parseLooseISODate('2026-02-30')).toBeNull()
+  })
+
+  it('rejects unparseable text', () => {
+    expect(parseLooseISODate('not a date')).toBeNull()
+  })
+})
+
+describe('parseLooseTime', () => {
+  it('accepts HH:mm', () => {
+    expect(parseLooseTime('08:05')).toBe('08:05')
+  })
+
+  it('accepts compact HHmm', () => {
+    expect(parseLooseTime('0805')).toBe('08:05')
+  })
+
+  it('accepts a single-digit hour with a colon', () => {
+    expect(parseLooseTime('8:05')).toBe('08:05')
+  })
+
+  it('rejects an out-of-range hour', () => {
+    expect(parseLooseTime('25:00')).toBeNull()
+  })
+
+  it('rejects unparseable text', () => {
+    expect(parseLooseTime('nope')).toBeNull()
   })
 })

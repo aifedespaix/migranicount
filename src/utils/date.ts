@@ -1,6 +1,6 @@
 export function todayISO(): string {
   const d = new Date()
-  return toISO(d)
+  return toISODate(d)
 }
 
 export function nowHHmm(): string {
@@ -26,8 +26,47 @@ export function formatDuration(minutes: number): string {
   return `${h}h${pad(m)}`
 }
 
-function toISO(d: Date): string {
+export function toISODate(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+export function parseLooseISODate(text: string): string | null {
+  const trimmed = text.trim()
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed)
+  const frMatch = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(trimmed)
+  let year: number, month: number, day: number
+  if (isoMatch) {
+    year = Number(isoMatch[1])
+    month = Number(isoMatch[2])
+    day = Number(isoMatch[3])
+  } else if (frMatch) {
+    day = Number(frMatch[1])
+    month = Number(frMatch[2])
+    year = Number(frMatch[3])
+  } else {
+    return null
+  }
+  const d = new Date(year, month - 1, day)
+  if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) return null
+  return toISODate(d)
+}
+
+export function parseLooseTime(text: string): string | null {
+  const trimmed = text.trim()
+  const colonMatch = /^(\d{1,2}):(\d{2})$/.exec(trimmed)
+  const compactMatch = /^(\d{2})(\d{2})$/.exec(trimmed)
+  let hour: number, minute: number
+  if (colonMatch) {
+    hour = Number(colonMatch[1])
+    minute = Number(colonMatch[2])
+  } else if (compactMatch) {
+    hour = Number(compactMatch[1])
+    minute = Number(compactMatch[2])
+  } else {
+    return null
+  }
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null
+  return `${pad(hour)}:${pad(minute)}`
 }
 
 function pad(n: number): string {
