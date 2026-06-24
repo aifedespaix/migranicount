@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest'
-import { monthlyFrequency, averageIntensityByMonth, medocEfficacy, averageDurationMinutes } from './stats'
+import {
+  monthlyFrequency,
+  averageIntensityByMonth,
+  medocEfficacy,
+  averageDurationMinutes,
+  frequencyTrendStats,
+  intensityDistribution,
+  averageIntensity,
+  efficacyRanking,
+} from './stats'
 import type { Migraine } from '../types/migraine'
 
 function makeMigraine(overrides: Partial<Migraine>): Migraine {
@@ -60,5 +69,83 @@ describe('averageDurationMinutes', () => {
       makeMigraine({ heureDebut: '08:00', heureFin: null }),
     ]
     expect(averageDurationMinutes(data)).toBe(90)
+  })
+})
+
+describe('frequencyTrendStats', () => {
+  it('computes total, busiest month, and trend vs prior 3 months', () => {
+    const data = [
+      makeMigraine({ date: '2026-04-01' }),
+      makeMigraine({ date: '2026-05-01' }),
+      makeMigraine({ date: '2026-06-01' }),
+      makeMigraine({ date: '2026-06-10' }),
+      makeMigraine({ date: '2026-06-20' }),
+    ]
+    const result = frequencyTrendStats(data, new Date(2026, 5, 24))
+    expect(result.total).toBe(5)
+    expect(result.busiestMonth).toEqual({ month: '2026-06', count: 3 })
+    // last 3 months (Apr+May+Jun = 1+1+3=5) vs prior 3 months (Jan+Feb+Mar = 0) -> no prior data, trendPct null
+    expect(result.trendPct).toBeNull()
+  })
+
+  it('returns a percentage trend when prior period has data', () => {
+    const data = [
+      makeMigraine({ date: '2026-04-01' }),
+      makeMigraine({ date: '2026-04-15' }),
+      makeMigraine({ date: '2026-06-01' }),
+      makeMigraine({ date: '2026-06-10' }),
+      makeMigraine({ date: '2026-06-20' }),
+      makeMigraine({ date: '2026-06-25' }),
+    ]
+    const result = frequencyTrendStats(data, new Date(2026, 5, 24))
+    // prior 3 months (Jan+Feb+Mar) = 0, last 3 (Apr+May+Jun) = 6 -> still null since prior3 is 0
+    expect(result.trendPct).toBeNull()
+  })
+
+  it('returns null busiestMonth when there are no migraines', () => {
+    const result = frequencyTrendStats([], new Date(2026, 5, 24))
+    expect(result.total).toBe(0)
+    expect(result.busiestMonth).toBeNull()
+    expect(result.trendPct).toBeNull()
+  })
+})
+
+describe('intensityDistribution', () => {
+  it('counts migraines per intensity level, sorted ascending', () => {
+    const data = [
+      makeMigraine({ intensite: 8 }),
+      makeMigraine({ intensite: 3 }),
+      makeMigraine({ intensite: 8 }),
+    ]
+    expect(intensityDistribution(data)).toEqual([
+      { level: 3, count: 1 },
+      { level: 8, count: 2 },
+    ])
+  })
+})
+
+describe('averageIntensity', () => {
+  it('averages intensite across all migraines', () => {
+    const data = [makeMigraine({ intensite: 4 }), makeMigraine({ intensite: 8 })]
+    expect(averageIntensity(data)).toBe(6)
+  })
+
+  it('returns 0 when there are no migraines', () => {
+    expect(averageIntensity([])).toBe(0)
+  })
+})
+
+describe('efficacyRanking', () => {
+  it('ranks medocs by % aborted, descending', () => {
+    const data = [
+      makeMigraine({ medocs: [{ id: '1', nom: 'Triptan', heure: '08:00' }], avortee: true }),
+      makeMigraine({ medocs: [{ id: '2', nom: 'Triptan', heure: '08:00' }], avortee: true }),
+      makeMigraine({ medocs: [{ id: '3', nom: 'Doliprane', heure: '08:00' }], avortee: false }),
+    ]
+    const result = efficacyRanking(data)
+    expect(result[0].nom).toBe('Triptan')
+    expect(result[0].pctAvortee).toBe(100)
+    expect(result[1].nom).toBe('Doliprane')
+    expect(result[1].pctAvortee).toBe(0)
   })
 })

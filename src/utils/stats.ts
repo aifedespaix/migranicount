@@ -70,3 +70,41 @@ function toMinutes(hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number)
   return h * 60 + m
 }
+
+export function frequencyTrendStats(
+  migraines: Migraine[],
+  from: Date = new Date()
+): { total: number; busiestMonth: { month: string; count: number } | null; trendPct: number | null } {
+  const months = monthlyFrequency(migraines, from)
+  const total = months.reduce((sum, m) => sum + m.count, 0)
+  const busiestMonth = months.reduce<{ month: string; count: number } | null>((best, m) => {
+    if (m.count === 0) return best
+    if (!best || m.count > best.count) return m
+    return best
+  }, null)
+  const last3 = months.slice(-3).reduce((sum, m) => sum + m.count, 0)
+  const prev3 = months.slice(-6, -3).reduce((sum, m) => sum + m.count, 0)
+  const trendPct = prev3 === 0 ? null : Math.round(((last3 - prev3) / prev3) * 100)
+  return { total, busiestMonth, trendPct }
+}
+
+export function intensityDistribution(migraines: Migraine[]): { level: number; count: number }[] {
+  const counts = new Map<number, number>()
+  for (const m of migraines) {
+    counts.set(m.intensite, (counts.get(m.intensite) ?? 0) + 1)
+  }
+  return Array.from(counts.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([level, count]) => ({ level, count }))
+}
+
+export function averageIntensity(migraines: Migraine[]): number {
+  if (migraines.length === 0) return 0
+  return Math.round((migraines.reduce((sum, m) => sum + m.intensite, 0) / migraines.length) * 10) / 10
+}
+
+export function efficacyRanking(migraines: Migraine[]): { nom: string; pctAvortee: number; total: number }[] {
+  return medocEfficacy(migraines)
+    .filter((d) => d.total >= 1)
+    .sort((a, b) => b.pctAvortee - a.pctAvortee)
+}
