@@ -22,7 +22,4 @@ defineEmits<{ click: [] }>()
   cursor: pointer;
   z-index: 20;
 }
-@media (min-width: 1024px) {
-  .fab { display: none; }
-}
 </style>
