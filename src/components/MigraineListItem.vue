@@ -2,7 +2,7 @@
   <li class="migraine-card" @click="$emit('click')">
     <div class="row header-row">
       <span class="date">{{ formatRelative(migraine.date) }}</span>
-      <span class="intensity" :style="{ background: intensityColor }">{{ migraine.intensite }}</span>
+      <span class="intensity" :style="{ background: intensityColorValue }">{{ migraine.intensite }}</span>
     </div>
     <div class="row detail-row muted">
       <span>{{ durationLabel }}</span>
@@ -22,16 +22,11 @@
 import { computed } from 'vue'
 import { formatRelative, formatDuration } from '../utils/date'
 import type { Migraine } from '../types/migraine'
+import { intensityColor as intensityColorFn } from '../utils/intensity'
+import { localisationLabel as localisationLabelFn } from '../utils/localisation'
 
 const props = defineProps<{ migraine: Migraine }>()
 defineEmits<{ click: [] }>()
-
-const LOCALISATION_LABELS: Record<NonNullable<Migraine['localisation']>, string> = {
-  gauche: 'Gauche',
-  droite: 'Droite',
-  bilaterale: 'Bilatérale',
-  nuque: 'Nuque',
-}
 
 const durationLabel = computed(() => {
   if (!props.migraine.heureFin) return 'en cours'
@@ -40,14 +35,9 @@ const durationLabel = computed(() => {
   return formatDuration(h2 * 60 + m2 - (h1 * 60 + m1))
 })
 
-const intensityColor = computed(() => {
-  const hue = 50 - (props.migraine.intensite / 10) * 50
-  return `hsl(${hue}, 80%, 50%)`
-})
+const intensityColorValue = computed(() => intensityColorFn(props.migraine.intensite))
 
-const localisationLabel = computed(() =>
-  props.migraine.localisation ? LOCALISATION_LABELS[props.migraine.localisation] : null
-)
+const localisationLabel = computed(() => localisationLabelFn(props.migraine.localisation))
 
 const hasBadges = computed(
   () =>

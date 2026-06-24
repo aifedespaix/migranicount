@@ -1,11 +1,5 @@
 import type { Migraine } from '../types/migraine'
-
-const LOCALISATION_LABELS: Record<NonNullable<Migraine['localisation']>, string> = {
-  gauche: 'Gauche',
-  droite: 'Droite',
-  bilaterale: 'Bilatérale',
-  nuque: 'Nuque',
-}
+import { localisationLabel } from './localisation'
 
 function normalize(s: string): string {
   return s
@@ -20,7 +14,7 @@ function matchesKeyword(migraine: Migraine, keyword: string): boolean {
     ...migraine.medocs.map((m) => m.nom),
     migraine.notes ?? '',
     ...migraine.declencheurs,
-    migraine.localisation ? LOCALISATION_LABELS[migraine.localisation] : '',
+    localisationLabel(migraine.localisation) ?? '',
   ]
   return haystacks.some((h) => normalize(h).includes(needle))
 }
