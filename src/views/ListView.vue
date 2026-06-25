@@ -76,6 +76,9 @@ function onAddSaved() {
 <style scoped>
 .list-view {
   padding: 1rem 1.5rem;
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 .empty-state {
   display: flex;
