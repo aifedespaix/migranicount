@@ -1,13 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
-  monthlyFrequency,
-  averageIntensityByMonth,
-  medocEfficacy,
-  averageDurationMinutes,
-  frequencyTrendStats,
-  intensityDistribution,
-  averageIntensity,
-  efficacyRanking,
+  monthlyFrequency, averageIntensityByMonth, medocEfficacy, averageDurationMinutes,
+  frequencyTrendStats, intensityDistribution, averageIntensity, efficacyRanking,
+  dailyFrequency, weeklyFrequency, averageIntensityByDay, averageIntensityByWeek, defaultPeriod,
 } from './stats'
 import type { Migraine } from '../types/migraine'
 
@@ -149,5 +144,94 @@ describe('efficacyRanking', () => {
     expect(result[0].pctAvortee).toBe(100)
     expect(result[1].nom).toBe('Doliprane')
     expect(result[1].pctAvortee).toBe(0)
+  })
+})
+
+describe('dailyFrequency', () => {
+  it('returns `days` entries for the last N days', () => {
+    const from = new Date(2026, 5, 25) // 25 juin
+    const result = dailyFrequency([], from, 7)
+    expect(result).toHaveLength(7)
+    expect(result[6].day).toBe('2026-06-25')
+    expect(result[0].day).toBe('2026-06-19')
+  })
+
+  it('counts migraines on the correct day', () => {
+    const from = new Date(2026, 5, 25)
+    const data = [makeMigraine({ date: '2026-06-24' }), makeMigraine({ date: '2026-06-24' })]
+    const result = dailyFrequency(data, from, 7)
+    expect(result.find(r => r.day === '2026-06-24')?.count).toBe(2)
+  })
+})
+
+describe('weeklyFrequency', () => {
+  it('returns `weeks` entries starting on Mondays', () => {
+    const from = new Date(2026, 5, 25) // jeudi
+    const result = weeklyFrequency([], from, 4)
+    expect(result).toHaveLength(4)
+    // La semaine du 25 juin commence le lundi 22 juin
+    expect(result[3].week).toBe('2026-06-22')
+  })
+
+  it('counts a migraine in the correct week', () => {
+    const from = new Date(2026, 5, 25)
+    const data = [makeMigraine({ date: '2026-06-23' })] // mardi de la semaine du 22
+    const result = weeklyFrequency(data, from, 4)
+    expect(result.find(r => r.week === '2026-06-22')?.count).toBe(1)
+  })
+})
+
+describe('averageIntensityByDay', () => {
+  it('returns 0 avg for days with no migraines', () => {
+    const from = new Date(2026, 5, 25)
+    const result = averageIntensityByDay([], from, 3)
+    expect(result.every(r => r.avg === 0)).toBe(true)
+  })
+
+  it('averages intensity on a given day', () => {
+    const from = new Date(2026, 5, 25)
+    const data = [
+      makeMigraine({ date: '2026-06-24', intensite: 4 }),
+      makeMigraine({ date: '2026-06-24', intensite: 8 }),
+    ]
+    const result = averageIntensityByDay(data, from, 3)
+    expect(result.find(r => r.day === '2026-06-24')?.avg).toBe(6)
+  })
+})
+
+describe('averageIntensityByWeek', () => {
+  it('averages intensity across a week', () => {
+    const from = new Date(2026, 5, 25)
+    const data = [
+      makeMigraine({ date: '2026-06-22', intensite: 6 }),
+      makeMigraine({ date: '2026-06-24', intensite: 4 }),
+    ]
+    const result = averageIntensityByWeek(data, from, 2)
+    expect(result.find(r => r.week === '2026-06-22')?.avg).toBe(5)
+  })
+})
+
+describe('defaultPeriod', () => {
+  it('returns month when no migraines', () => {
+    expect(defaultPeriod([])).toBe('month')
+  })
+
+  it('returns day when oldest migraine is < 3 months ago', () => {
+    const recent = makeMigraine({ date: new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10) })
+    expect(defaultPeriod([recent])).toBe('day')
+  })
+
+  it('returns week when oldest migraine is 3-6 months ago', () => {
+    const d = new Date()
+    d.setMonth(d.getMonth() - 4)
+    const old = makeMigraine({ date: d.toISOString().slice(0, 10) })
+    expect(defaultPeriod([old])).toBe('week')
+  })
+
+  it('returns month when oldest migraine is > 6 months ago', () => {
+    const d = new Date()
+    d.setMonth(d.getMonth() - 8)
+    const old = makeMigraine({ date: d.toISOString().slice(0, 10) })
+    expect(defaultPeriod([old])).toBe('month')
   })
 })

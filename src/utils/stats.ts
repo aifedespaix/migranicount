@@ -108,3 +108,106 @@ export function efficacyRanking(migraines: Migraine[]): { nom: string; pctAvorte
     .filter((d) => d.total >= 1)
     .sort((a, b) => b.pctAvortee - a.pctAvortee)
 }
+
+function dayToISO(d: Date): string {
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function mondayOf(d: Date): Date {
+  const dow = d.getDay()
+  const daysToMon = dow === 0 ? 6 : dow - 1
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - daysToMon)
+}
+
+export function dailyFrequency(
+  migraines: Migraine[],
+  from: Date = new Date(),
+  days: number = 30
+): { day: string; count: number }[] {
+  const result: { day: string; count: number }[] = []
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(from.getFullYear(), from.getMonth(), from.getDate() - i)
+    result.push({ day: dayToISO(d), count: 0 })
+  }
+  const map = new Map(result.map((r) => [r.day, r]))
+  for (const m of migraines) {
+    const bucket = map.get(m.date)
+    if (bucket) bucket.count++
+  }
+  return result
+}
+
+export function weeklyFrequency(
+  migraines: Migraine[],
+  from: Date = new Date(),
+  weeks: number = 12
+): { week: string; count: number }[] {
+  const thisMonday = mondayOf(from)
+  const result: { week: string; count: number }[] = []
+  for (let i = weeks - 1; i >= 0; i--) {
+    const d = new Date(thisMonday.getFullYear(), thisMonday.getMonth(), thisMonday.getDate() - i * 7)
+    result.push({ week: dayToISO(d), count: 0 })
+  }
+  const map = new Map(result.map((r) => [r.week, r]))
+  for (const m of migraines) {
+    const d = new Date(m.date + 'T00:00:00')
+    const key = dayToISO(mondayOf(d))
+    const bucket = map.get(key)
+    if (bucket) bucket.count++
+  }
+  return result
+}
+
+export function averageIntensityByDay(
+  migraines: Migraine[],
+  from: Date = new Date(),
+  days: number = 30
+): { day: string; avg: number }[] {
+  const result: { day: string; total: number; count: number }[] = []
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(from.getFullYear(), from.getMonth(), from.getDate() - i)
+    result.push({ day: dayToISO(d), total: 0, count: 0 })
+  }
+  const map = new Map(result.map((r) => [r.day, r]))
+  for (const m of migraines) {
+    const bucket = map.get(m.date)
+    if (bucket) { bucket.total += m.intensite; bucket.count++ }
+  }
+  return result.map(({ day, total, count }) => ({ day, avg: count === 0 ? 0 : Math.round((total / count) * 10) / 10 }))
+}
+
+export function averageIntensityByWeek(
+  migraines: Migraine[],
+  from: Date = new Date(),
+  weeks: number = 12
+): { week: string; avg: number }[] {
+  const thisMonday = mondayOf(from)
+  const result: { week: string; total: number; count: number }[] = []
+  for (let i = weeks - 1; i >= 0; i--) {
+    const d = new Date(thisMonday.getFullYear(), thisMonday.getMonth(), thisMonday.getDate() - i * 7)
+    result.push({ week: dayToISO(d), total: 0, count: 0 })
+  }
+  const map = new Map(result.map((r) => [r.week, r]))
+  for (const m of migraines) {
+    const d = new Date(m.date + 'T00:00:00')
+    const key = dayToISO(mondayOf(d))
+    const bucket = map.get(key)
+    if (bucket) { bucket.total += m.intensite; bucket.count++ }
+  }
+  return result.map(({ week, total, count }) => ({ week, avg: count === 0 ? 0 : Math.round((total / count) * 10) / 10 }))
+}
+
+export type Period = 'day' | 'week' | 'month'
+
+export function defaultPeriod(migraines: Migraine[]): Period {
+  if (migraines.length === 0) return 'month'
+  const oldest = migraines.reduce((min, m) => (m.date < min ? m.date : min), migraines[0].date)
+  const oldestDate = new Date(oldest + 'T00:00:00')
+  const now = new Date()
+  const monthsDiff =
+    (now.getFullYear() - oldestDate.getFullYear()) * 12 + (now.getMonth() - oldestDate.getMonth())
+  if (monthsDiff < 3) return 'day'
+  if (monthsDiff < 6) return 'week'
+  return 'month'
+}
