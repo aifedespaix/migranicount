@@ -12,7 +12,7 @@ export interface Migraine {
   heureFin: string | null
   medocs: MedocPris[]
   intensite: number
-  avortee: boolean
+  avortee: boolean | 'probable'
   nausee: boolean
   vomissement: boolean
   aura: boolean

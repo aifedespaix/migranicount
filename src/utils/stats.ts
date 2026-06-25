@@ -47,7 +47,7 @@ export function medocEfficacy(migraines: Migraine[]): { nom: string; pctAvortee:
     for (const nom of noms) {
       const bucket = byMedoc.get(nom) ?? { total: 0, avortee: 0 }
       bucket.total += 1
-      if (m.avortee) bucket.avortee += 1
+      if (m.avortee === true || m.avortee === 'probable') bucket.avortee += 1
       byMedoc.set(nom, bucket)
     }
   }

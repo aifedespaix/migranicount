@@ -25,15 +25,6 @@
       >
         Aura visuelle
       </button>
-      <button
-        v-if="model.medocs.length > 0"
-        type="button"
-        class="pill-btn"
-        :class="{ active: model.avortee }"
-        @click="model.avortee = !model.avortee"
-      >
-        Migraine avortée par le médicament
-      </button>
     </div>
   </div>
 </template>

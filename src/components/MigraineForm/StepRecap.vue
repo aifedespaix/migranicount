@@ -44,7 +44,8 @@
       <div class="recap-content">
         <p class="recap-label">Symptômes</p>
         <div class="pill-group">
-          <span v-if="model.avortee" class="pill-btn active">Avortée</span>
+          <span v-if="model.avortee === true" class="pill-btn active">Avortée ✓</span>
+          <span v-else-if="model.avortee === 'probable'" class="pill-btn active" style="background: var(--color-muted)">Avortée (probable)</span>
           <span v-if="model.nausee" class="pill-btn">Nausée</span>
           <span v-if="model.vomissement" class="pill-btn">Vomissement</span>
           <span v-if="model.aura" class="pill-btn">Aura</span>

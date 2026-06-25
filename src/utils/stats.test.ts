@@ -54,6 +54,15 @@ describe('medocEfficacy', () => {
     expect(triptan?.total).toBe(2)
     expect(triptan?.pctAvortee).toBe(50)
   })
+
+  it('counts "probable" as avortee in pctAvortee', () => {
+    const data = [
+      makeMigraine({ medocs: [{ id: '1', nom: 'Triptan', heure: '08:00' }], avortee: 'probable' }),
+      makeMigraine({ medocs: [{ id: '2', nom: 'Triptan', heure: '08:00' }], avortee: false }),
+    ]
+    const result = medocEfficacy(data)
+    expect(result.find((r) => r.nom === 'Triptan')?.pctAvortee).toBe(50)
+  })
 })
 
 describe('averageDurationMinutes', () => {
