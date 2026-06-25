@@ -46,6 +46,7 @@ export function saveDraftStep(index: number): void {
 }
 
 export function loadDraftStep(): number {
+  if (!hasSavedDraft()) return 0
   return getJSON<number>(DRAFT_STEP_KEY, 0)
 }
 

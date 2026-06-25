@@ -77,6 +77,7 @@
       cancel-label="Continuer l'édition"
       @confirm="confirmDiscardClose"
       @cancel="showConfirmDialog = false"
+      @dismiss="showConfirmDialog = false"
     />
   </div>
 </template>

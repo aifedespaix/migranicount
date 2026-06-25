@@ -17,6 +17,7 @@
     cancel-label="Nouvelle saisie"
     @confirm="resumeDraft"
     @cancel="startFresh"
+    @dismiss="showDraftDialog = false"
   />
   <ToastContainer />
 </template>

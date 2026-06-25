@@ -1,5 +1,5 @@
 <template>
-  <div class="confirm-backdrop" @click.self="$emit('cancel')">
+  <div class="confirm-backdrop" @click.self="$emit('dismiss')">
     <div class="confirm-dialog" role="alertdialog" aria-modal="true">
       <h3>{{ title }}</h3>
       <p>{{ message }}</p>
@@ -13,7 +13,7 @@
 
 <script setup lang="ts">
 defineProps<{ title: string; message: string; confirmLabel: string; cancelLabel: string }>()
-defineEmits<{ confirm: []; cancel: [] }>()
+defineEmits<{ confirm: []; cancel: []; dismiss: [] }>()
 </script>
 
 <style scoped>

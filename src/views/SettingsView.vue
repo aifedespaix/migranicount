@@ -85,6 +85,7 @@
       cancel-label="Annuler"
       @confirm="confirmImport"
       @cancel="confirming = false"
+      @dismiss="confirming = false"
     />
   </div>
 </template>

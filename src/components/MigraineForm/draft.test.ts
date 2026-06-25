@@ -66,9 +66,15 @@ describe('saveDraftStep / loadDraftStep', () => {
     expect(loadDraftStep()).toBe(0)
   })
 
-  it('saveDraftStep then loadDraftStep round-trips', () => {
+  it('saveDraftStep then loadDraftStep round-trips when draft exists', () => {
+    saveDraft(emptyDraft())
     saveDraftStep(4)
     expect(loadDraftStep()).toBe(4)
+  })
+
+  it('loadDraftStep returns 0 when step is stored but no draft exists', () => {
+    saveDraftStep(4)
+    expect(loadDraftStep()).toBe(0)
   })
 
   it('clearDraft also resets step to 0', () => {
