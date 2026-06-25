@@ -9,41 +9,45 @@
       @keydown.enter="onEnter"
     />
     <button type="button" class="date-field-icon" @click="togglePopup" aria-label="Choisir une date">📅</button>
-    <div v-if="showPopup" class="date-field-popup">
-      <div class="calendar-header">
-        <button type="button" @click="prevMonth">‹</button>
-        <span>{{ monthLabel }}</span>
-        <button type="button" @click="nextMonth">›</button>
+    <Teleport to="body">
+      <div v-if="showPopup" ref="popupRef" class="date-field-popup" :style="popupStyle">
+        <div class="calendar-header">
+          <button type="button" @click="prevMonth">‹</button>
+          <span>{{ monthLabel }}</span>
+          <button type="button" @click="nextMonth">›</button>
+        </div>
+        <div class="calendar-weekdays">
+          <span v-for="wd in weekdayLabels" :key="wd">{{ wd }}</span>
+        </div>
+        <div class="calendar-grid">
+          <button
+            v-for="cell in grid.flat()"
+            :key="cell.iso"
+            type="button"
+            class="calendar-cell"
+            :class="{ 'out-of-month': !cell.inCurrentMonth, selected: cell.iso === model, today: cell.iso === todayIso }"
+            @click="selectDay(cell.iso)"
+          >
+            {{ cell.day }}
+          </button>
+        </div>
       </div>
-      <div class="calendar-weekdays">
-        <span v-for="wd in weekdayLabels" :key="wd">{{ wd }}</span>
-      </div>
-      <div class="calendar-grid">
-        <button
-          v-for="cell in grid.flat()"
-          :key="cell.iso"
-          type="button"
-          class="calendar-cell"
-          :class="{ 'out-of-month': !cell.inCurrentMonth, selected: cell.iso === model, today: cell.iso === todayIso }"
-          @click="selectDay(cell.iso)"
-        >
-          {{ cell.day }}
-        </button>
-      </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { buildCalendarGrid } from '../utils/calendar'
 import { parseLooseISODate, todayISO } from '../utils/date'
 
 const model = defineModel<string>({ required: true })
 
 const rootRef = ref<HTMLElement | null>(null)
+const popupRef = ref<HTMLElement | null>(null)
 const textValue = ref(model.value)
 const showPopup = ref(false)
+const popupStyle = ref({ top: '0px', left: '0px' })
 const todayIso = todayISO()
 
 const initial = model.value ? new Date(model.value + 'T00:00:00') : new Date()
@@ -60,8 +64,29 @@ const grid = computed(() => buildCalendarGrid(viewYear.value, viewMonth.value))
 
 watch(model, (v) => { textValue.value = v })
 
+function updatePopupPosition() {
+  if (!rootRef.value) return
+  const rect = rootRef.value.getBoundingClientRect()
+  const popupWidth = popupRef.value?.offsetWidth ?? 256
+  const popupHeight = popupRef.value?.offsetHeight ?? 280
+  let top = rect.bottom + 4
+  if (top + popupHeight > window.innerHeight) {
+    top = Math.max(8, rect.top - popupHeight - 4)
+  }
+  let left = rect.left
+  if (left + popupWidth > window.innerWidth - 8) {
+    left = window.innerWidth - popupWidth - 8
+  }
+  left = Math.max(8, left)
+  popupStyle.value = { top: `${top}px`, left: `${left}px` }
+}
+
 function togglePopup() {
   showPopup.value = !showPopup.value
+  if (showPopup.value) {
+    updatePopupPosition()
+    nextTick(updatePopupPosition)
+  }
 }
 
 function prevMonth() {
@@ -108,8 +133,20 @@ function onOutsideClick(e: MouseEvent) {
   }
 }
 
-onMounted(() => document.addEventListener('mousedown', onOutsideClick))
-onUnmounted(() => document.removeEventListener('mousedown', onOutsideClick))
+function onViewportChange() {
+  if (showPopup.value) updatePopupPosition()
+}
+
+onMounted(() => {
+  document.addEventListener('mousedown', onOutsideClick)
+  window.addEventListener('scroll', onViewportChange, true)
+  window.addEventListener('resize', onViewportChange)
+})
+onUnmounted(() => {
+  document.removeEventListener('mousedown', onOutsideClick)
+  window.removeEventListener('scroll', onViewportChange, true)
+  window.removeEventListener('resize', onViewportChange)
+})
 </script>
 
 <style scoped>
@@ -135,9 +172,7 @@ onUnmounted(() => document.removeEventListener('mousedown', onOutsideClick))
   cursor: pointer;
 }
 .date-field-popup {
-  position: absolute;
-  top: 100%;
-  left: 0;
+  position: fixed;
   z-index: 40;
   background: var(--color-surface);
   border: 1px solid var(--color-muted);

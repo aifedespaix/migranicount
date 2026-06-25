@@ -9,44 +9,48 @@
       @keydown.enter="onEnter"
     />
     <button type="button" class="time-field-icon" @click="togglePopup" aria-label="Choisir une heure">🕐</button>
-    <div v-if="showPopup" class="time-field-popup">
-      <div class="time-column">
-        <button
-          v-for="h in hours"
-          :key="h"
-          type="button"
-          class="time-cell"
-          :class="{ selected: h === selectedHour }"
-          @click="pickHour(h)"
-        >
-          {{ h }}
-        </button>
+    <Teleport to="body">
+      <div v-if="showPopup" ref="popupRef" class="time-field-popup" :style="popupStyle">
+        <div class="time-column">
+          <button
+            v-for="h in hours"
+            :key="h"
+            type="button"
+            class="time-cell"
+            :class="{ selected: h === selectedHour }"
+            @click="pickHour(h)"
+          >
+            {{ h }}
+          </button>
+        </div>
+        <div class="time-column">
+          <button
+            v-for="m in minutes"
+            :key="m"
+            type="button"
+            class="time-cell"
+            :class="{ selected: m === selectedMinute }"
+            @click="pickMinute(m)"
+          >
+            {{ m }}
+          </button>
+        </div>
       </div>
-      <div class="time-column">
-        <button
-          v-for="m in minutes"
-          :key="m"
-          type="button"
-          class="time-cell"
-          :class="{ selected: m === selectedMinute }"
-          @click="pickMinute(m)"
-        >
-          {{ m }}
-        </button>
-      </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { parseLooseTime } from '../utils/date'
 
 const model = defineModel<string>({ required: true })
 
 const rootRef = ref<HTMLElement | null>(null)
+const popupRef = ref<HTMLElement | null>(null)
 const textValue = ref(model.value)
 const showPopup = ref(false)
+const popupStyle = ref({ top: '0px', left: '0px' })
 
 const [initialHour, initialMinute] = model.value.split(':')
 const selectedHour = ref(initialHour)
@@ -64,11 +68,30 @@ watch(model, (v) => {
   selectedMinute.value = m
 })
 
+function updatePopupPosition() {
+  if (!rootRef.value) return
+  const rect = rootRef.value.getBoundingClientRect()
+  const popupWidth = popupRef.value?.offsetWidth ?? 140
+  const popupHeight = popupRef.value?.offsetHeight ?? 160
+  let top = rect.bottom + 4
+  if (top + popupHeight > window.innerHeight) {
+    top = Math.max(8, rect.top - popupHeight - 4)
+  }
+  let left = rect.left
+  if (left + popupWidth > window.innerWidth - 8) {
+    left = window.innerWidth - popupWidth - 8
+  }
+  left = Math.max(8, left)
+  popupStyle.value = { top: `${top}px`, left: `${left}px` }
+}
+
 function togglePopup() {
   showPopup.value = !showPopup.value
   if (showPopup.value) {
     hourPicked.value = false
     minutePicked.value = false
+    updatePopupPosition()
+    nextTick(updatePopupPosition)
   }
 }
 
@@ -112,8 +135,20 @@ function onOutsideClick(e: MouseEvent) {
   }
 }
 
-onMounted(() => document.addEventListener('mousedown', onOutsideClick))
-onUnmounted(() => document.removeEventListener('mousedown', onOutsideClick))
+function onViewportChange() {
+  if (showPopup.value) updatePopupPosition()
+}
+
+onMounted(() => {
+  document.addEventListener('mousedown', onOutsideClick)
+  window.addEventListener('scroll', onViewportChange, true)
+  window.addEventListener('resize', onViewportChange)
+})
+onUnmounted(() => {
+  document.removeEventListener('mousedown', onOutsideClick)
+  window.removeEventListener('scroll', onViewportChange, true)
+  window.removeEventListener('resize', onViewportChange)
+})
 </script>
 
 <style scoped>
@@ -139,9 +174,7 @@ onUnmounted(() => document.removeEventListener('mousedown', onOutsideClick))
   cursor: pointer;
 }
 .time-field-popup {
-  position: absolute;
-  top: 100%;
-  left: 0;
+  position: fixed;
   z-index: 40;
   background: var(--color-surface);
   border: 1px solid var(--color-muted);
