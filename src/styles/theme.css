@@ -8,16 +8,31 @@
   --color-danger: #d64545;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #1c1726;
-    --color-surface: #271f33;
-    --color-text: #ece8f0;
-    --color-accent: #a78bfa;
-    --color-accent-contrast: #1c1726;
-    --color-muted: #a39db0;
-    --color-danger: #f08a8a;
-  }
+[data-theme="dark"] {
+  --color-bg: #1c1726;
+  --color-surface: #271f33;
+  --color-text: #ece8f0;
+  --color-accent: #a78bfa;
+  --color-accent-contrast: #1c1726;
+  --color-muted: #a39db0;
+  --color-danger: #f08a8a;
+}
+
+[data-theme="migraine"] {
+  --color-bg: #2b2420;
+  --color-surface: #3a322b;
+  --color-text: #ddd4c8;
+  --color-accent: #8fa876;
+  --color-accent-contrast: #1c2117;
+  --color-muted: #a89b8a;
+  --color-danger: #c97b5f;
+}
+
+[data-theme="migraine"] *,
+[data-theme="migraine"] *::before,
+[data-theme="migraine"] *::after {
+  animation: none !important;
+  transition: none !important;
 }
 
 body {
