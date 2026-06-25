@@ -6,12 +6,31 @@
       <RouterLink :to="{ name: 'liste' }">Liste</RouterLink>
       <RouterLink :to="{ name: 'settings' }">Réglages</RouterLink>
     </nav>
+    <button
+      v-if="favoris.favoris.length > 0"
+      type="button"
+      class="edit-medocs-btn"
+      title="Modifier les médicaments"
+      aria-label="Modifier les médicaments"
+      @click="showMedocsEdit = true"
+    >
+      <Pencil :size="18" />
+    </button>
     <button class="add-btn" @click="$emit('add')">+ Ajouter</button>
   </header>
+  <MedocsEditModal v-if="showMedocsEdit" @close="showMedocsEdit = false" />
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+import { Pencil } from 'lucide-vue-next'
+import { useMedocsFavorisStore } from '../stores/medocsFavoris'
+import MedocsEditModal from './MedocsEditModal.vue'
+
 defineEmits<{ add: [] }>()
+
+const favoris = useMedocsFavorisStore()
+const showMedocsEdit = ref(false)
 </script>
 
 <style scoped>
@@ -39,6 +58,17 @@ defineEmits<{ add: [] }>()
 .header-nav nav a.router-link-active {
   color: var(--color-accent);
   font-weight: 600;
+}
+.edit-medocs-btn {
+  background: none;
+  border: none;
+  color: var(--color-muted);
+  cursor: pointer;
+  padding: 0.5rem;
+  margin-right: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .add-btn {
   background: var(--color-accent);
