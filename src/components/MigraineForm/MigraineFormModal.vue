@@ -20,8 +20,10 @@
         <div class="progress-bar-fill" :style="{ width: progressPercent + '%' }"></div>
       </div>
 
-      <div class="modal-body">
-        <component :is="steps[stepIndex]" v-model="draft" />
+      <div class="modal-body" ref="modalBodyRef">
+        <Transition :name="transitionName">
+          <component :is="steps[stepIndex]" v-model="draft" :key="stepIndex" />
+        </Transition>
       </div>
 
       <div class="modal-actions">
@@ -29,7 +31,7 @@
           type="button"
           class="action-btn action-btn-prev"
           :disabled="stepIndex === 0"
-          @click="stepIndex--"
+          @click="goPrev"
         >
           <ArrowLeft :size="18" />
           Précédent
@@ -47,7 +49,7 @@
           type="button"
           class="action-btn action-btn-next"
           :disabled="stepIndex === steps.length - 1"
-          @click="stepIndex++"
+          @click="goNext"
         >
           Suivant
           <ArrowRight :size="18" />
@@ -69,7 +71,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useSwipe } from '@vueuse/core'
 import { Save, ArrowRight, ArrowLeft } from 'lucide-vue-next'
+import { nextStepIndex, prevStepIndex } from './stepNav'
 import StepWhen from './StepWhen.vue'
 import StepIntensity from './StepIntensity.vue'
 import StepMedocs from './StepMedocs.vue'
@@ -95,6 +99,30 @@ const showConfirmDialog = ref(false)
 
 const progressPercent = computed(() => ((stepIndex.value + 1) / steps.length) * 100)
 const canSave = computed(() => canSaveDraft(draft.value))
+
+const modalBodyRef = ref<HTMLElement | null>(null)
+const transitionName = ref<'slide-next' | 'slide-prev'>('slide-next')
+
+function goNext() {
+  const next = nextStepIndex(stepIndex.value, steps.length)
+  if (next === stepIndex.value) return
+  transitionName.value = 'slide-next'
+  stepIndex.value = next
+}
+
+function goPrev() {
+  const prev = prevStepIndex(stepIndex.value, steps.length)
+  if (prev === stepIndex.value) return
+  transitionName.value = 'slide-prev'
+  stepIndex.value = prev
+}
+
+useSwipe(modalBodyRef, {
+  onSwipeEnd(_event, direction) {
+    if (direction === 'left') goNext()
+    else if (direction === 'right') goPrev()
+  },
+})
 
 watch(draft, (d) => { if (!props.editId) saveDraft(d) }, { deep: true })
 
@@ -135,6 +163,7 @@ function submit() {
 .modal-sheet {
   background: var(--color-surface);
   width: 100%;
+  min-height: 66.6667vh;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
@@ -183,6 +212,34 @@ function submit() {
   flex: 1;
   overflow-y: auto;
   padding: 1.25rem 1.5rem;
+  position: relative;
+}
+.slide-next-enter-active,
+.slide-next-leave-active,
+.slide-prev-enter-active,
+.slide-prev-leave-active {
+  transition: transform 0.22s ease, opacity 0.22s ease;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 1.25rem 1.5rem;
+}
+.slide-next-enter-from {
+  transform: translateX(100%);
+  opacity: 0;
+}
+.slide-next-leave-to {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+.slide-prev-enter-from {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+.slide-prev-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
 }
 .modal-actions {
   display: flex;
@@ -249,6 +306,7 @@ function submit() {
   }
   .modal-sheet {
     width: 480px;
+    min-height: 0;
     max-height: 85vh;
     border-radius: 1rem;
   }
