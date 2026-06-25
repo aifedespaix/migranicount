@@ -26,18 +26,24 @@
         </div>
       </div>
 
+      <div class="period-selector">
+        <button
+          v-for="p in (['day', 'week', 'month'] as const)"
+          :key="p"
+          type="button"
+          :class="['period-btn', { active: period === p }]"
+          @click="period = p"
+        >{{ { day: 'Jour', week: 'Semaine', month: 'Mois' }[p] }}</button>
+      </div>
+
       <div class="charts-grid">
         <button class="chart-card" @click="openDetail('frequency')">
-          <h2>Fréquence (12 derniers mois)</h2>
-          <div class="chart-wrap"><FrequencyChart :migraines="migraines.migraines" /></div>
+          <h2>Fréquence</h2>
+          <div class="chart-wrap"><FrequencyChart :migraines="migraines.migraines" :period="period" /></div>
         </button>
         <button class="chart-card" @click="openDetail('intensity')">
           <h2>Intensité moyenne</h2>
-          <div class="chart-wrap"><IntensityChart :migraines="migraines.migraines" /></div>
-        </button>
-        <button class="chart-card" @click="openDetail('efficacy')">
-          <h2>Efficacité des traitements</h2>
-          <div class="chart-wrap"><EfficacyChart :migraines="migraines.migraines" /></div>
+          <div class="chart-wrap"><IntensityChart :migraines="migraines.migraines" :period="period" /></div>
         </button>
       </div>
     </template>
@@ -61,20 +67,20 @@
 import { computed, ref } from 'vue'
 import { useMigrainesStore } from '../stores/migraines'
 import { formatRelative, formatDuration, todayISO } from '../utils/date'
-import { averageDurationMinutes } from '../utils/stats'
+import { averageDurationMinutes, defaultPeriod, type Period } from '../utils/stats'
 import FrequencyChart from '../components/charts/FrequencyChart.vue'
 import IntensityChart from '../components/charts/IntensityChart.vue'
-import EfficacyChart from '../components/charts/EfficacyChart.vue'
 import ChartDetailModal from '../components/charts/ChartDetailModal.vue'
 import MigraineFormModal from '../components/MigraineForm/MigraineFormModal.vue'
 import { useToastStore } from '../stores/toast'
 
 const migraines = useMigrainesStore()
 const toastStore = useToastStore()
-const activeDetail = ref<'frequency' | 'intensity' | 'efficacy' | null>(null)
+const period = ref<Period>(defaultPeriod(migraines.migraines))
+const activeDetail = ref<'frequency' | 'intensity' | null>(null)
 const emptyStateFormOpen = ref(false)
 
-function openDetail(chart: 'frequency' | 'intensity' | 'efficacy') {
+function openDetail(chart: 'frequency' | 'intensity') {
   activeDetail.value = chart
 }
 
@@ -144,7 +150,7 @@ const thisMonthCount = computed(() =>
 }
 @media (orientation: landscape) {
   .charts-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 .chart-card {
@@ -171,7 +177,27 @@ const thisMonthCount = computed(() =>
 }
 .chart-wrap {
   flex: 1;
-  min-height: 0;
+  min-height: 200px;
   position: relative;
+}
+.period-selector {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+.period-btn {
+  padding: 0.35rem 0.85rem;
+  border-radius: 1rem;
+  border: 1px solid var(--color-muted);
+  background: none;
+  color: var(--color-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.period-btn.active {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  border-color: var(--color-accent);
 }
 </style>

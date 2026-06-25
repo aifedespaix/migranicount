@@ -9,7 +9,6 @@
         <div class="chart-detail-chart">
           <FrequencyChart v-if="chart === 'frequency'" :migraines="migraines" />
           <IntensityChart v-else-if="chart === 'intensity'" :migraines="migraines" />
-          <EfficacyChart v-else :migraines="migraines" />
         </div>
         <div class="chart-detail-stats">
           <template v-if="chart === 'frequency'">
@@ -28,13 +27,6 @@
               <li v-for="d in intensityDist" :key="d.level">Niveau {{ d.level }} : {{ d.count }} crise(s)</li>
             </ul>
           </template>
-          <template v-else>
-            <ul class="stat-list">
-              <li v-for="r in efficacyRank" :key="r.nom">
-                {{ r.nom }} — {{ r.pctAvortee }}% d'efficacité ({{ r.total }} prise(s))
-              </li>
-            </ul>
-          </template>
         </div>
       </div>
     </div>
@@ -45,11 +37,10 @@
 import { computed, onMounted, onUnmounted } from 'vue'
 import FrequencyChart from './FrequencyChart.vue'
 import IntensityChart from './IntensityChart.vue'
-import EfficacyChart from './EfficacyChart.vue'
-import { frequencyTrendStats, intensityDistribution, averageIntensity, efficacyRanking } from '../../utils/stats'
+import { frequencyTrendStats, intensityDistribution, averageIntensity } from '../../utils/stats'
 import type { Migraine } from '../../types/migraine'
 
-const props = defineProps<{ chart: 'frequency' | 'intensity' | 'efficacy'; migraines: Migraine[] }>()
+const props = defineProps<{ chart: 'frequency' | 'intensity'; migraines: Migraine[] }>()
 const emit = defineEmits<{ close: [] }>()
 
 function handleKeydown(e: KeyboardEvent) {
@@ -61,14 +52,12 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeydown))
 
 const title = computed(() => {
   if (props.chart === 'frequency') return 'Fréquence (12 derniers mois)'
-  if (props.chart === 'intensity') return 'Intensité moyenne'
-  return 'Efficacité des traitements'
+  return 'Intensité moyenne'
 })
 
 const frequencyStats = computed(() => frequencyTrendStats(props.migraines))
 const intensityDist = computed(() => intensityDistribution(props.migraines))
 const avgIntensity = computed(() => averageIntensity(props.migraines))
-const efficacyRank = computed(() => efficacyRanking(props.migraines))
 </script>
 
 <style scoped>
