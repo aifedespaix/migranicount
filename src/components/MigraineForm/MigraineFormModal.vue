@@ -189,6 +189,8 @@ function submit() {
 .modal-sheet {
   background: var(--color-surface);
   width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
   min-height: 66.6667vh;
   max-height: 90vh;
   display: flex;
@@ -271,6 +273,7 @@ function submit() {
 .modal-body {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 1.25rem 1.5rem;
   position: relative;
 }
