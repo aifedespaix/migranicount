@@ -14,6 +14,9 @@ import HeaderNav from './components/HeaderNav.vue'
 import BottomNav from './components/BottomNav.vue'
 import FabButton from './components/FabButton.vue'
 import MigraineFormModal from './components/MigraineForm/MigraineFormModal.vue'
+import { useSettingsStore } from './stores/settings'
+
+useSettingsStore()
 
 const formOpen = ref(false)
 </script>
