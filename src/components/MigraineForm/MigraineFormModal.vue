@@ -95,7 +95,7 @@ import StepTriggers from './StepTriggers.vue'
 import StepNotes from './StepNotes.vue'
 import StepRecap from './StepRecap.vue'
 import ConfirmDialog from '../ConfirmDialog.vue'
-import { loadDraft, saveDraft, clearDraft, canSaveDraft } from './draft'
+import { loadDraft, saveDraft, clearDraft, canSaveDraft, loadDraftStep, saveDraftStep } from './draft'
 import { useMigrainesStore } from '../../stores/migraines'
 
 const props = defineProps<{ editId?: string }>()
@@ -105,7 +105,7 @@ const migraines = useMigrainesStore()
 const steps = [StepWhen, StepIntensity, StepMedocs, StepSymptoms, StepLocation, StepTriggers, StepNotes, StepRecap]
 const stepTitles = ['Quand ?', 'Intensité', 'Médicaments', 'Symptômes', 'Localisation', 'Déclencheurs', 'Notes', 'Récapitulatif']
 const stepShortTitles = ['Quand', 'Intensité', 'Médocs', 'Symptômes', 'Lieu', 'Déclencheurs', 'Notes', 'Récap']
-const stepIndex = ref(props.editId ? steps.length - 1 : 0)
+const stepIndex = ref(props.editId ? steps.length - 1 : loadDraftStep())
 const draft = ref(props.editId ? { ...migraines.getById(props.editId)! } : loadDraft())
 const initialSnapshot = props.editId ? JSON.stringify(draft.value) : null
 const showConfirmDialog = ref(false)
@@ -122,6 +122,7 @@ function goNext() {
   if (next === stepIndex.value) return
   transitionName.value = 'slide-next'
   stepIndex.value = next
+  if (!props.editId) saveDraftStep(stepIndex.value)
 }
 
 function goPrev() {
@@ -129,12 +130,14 @@ function goPrev() {
   if (prev === stepIndex.value) return
   transitionName.value = 'slide-prev'
   stepIndex.value = prev
+  if (!props.editId) saveDraftStep(stepIndex.value)
 }
 
 function goToStep(i: number) {
   if (i === stepIndex.value) return
   transitionName.value = i > stepIndex.value ? 'slide-next' : 'slide-prev'
   stepIndex.value = i
+  if (!props.editId) saveDraftStep(stepIndex.value)
 }
 
 useSwipe(modalBodyRef, {

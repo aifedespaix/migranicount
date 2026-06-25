@@ -36,7 +36,9 @@
       >
         <SettingsIcon :size="18" />
       </button>
-      <button class="add-btn" @click="$emit('add')">+ Ajouter</button>
+      <button class="add-btn" :class="{ 'add-btn--resume': props.hasDraft }" @click="$emit('add')">
+        {{ props.hasDraft ? '↩ Reprendre' : '+ Ajouter' }}
+      </button>
     </div>
   </header>
   <MedocsEditModal v-if="showMedocsEdit" @close="showMedocsEdit = false" />
@@ -49,6 +51,7 @@ import { Pencil, BarChart2, List, Settings as SettingsIcon } from 'lucide-vue-ne
 import { useMedocsFavorisStore } from '../stores/medocsFavoris'
 import MedocsEditModal from './MedocsEditModal.vue'
 
+const props = defineProps<{ hasDraft?: boolean }>()
 defineEmits<{ add: [] }>()
 
 const router = useRouter()
@@ -140,6 +143,9 @@ const showMedocsEdit = ref(false)
   padding: 0.5rem 1rem;
   cursor: pointer;
   font-size: 0.9rem;
+}
+.add-btn--resume {
+  background: var(--color-info);
 }
 @media (min-width: 1024px) {
   .header-links { display: flex; }

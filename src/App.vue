@@ -1,5 +1,5 @@
 <template>
-  <HeaderNav @add="openForm" />
+  <HeaderNav @add="openForm" :has-draft="hasDraft" />
   <main class="app-main" ref="mainRef">
     <RouterView v-slot="{ Component }">
       <Transition :name="pageTransition">
@@ -7,8 +7,17 @@
       </Transition>
     </RouterView>
   </main>
-  <BottomNav @add="openForm" />
+  <BottomNav @add="openForm" :has-draft="hasDraft" />
   <MigraineFormModal v-if="formOpen" @close="onFormClose" @saved="onFormSaved" />
+  <ConfirmDialog
+    v-if="showDraftDialog"
+    title="Saisie en cours"
+    message="Vous avez une migraine non enregistrée. Souhaitez-vous reprendre là où vous en étiez, ou commencer une nouvelle saisie ?"
+    confirm-label="Reprendre"
+    cancel-label="Nouvelle saisie"
+    @confirm="resumeDraft"
+    @cancel="startFresh"
+  />
   <ToastContainer />
 </template>
 
@@ -19,49 +28,53 @@ import { useSwipe } from '@vueuse/core'
 import HeaderNav from './components/HeaderNav.vue'
 import BottomNav from './components/BottomNav.vue'
 import MigraineFormModal from './components/MigraineForm/MigraineFormModal.vue'
+import ConfirmDialog from './components/ConfirmDialog.vue'
 import ToastContainer from './components/ToastContainer.vue'
 import { useSettingsStore } from './stores/settings'
 import { useToastStore } from './stores/toast'
+import { hasSavedDraft, clearDraft } from './components/MigraineForm/draft'
 
 useSettingsStore()
 
 const router = useRouter()
 const toastStore = useToastStore()
 const formOpen = ref(false)
-const pendingDraftToastId = ref<string | null>(null)
+const showDraftDialog = ref(false)
+const hasDraft = ref(hasSavedDraft())
 const mainRef = ref<HTMLElement | null>(null)
 const pageTransition = ref<'slide-next' | 'slide-prev'>('slide-next')
 
 const routeOrder: Record<string, number> = { stats: 0, liste: 1 }
 
 function openForm() {
-  if (pendingDraftToastId.value) {
-    toastStore.remove(pendingDraftToastId.value)
-    pendingDraftToastId.value = null
+  if (hasDraft.value) {
+    showDraftDialog.value = true
+  } else {
+    formOpen.value = true
   }
+}
+
+function resumeDraft() {
+  showDraftDialog.value = false
+  formOpen.value = true
+}
+
+function startFresh() {
+  showDraftDialog.value = false
+  clearDraft()
+  hasDraft.value = false
   formOpen.value = true
 }
 
 function onFormSaved() {
-  if (pendingDraftToastId.value) {
-    toastStore.remove(pendingDraftToastId.value)
-    pendingDraftToastId.value = null
-  }
   toastStore.add({ message: 'Migraine enregistrée !', type: 'success', persistent: false })
   formOpen.value = false
+  hasDraft.value = false
 }
 
 function onFormClose() {
   formOpen.value = false
-  if (pendingDraftToastId.value) {
-    toastStore.remove(pendingDraftToastId.value)
-  }
-  pendingDraftToastId.value = toastStore.add({
-    message: 'Brouillon en attente',
-    type: 'pending',
-    persistent: true,
-    action: { label: 'Reprendre', handler: openForm },
-  })
+  hasDraft.value = hasSavedDraft()
 }
 
 useSwipe(mainRef, {

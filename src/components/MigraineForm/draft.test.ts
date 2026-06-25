@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { emptyDraft, loadDraft, saveDraft, clearDraft, canSaveDraft } from './draft'
+import { emptyDraft, loadDraft, saveDraft, clearDraft, canSaveDraft, hasSavedDraft, saveDraftStep, loadDraftStep } from './draft'
 
 beforeEach(() => localStorage.clear())
 
@@ -41,5 +41,39 @@ describe('canSaveDraft', () => {
 
   it('returns false when both date and heureDebut are empty', () => {
     expect(canSaveDraft({ ...emptyDraft(), date: '', heureDebut: '' })).toBe(false)
+  })
+})
+
+describe('hasSavedDraft', () => {
+  it('returns false when no draft saved', () => {
+    expect(hasSavedDraft()).toBe(false)
+  })
+
+  it('returns true after saveDraft', () => {
+    saveDraft(emptyDraft())
+    expect(hasSavedDraft()).toBe(true)
+  })
+
+  it('returns false after clearDraft', () => {
+    saveDraft(emptyDraft())
+    clearDraft()
+    expect(hasSavedDraft()).toBe(false)
+  })
+})
+
+describe('saveDraftStep / loadDraftStep', () => {
+  it('loadDraftStep returns 0 when nothing saved', () => {
+    expect(loadDraftStep()).toBe(0)
+  })
+
+  it('saveDraftStep then loadDraftStep round-trips', () => {
+    saveDraftStep(4)
+    expect(loadDraftStep()).toBe(4)
+  })
+
+  it('clearDraft also resets step to 0', () => {
+    saveDraftStep(4)
+    clearDraft()
+    expect(loadDraftStep()).toBe(0)
   })
 })

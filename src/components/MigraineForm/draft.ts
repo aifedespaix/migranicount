@@ -5,6 +5,7 @@ import type { Migraine } from '../../types/migraine'
 export type MigraineDraft = Omit<Migraine, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }
 
 const DRAFT_KEY = 'draft'
+const DRAFT_STEP_KEY = 'draft-step'
 
 export function emptyDraft(): MigraineDraft {
   return {
@@ -32,7 +33,20 @@ export function saveDraft(d: MigraineDraft): void {
 }
 
 export function clearDraft(): void {
-  setJSON(DRAFT_KEY, emptyDraft())
+  localStorage.removeItem('migracount:draft')
+  localStorage.removeItem('migracount:draft-step')
+}
+
+export function hasSavedDraft(): boolean {
+  return localStorage.getItem('migracount:draft') !== null
+}
+
+export function saveDraftStep(index: number): void {
+  setJSON(DRAFT_STEP_KEY, index)
+}
+
+export function loadDraftStep(): number {
+  return getJSON<number>(DRAFT_STEP_KEY, 0)
 }
 
 export function canSaveDraft(d: MigraineDraft): boolean {
