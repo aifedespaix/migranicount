@@ -25,24 +25,32 @@
       </div>
 
       <div class="modal-actions">
-        <button type="button" class="action-btn" :disabled="stepIndex === 0" @click="stepIndex--">
+        <button
+          type="button"
+          class="action-btn action-btn-prev"
+          :disabled="stepIndex === 0"
+          @click="stepIndex--"
+        >
+          <ArrowLeft :size="18" />
           Précédent
         </button>
         <button
           type="button"
-          class="action-btn action-btn-primary"
-          :disabled="stepIndex !== steps.length - 1"
+          class="action-btn action-btn-save"
+          :disabled="stepIndex !== steps.length - 1 || !canSave"
           @click="submit"
         >
+          <Save :size="18" />
           Enregistrer
         </button>
         <button
           type="button"
-          class="action-btn"
+          class="action-btn action-btn-next"
           :disabled="stepIndex === steps.length - 1"
           @click="stepIndex++"
         >
           Suivant
+          <ArrowRight :size="18" />
         </button>
       </div>
     </div>
@@ -61,6 +69,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { Save, ArrowRight, ArrowLeft } from 'lucide-vue-next'
 import StepWhen from './StepWhen.vue'
 import StepIntensity from './StepIntensity.vue'
 import StepMedocs from './StepMedocs.vue'
@@ -70,7 +79,7 @@ import StepTriggers from './StepTriggers.vue'
 import StepNotes from './StepNotes.vue'
 import StepRecap from './StepRecap.vue'
 import ConfirmDialog from '../ConfirmDialog.vue'
-import { loadDraft, saveDraft, clearDraft } from './draft'
+import { loadDraft, saveDraft, clearDraft, canSaveDraft } from './draft'
 import { useMigrainesStore } from '../../stores/migraines'
 
 const props = defineProps<{ editId?: string }>()
@@ -85,6 +94,7 @@ const initialSnapshot = props.editId ? JSON.stringify(draft.value) : null
 const showConfirmDialog = ref(false)
 
 const progressPercent = computed(() => ((stepIndex.value + 1) / steps.length) * 100)
+const canSave = computed(() => canSaveDraft(draft.value))
 
 watch(draft, (d) => { if (!props.editId) saveDraft(d) }, { deep: true })
 
@@ -184,6 +194,10 @@ function submit() {
 }
 .action-btn {
   flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
   padding: 0.65rem 1rem;
   border-radius: 0.5rem;
   border: 1px solid var(--color-muted);
@@ -196,15 +210,36 @@ function submit() {
   opacity: 0.4;
   cursor: not-allowed;
 }
-.action-btn-primary {
-  background: var(--color-accent);
-  color: var(--color-accent-contrast);
-  border-color: var(--color-accent);
+.action-btn-save {
+  background: var(--color-success);
+  color: var(--color-success-contrast);
+  border-color: var(--color-success);
 }
-.action-btn-primary:disabled {
+.action-btn-save:disabled {
   background: var(--color-muted);
   border-color: var(--color-muted);
   color: var(--color-surface);
+  opacity: 0.6;
+}
+.action-btn-next {
+  background: var(--color-info);
+  color: var(--color-info-contrast);
+  border-color: var(--color-info);
+}
+.action-btn-next:disabled {
+  background: var(--color-muted);
+  border-color: var(--color-muted);
+  color: var(--color-surface);
+  opacity: 0.6;
+}
+.action-btn-prev {
+  background: transparent;
+  color: var(--color-info);
+  border-color: var(--color-info);
+}
+.action-btn-prev:disabled {
+  color: var(--color-muted);
+  border-color: var(--color-muted);
   opacity: 0.6;
 }
 @media (min-width: 1024px) {

@@ -6,6 +6,10 @@
   --color-accent-contrast: #ffffff;
   --color-muted: #6b6275;
   --color-danger: #d64545;
+  --color-success: #2f9e58;
+  --color-success-contrast: #ffffff;
+  --color-info: #3b82f6;
+  --color-info-contrast: #ffffff;
 }
 
 [data-theme="dark"] {
@@ -16,6 +20,10 @@
   --color-accent-contrast: #1c1726;
   --color-muted: #a39db0;
   --color-danger: #f08a8a;
+  --color-success: #4ade80;
+  --color-success-contrast: #1c1726;
+  --color-info: #60a5fa;
+  --color-info-contrast: #1c1726;
 }
 
 [data-theme="migraine"] {
@@ -26,6 +34,10 @@
   --color-accent-contrast: #1c2117;
   --color-muted: #a89b8a;
   --color-danger: #c97b5f;
+  --color-success: #7c9a5e;
+  --color-success-contrast: #1c2117;
+  --color-info: #6f8fae;
+  --color-info-contrast: #1c2117;
 }
 
 [data-theme="migraine"] *,
