@@ -1,6 +1,7 @@
 # Migracount
 
-Migracount est une PWA (Progressive Web App) personnelle de suivi des crises de migraine. Elle permet d'enregistrer chaque crise en quelques étapes, de visualiser son évolution dans le temps, et de garder un historique consultable et filtrable — entièrement en local, sans compte ni serveur.
+Migracount est une PWA de suivi des crises de migraine. Elle permet d'enregistrer chaque crise en quelques étapes, de visualiser son évolution dans le temps, et de garder un historique consultable et filtrable.
+Comme ça tu peux bien te rapeler comment t'en a chié ta mère et montrer ça à un fdp de médecin pour qu'il daigne t'aider un peu.
 
 ## Fonctionnalités
 
