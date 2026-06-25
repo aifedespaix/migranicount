@@ -22,7 +22,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { newId } from '../../utils/uuid'
-import { nowHHmm } from '../../utils/date'
+import { addMinutesToHHmm } from '../../utils/date'
+import { capitalizeFirstLetter } from '../../utils/text'
 import { useMedocsFavorisStore } from '../../stores/medocsFavoris'
 import TimeField from '../TimeField.vue'
 import type { MigraineDraft } from './draft'
@@ -33,20 +34,20 @@ const favoris = useMedocsFavorisStore()
 
 const nomInput = ref('')
 const descriptionInput = ref('')
-const heureInput = ref(nowHHmm())
+const heureInput = ref(addMinutesToHHmm(model.value.heureDebut, 15))
 
 function addFromFavori(f: MedocFavori) {
-  model.value.medocs.push({ id: newId(), nom: f.nom, description: f.description, heure: nowHHmm() })
+  model.value.medocs.push({ id: newId(), nom: f.nom, description: f.description, heure: heureInput.value })
   favoris.registerUsage(f.nom, f.description)
 }
 
 function addNew() {
   if (!nomInput.value) return
-  model.value.medocs.push({ id: newId(), nom: nomInput.value, description: descriptionInput.value || undefined, heure: heureInput.value })
-  favoris.registerUsage(nomInput.value, descriptionInput.value || undefined)
+  const nom = capitalizeFirstLetter(nomInput.value)
+  model.value.medocs.push({ id: newId(), nom, description: descriptionInput.value || undefined, heure: heureInput.value })
+  favoris.registerUsage(nom, descriptionInput.value || undefined)
   nomInput.value = ''
   descriptionInput.value = ''
-  heureInput.value = nowHHmm()
 }
 
 function remove(index: number) {
