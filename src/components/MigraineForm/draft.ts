@@ -34,3 +34,7 @@ export function saveDraft(d: MigraineDraft): void {
 export function clearDraft(): void {
   setJSON(DRAFT_KEY, emptyDraft())
 }
+
+export function canSaveDraft(d: MigraineDraft): boolean {
+  return Boolean(d.date) && Boolean(d.heureDebut)
+}
