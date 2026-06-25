@@ -106,6 +106,7 @@ const thisMonthCount = computed(() =>
   padding: 1rem 1.5rem;
   box-sizing: border-box;
   gap: 1rem;
+  overflow-y: auto;
 }
 .empty-state {
   flex: 1;
@@ -129,17 +130,32 @@ const thisMonthCount = computed(() =>
 }
 .summary-cards {
   display: flex;
-  gap: 1rem;
+  gap: 0.5rem;
   flex-shrink: 0;
 }
 .card {
   flex: 1;
+  min-width: 0;
   background: var(--color-surface);
   border-radius: 0.5rem;
-  padding: 0.75rem 1rem;
+  padding: 0.6rem 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.2rem;
+}
+.card strong {
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card span {
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .charts-grid {
   flex: 1;
@@ -177,7 +193,8 @@ const thisMonthCount = computed(() =>
 }
 .chart-wrap {
   flex: 1;
-  min-height: 200px;
+  min-height: 0;
+  height: 180px;
   position: relative;
 }
 .period-selector {
