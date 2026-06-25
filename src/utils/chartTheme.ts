@@ -1,4 +1,5 @@
-import { computed, onScopeDispose, ref } from 'vue'
+import { computed, onScopeDispose, ref, watch } from 'vue'
+import { useSettingsStore } from '../stores/settings'
 
 /**
  * Adds an alpha channel to a CSS color string.
@@ -23,24 +24,24 @@ function readCssVar(name: string): string {
 
 /**
  * Reactive theme colors sourced from the active theme's CSS custom properties.
- * Re-evaluates when the OS color scheme changes (the app's only theme switch
- * mechanism, driven by `prefers-color-scheme` in src/styles/theme.css).
+ * Re-evaluates whenever the settings store's resolved theme changes (manual
+ * switch between light/dark/migraine, or a live OS-level scheme change while
+ * the store is set to "auto").
  */
 export function useChartThemeColors() {
+  const settings = useSettingsStore()
   const themeVersion = ref(0)
 
-  let mediaQuery: MediaQueryList | undefined
-  const handleChange = () => {
-    themeVersion.value++
-  }
-
-  if (typeof window !== 'undefined' && window.matchMedia) {
-    mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    mediaQuery.addEventListener('change', handleChange)
-  }
+  const stopWatch = watch(
+    () => settings.resolvedTheme,
+    () => {
+      themeVersion.value++
+    },
+    { flush: 'post' }
+  )
 
   onScopeDispose(() => {
-    mediaQuery?.removeEventListener('change', handleChange)
+    stopWatch()
   })
 
   const accent = computed(() => {
