@@ -52,7 +52,7 @@
     <MigraineFormModal
       v-if="emptyStateFormOpen"
       @close="emptyStateFormOpen = false"
-      @saved="emptyStateFormOpen = false"
+      @saved="onEmptyStateSaved"
     />
   </div>
 </template>
@@ -67,13 +67,20 @@ import IntensityChart from '../components/charts/IntensityChart.vue'
 import EfficacyChart from '../components/charts/EfficacyChart.vue'
 import ChartDetailModal from '../components/charts/ChartDetailModal.vue'
 import MigraineFormModal from '../components/MigraineForm/MigraineFormModal.vue'
+import { useToastStore } from '../stores/toast'
 
 const migraines = useMigrainesStore()
+const toastStore = useToastStore()
 const activeDetail = ref<'frequency' | 'intensity' | 'efficacy' | null>(null)
 const emptyStateFormOpen = ref(false)
 
 function openDetail(chart: 'frequency' | 'intensity' | 'efficacy') {
   activeDetail.value = chart
+}
+
+function onEmptyStateSaved() {
+  emptyStateFormOpen.value = false
+  toastStore.add({ message: 'Migraine enregistrée !', type: 'success', persistent: false })
 }
 
 const lastMigraine = computed(() =>

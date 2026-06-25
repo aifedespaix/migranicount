@@ -31,8 +31,8 @@
       </ul>
     </template>
 
-    <MigraineFormModal v-if="editId" :edit-id="editId" @close="editId = null" @saved="editId = null" />
-    <MigraineFormModal v-if="addFormOpen" @close="addFormOpen = false" @saved="addFormOpen = false" />
+    <MigraineFormModal v-if="editId" :edit-id="editId" @close="editId = null" @saved="onEditSaved" />
+    <MigraineFormModal v-if="addFormOpen" @close="addFormOpen = false" @saved="onAddSaved" />
   </div>
 </template>
 
@@ -42,8 +42,10 @@ import { useMigrainesStore } from '../stores/migraines'
 import { filterMigraines } from '../utils/migraineFilters'
 import MigraineListItem from '../components/MigraineListItem.vue'
 import MigraineFormModal from '../components/MigraineForm/MigraineFormModal.vue'
+import { useToastStore } from '../stores/toast'
 
 const migraines = useMigrainesStore()
+const toastStore = useToastStore()
 const editId = ref<string | null>(null)
 const addFormOpen = ref(false)
 const keyword = ref('')
@@ -58,6 +60,16 @@ const filtered = computed(() => filterMigraines(sorted.value, { keyword: keyword
 function resetFilters() {
   keyword.value = ''
   month.value = ''
+}
+
+function onEditSaved() {
+  editId.value = null
+  toastStore.add({ message: 'Migraine mise à jour !', type: 'success', persistent: false })
+}
+
+function onAddSaved() {
+  addFormOpen.value = false
+  toastStore.add({ message: 'Migraine enregistrée !', type: 'success', persistent: false })
 }
 </script>
 
