@@ -1,6 +1,5 @@
 <template>
   <div class="step">
-    <h2>Intensité</h2>
     <input type="range" min="1" max="10" v-model.number="model.intensite" class="intensity-slider" />
     <p class="intensity-value" :style="{ color: trackColor }">{{ model.intensite }} / 10 — {{ label }}</p>
   </div>

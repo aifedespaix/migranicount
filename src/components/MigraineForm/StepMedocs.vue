@@ -1,6 +1,5 @@
 <template>
   <div class="step">
-    <h2>Médicaments</h2>
     <div class="pill-group">
       <button v-for="f in favoris.favoris" :key="f.nom" type="button" class="pill-btn" @click="addFromFavori(f)">
         {{ f.nom }}

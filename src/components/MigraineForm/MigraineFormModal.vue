@@ -2,9 +2,21 @@
   <div class="modal-backdrop" @click.self="requestClose">
     <div class="modal-sheet">
       <header class="modal-header">
-        <div class="modal-header-text">
-          <p class="modal-progress">Étape {{ stepIndex + 1 }} / {{ steps.length }}</p>
-          <h1 class="modal-title">{{ stepTitles[stepIndex] }}</h1>
+        <div class="stepper-nav" ref="stepperNavRef" role="tablist">
+          <button
+            v-for="(label, i) in stepShortTitles"
+            :key="i"
+            type="button"
+            class="stepper-btn"
+            :class="{ active: i === stepIndex, past: i < stepIndex }"
+            role="tab"
+            :aria-selected="i === stepIndex"
+            :aria-label="stepTitles[i]"
+            @click="goToStep(i)"
+          >
+            <span class="stepper-num">{{ i + 1 }}</span>
+            <span class="stepper-label">{{ label }}</span>
+          </button>
         </div>
         <button
           type="button"
@@ -70,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useSwipe } from '@vueuse/core'
 import { Save, ArrowRight, ArrowLeft } from 'lucide-vue-next'
 import { nextStepIndex, prevStepIndex } from './stepNav'
@@ -92,6 +104,7 @@ const migraines = useMigrainesStore()
 
 const steps = [StepWhen, StepIntensity, StepMedocs, StepSymptoms, StepLocation, StepTriggers, StepNotes, StepRecap]
 const stepTitles = ['Quand ?', 'Intensité', 'Médicaments', 'Symptômes', 'Localisation', 'Déclencheurs', 'Notes', 'Récapitulatif']
+const stepShortTitles = ['Quand', 'Intensité', 'Médocs', 'Symptômes', 'Lieu', 'Déclencheurs', 'Notes', 'Récap']
 const stepIndex = ref(props.editId ? steps.length - 1 : 0)
 const draft = ref(props.editId ? { ...migraines.getById(props.editId)! } : loadDraft())
 const initialSnapshot = props.editId ? JSON.stringify(draft.value) : null
@@ -101,6 +114,7 @@ const progressPercent = computed(() => ((stepIndex.value + 1) / steps.length) * 
 const canSave = computed(() => canSaveDraft(draft.value))
 
 const modalBodyRef = ref<HTMLElement | null>(null)
+const stepperNavRef = ref<HTMLElement | null>(null)
 const transitionName = ref<'slide-next' | 'slide-prev'>('slide-next')
 
 function goNext() {
@@ -117,6 +131,12 @@ function goPrev() {
   stepIndex.value = prev
 }
 
+function goToStep(i: number) {
+  if (i === stepIndex.value) return
+  transitionName.value = i > stepIndex.value ? 'slide-next' : 'slide-prev'
+  stepIndex.value = i
+}
+
 useSwipe(modalBodyRef, {
   onSwipeEnd(_event, direction) {
     if (direction === 'left') goNext()
@@ -125,6 +145,12 @@ useSwipe(modalBodyRef, {
 })
 
 watch(draft, (d) => { if (!props.editId) saveDraft(d) }, { deep: true })
+
+watch(stepIndex, async (i) => {
+  await nextTick()
+  const btn = stepperNavRef.value?.querySelectorAll('.stepper-btn')[i] as HTMLElement | undefined
+  btn?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+})
 
 function isDirty(): boolean {
   if (!props.editId) return false
@@ -172,20 +198,54 @@ function submit() {
 }
 .modal-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  padding: 1.25rem 1.5rem 0.5rem;
+  padding: 0.75rem 1rem 0.5rem;
+  gap: 0.5rem;
 }
-.modal-progress {
-  margin: 0 0 0.15rem;
-  font-size: 0.75rem;
+.stepper-nav {
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  flex: 1;
+  min-width: 0;
+}
+.stepper-nav::-webkit-scrollbar { display: none; }
+.stepper-btn {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.4rem;
+  border: 1px solid transparent;
+  background: none;
+  cursor: pointer;
   color: var(--color-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  scroll-snap-align: start;
+  min-width: 2.5rem;
 }
-.modal-title {
-  margin: 0;
-  font-size: 1.15rem;
+.stepper-btn.past {
+  color: var(--color-accent);
+  opacity: 0.6;
+}
+.stepper-btn.active {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+.stepper-num {
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.stepper-label {
+  font-size: 0.6rem;
+  white-space: nowrap;
 }
 .modal-close-btn {
   background: none;

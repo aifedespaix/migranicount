@@ -1,6 +1,5 @@
 <template>
   <div class="step">
-    <h2>Déclencheurs</h2>
     <div class="pill-group">
       <button
         v-for="tag in declencheurs.tags()"

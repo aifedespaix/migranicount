@@ -1,6 +1,5 @@
 <template>
   <div class="step">
-    <h2>Notes</h2>
     <textarea
       v-model="model.notes"
       rows="5"

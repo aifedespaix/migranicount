@@ -1,7 +1,5 @@
 <template>
   <div class="step">
-    <h2>Récapitulatif</h2>
-
     <div class="recap-row">
       <span class="recap-icon">📅</span>
       <div class="recap-content">

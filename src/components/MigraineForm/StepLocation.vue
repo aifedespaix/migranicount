@@ -1,6 +1,5 @@
 <template>
   <div class="step">
-    <h2>Localisation</h2>
     <div class="pill-group">
       <button
         v-for="opt in localisations"

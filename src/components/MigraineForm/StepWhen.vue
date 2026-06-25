@@ -1,6 +1,5 @@
 <template>
   <div class="step">
-    <h2>Quand ?</h2>
     <label class="field-label">
       <span>Date</span>
       <DateField v-model="model.date" />

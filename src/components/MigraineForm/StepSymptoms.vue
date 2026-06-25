@@ -1,6 +1,5 @@
 <template>
   <div class="step">
-    <h2>Symptômes</h2>
     <div class="pill-group">
       <button
         type="button"
