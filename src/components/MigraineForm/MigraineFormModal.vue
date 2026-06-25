@@ -65,7 +65,8 @@ import StepWhen from './StepWhen.vue'
 import StepIntensity from './StepIntensity.vue'
 import StepMedocs from './StepMedocs.vue'
 import StepSymptoms from './StepSymptoms.vue'
-import StepLocationTriggers from './StepLocationTriggers.vue'
+import StepLocation from './StepLocation.vue'
+import StepTriggers from './StepTriggers.vue'
 import StepNotes from './StepNotes.vue'
 import StepRecap from './StepRecap.vue'
 import ConfirmDialog from '../ConfirmDialog.vue'
@@ -76,8 +77,8 @@ const props = defineProps<{ editId?: string }>()
 const emit = defineEmits<{ close: []; saved: [] }>()
 const migraines = useMigrainesStore()
 
-const steps = [StepWhen, StepIntensity, StepMedocs, StepSymptoms, StepLocationTriggers, StepNotes, StepRecap]
-const stepTitles = ['Quand ?', 'Intensité', 'Médicaments', 'Symptômes', 'Localisation & déclencheurs', 'Notes', 'Récapitulatif']
+const steps = [StepWhen, StepIntensity, StepMedocs, StepSymptoms, StepLocation, StepTriggers, StepNotes, StepRecap]
+const stepTitles = ['Quand ?', 'Intensité', 'Médicaments', 'Symptômes', 'Localisation', 'Déclencheurs', 'Notes', 'Récapitulatif']
 const stepIndex = ref(props.editId ? steps.length - 1 : 0)
 const draft = ref(props.editId ? { ...migraines.getById(props.editId)! } : loadDraft())
 const initialSnapshot = props.editId ? JSON.stringify(draft.value) : null

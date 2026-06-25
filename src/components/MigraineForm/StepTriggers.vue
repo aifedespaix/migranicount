@@ -1,18 +1,6 @@
 <template>
   <div class="step">
-    <h2>Localisation & déclencheurs</h2>
-    <div class="pill-group">
-      <button
-        v-for="opt in localisations"
-        :key="opt"
-        type="button"
-        class="pill-btn"
-        :class="{ active: model.localisation === opt }"
-        @click="model.localisation = opt"
-      >
-        {{ labels[opt] }}
-      </button>
-    </div>
+    <h2>Déclencheurs</h2>
     <div class="pill-group">
       <button
         v-for="tag in declencheurs.tags()"
@@ -40,11 +28,6 @@ import type { MigraineDraft } from './draft'
 const model = defineModel<MigraineDraft>({ required: true })
 const declencheurs = useDeclencheursStore()
 const customTag = ref('')
-
-const localisations = ['gauche', 'droite', 'bilaterale', 'nuque'] as const
-const labels: Record<typeof localisations[number], string> = {
-  gauche: 'Gauche', droite: 'Droite', bilaterale: 'Bilatérale', nuque: 'Nuque',
-}
 
 function toggleTag(tag: string) {
   const i = model.value.declencheurs.indexOf(tag)
