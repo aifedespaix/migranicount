@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   listMigraines, saveMigraine, deleteMigraine, getMigraine,
-  listMedocsFavoris, registerMedocUsage,
+  listMedocsFavoris, registerMedocUsage, updateMedocFavoriDescription,
   listDeclencheursFavoris, registerDeclencheur,
   exportAll, importAll,
 } from './migraineRepository'
@@ -84,5 +84,24 @@ describe('exportAll / importAll', () => {
     expect(listMigraines()).toHaveLength(1)
     expect(listMedocsFavoris()).toHaveLength(1)
     expect(listDeclencheursFavoris()).toEqual(['stress'])
+  })
+})
+
+describe('updateMedocFavoriDescription', () => {
+  it('updates the description of an existing favori', () => {
+    registerMedocUsage('Doliprane', 'antidouleur')
+    updateMedocFavoriDescription('Doliprane', 'nouvelle description')
+    expect(listMedocsFavoris()).toEqual([{ nom: 'Doliprane', description: 'nouvelle description', usageCount: 1 }])
+  })
+
+  it('clears the description when given an empty string', () => {
+    registerMedocUsage('Doliprane', 'antidouleur')
+    updateMedocFavoriDescription('Doliprane', '')
+    expect(listMedocsFavoris()).toEqual([{ nom: 'Doliprane', usageCount: 1 }])
+  })
+
+  it('does nothing when the favori does not exist', () => {
+    updateMedocFavoriDescription('Inexistant', 'description')
+    expect(listMedocsFavoris()).toEqual([])
   })
 })

@@ -55,6 +55,14 @@ export function registerMedocUsage(nom: string, description?: string): void {
   setJSON(MEDOCS_KEY, favoris)
 }
 
+export function updateMedocFavoriDescription(nom: string, description: string): void {
+  const favoris = listMedocsFavoris()
+  const existing = favoris.find((f) => f.nom === nom)
+  if (!existing) return
+  existing.description = description || undefined
+  setJSON(MEDOCS_KEY, favoris)
+}
+
 export function listDeclencheursFavoris(): string[] {
   return getJSON<string[]>(DECLENCHEURS_KEY, [])
 }
