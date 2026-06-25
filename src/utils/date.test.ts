@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { todayISO, nowHHmm, formatRelative, formatDuration, toISODate, parseLooseISODate, parseLooseTime } from './date'
+import { todayISO, nowHHmm, formatRelative, formatDuration, toISODate, parseLooseISODate, parseLooseTime, addMinutesToHHmm } from './date'
 
 describe('todayISO', () => {
   it('returns YYYY-MM-DD format', () => {
@@ -87,5 +87,23 @@ describe('parseLooseTime', () => {
 
   it('rejects unparseable text', () => {
     expect(parseLooseTime('nope')).toBeNull()
+  })
+})
+
+describe('addMinutesToHHmm', () => {
+  it('adds minutes within the same hour', () => {
+    expect(addMinutesToHHmm('08:00', 15)).toBe('08:15')
+  })
+
+  it('rolls over to the next hour', () => {
+    expect(addMinutesToHHmm('08:50', 15)).toBe('09:05')
+  })
+
+  it('rolls over past midnight', () => {
+    expect(addMinutesToHHmm('23:50', 15)).toBe('00:05')
+  })
+
+  it('handles negative minutes (subtracting)', () => {
+    expect(addMinutesToHHmm('00:05', -15)).toBe('23:50')
   })
 })

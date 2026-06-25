@@ -69,6 +69,12 @@ export function parseLooseTime(text: string): string | null {
   return `${pad(hour)}:${pad(minute)}`
 }
 
+export function addMinutesToHHmm(hhmm: string, minutes: number): string {
+  const [h, m] = hhmm.split(':').map(Number)
+  const total = ((h * 60 + m + minutes) % 1440 + 1440) % 1440
+  return `${pad(Math.floor(total / 60))}:${pad(total % 60)}`
+}
+
 function pad(n: number): string {
   return n.toString().padStart(2, '0')
 }
