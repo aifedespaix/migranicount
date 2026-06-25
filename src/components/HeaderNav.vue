@@ -1,34 +1,57 @@
 <template>
   <header class="header-nav">
-    <span class="logo">Migracount</span>
-    <nav>
-      <RouterLink :to="{ name: 'stats' }">Stats</RouterLink>
-      <RouterLink :to="{ name: 'liste' }">Liste</RouterLink>
-      <RouterLink :to="{ name: 'settings' }">Réglages</RouterLink>
+    <div class="header-brand">
+      <img src="/icons/favicon-32.png" alt="" class="brand-icon" aria-hidden="true" />
+      <span class="brand-name">Migracount</span>
+    </div>
+
+    <nav class="header-links">
+      <RouterLink :to="{ name: 'stats' }" class="nav-link">
+        <BarChart2 :size="16" />
+        Stats
+      </RouterLink>
+      <RouterLink :to="{ name: 'liste' }" class="nav-link">
+        <List :size="16" />
+        Liste
+      </RouterLink>
     </nav>
-    <button
-      v-if="favoris.favoris.length > 0"
-      type="button"
-      class="edit-medocs-btn"
-      title="Modifier les médicaments"
-      aria-label="Modifier les médicaments"
-      @click="showMedocsEdit = true"
-    >
-      <Pencil :size="18" />
-    </button>
-    <button class="add-btn" @click="$emit('add')">+ Ajouter</button>
+
+    <div class="header-actions">
+      <button
+        v-if="favoris.favoris.length > 0"
+        type="button"
+        class="icon-btn"
+        title="Modifier les médicaments"
+        aria-label="Modifier les médicaments"
+        @click="showMedocsEdit = true"
+      >
+        <Pencil :size="18" />
+      </button>
+      <button
+        type="button"
+        class="icon-btn"
+        title="Réglages"
+        aria-label="Réglages"
+        @click="router.push({ name: 'settings' })"
+      >
+        <SettingsIcon :size="18" />
+      </button>
+      <button class="add-btn" @click="$emit('add')">+ Ajouter</button>
+    </div>
   </header>
   <MedocsEditModal v-if="showMedocsEdit" @close="showMedocsEdit = false" />
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Pencil } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
+import { Pencil, BarChart2, List, Settings as SettingsIcon } from 'lucide-vue-next'
 import { useMedocsFavorisStore } from '../stores/medocsFavoris'
 import MedocsEditModal from './MedocsEditModal.vue'
 
 defineEmits<{ add: [] }>()
 
+const router = useRouter()
 const favoris = useMedocsFavorisStore()
 const showMedocsEdit = ref(false)
 </script>
@@ -44,38 +67,83 @@ const showMedocsEdit = ref(false)
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 1.5rem;
+  padding: 0 1rem;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-muted);
   z-index: 30;
   box-sizing: border-box;
+  gap: 0.75rem;
 }
-.header-nav nav a {
-  margin-right: 1.5rem;
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+.brand-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+}
+.brand-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+.header-links {
+  display: none;
+  align-items: center;
+  gap: 0.25rem;
+}
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.4rem;
   color: var(--color-muted);
   text-decoration: none;
+  font-size: 0.9rem;
 }
-.header-nav nav a.router-link-active {
+.nav-link.router-link-active {
   color: var(--color-accent);
   font-weight: 600;
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
-.edit-medocs-btn {
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.icon-btn {
   background: none;
   border: none;
   color: var(--color-muted);
   cursor: pointer;
   padding: 0.5rem;
-  margin-right: 0.5rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-radius: 0.4rem;
+}
+.icon-btn:hover {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-muted) 12%, transparent);
 }
 .add-btn {
+  display: none;
   background: var(--color-accent);
   color: var(--color-accent-contrast);
   border: none;
   border-radius: 0.5rem;
   padding: 0.5rem 1rem;
   cursor: pointer;
+  font-size: 0.9rem;
+}
+@media (min-width: 1024px) {
+  .header-links { display: flex; }
+  .add-btn { display: inline-block; }
+  .header-nav { padding: 0 1.5rem; }
 }
 </style>
