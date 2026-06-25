@@ -25,7 +25,19 @@
       <span class="recap-icon">💊</span>
       <div class="recap-content">
         <p class="recap-label">Médicaments</p>
-        <p class="recap-value">{{ model.medocs.map((m) => `${m.nom} (${m.heure})`).join(', ') }}</p>
+        <ul class="medoc-recap-list">
+          <li v-for="m in model.medocs" :key="m.id">
+            <button
+              type="button"
+              class="medoc-recap-item"
+              :disabled="!m.description"
+              @click="toggleExpanded(m.id)"
+            >
+              {{ m.nom }} ({{ m.heure }})
+            </button>
+            <p v-if="expandedId === m.id" class="medoc-recap-description">{{ m.description }}</p>
+          </li>
+        </ul>
       </div>
     </div>
 
@@ -71,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { intensityColor, intensityLabel } from '../../utils/intensity'
 import { localisationLabel } from '../../utils/localisation'
 import type { MigraineDraft } from './draft'
@@ -84,9 +96,40 @@ const localisationLabelValue = computed(() => localisationLabel(model.value.loca
 const hasSymptoms = computed(
   () => model.value.avortee || model.value.nausee || model.value.vomissement || model.value.aura
 )
+
+const expandedId = ref<string | null>(null)
+
+function toggleExpanded(id: string) {
+  expandedId.value = expandedId.value === id ? null : id
+}
 </script>
 
 <style scoped>
+.medoc-recap-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+}
+.medoc-recap-item {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+}
+.medoc-recap-item:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+.medoc-recap-description {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
 .intensity-badge {
   display: inline-flex;
   align-items: center;
