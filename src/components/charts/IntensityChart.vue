@@ -6,23 +6,31 @@
 import { computed } from 'vue'
 import { Line } from 'vue-chartjs'
 import { Chart as ChartJS, LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js'
-import { averageIntensityByMonth } from '../../utils/stats'
+import { averageIntensityByMonth, averageIntensityByDay, averageIntensityByWeek, type Period } from '../../utils/stats'
 import { useChartThemeColors, withAlpha } from '../../utils/chartTheme'
 import type { Migraine } from '../../types/migraine'
 
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend)
 
-const props = defineProps<{ migraines: Migraine[] }>()
+const props = defineProps<{ migraines: Migraine[]; period?: Period }>()
 const themeColors = useChartThemeColors()
 
 const chartData = computed(() => {
-  const data = averageIntensityByMonth(props.migraines)
+  const p = props.period ?? 'month'
+  let items: { label: string; avg: number }[]
+  if (p === 'day') {
+    items = averageIntensityByDay(props.migraines).map((d) => ({ label: d.day.slice(5), avg: d.avg }))
+  } else if (p === 'week') {
+    items = averageIntensityByWeek(props.migraines).map((d) => ({ label: d.week.slice(5), avg: d.avg }))
+  } else {
+    items = averageIntensityByMonth(props.migraines).map((d) => ({ label: d.month.slice(5), avg: d.avg }))
+  }
   return {
-    labels: data.map((d) => d.month.slice(5)),
+    labels: items.map((d) => d.label),
     datasets: [
       {
         label: 'Intensité moyenne',
-        data: data.map((d) => d.avg),
+        data: items.map((d) => d.avg),
         borderColor: themeColors.accent.value,
         backgroundColor: themeColors.accent.value,
         tension: 0.3,
