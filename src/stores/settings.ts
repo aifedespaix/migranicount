@@ -3,7 +3,7 @@ import { ref, computed, watchEffect } from 'vue'
 import { getJSON, setJSON } from '../storage/storage'
 
 export type ThemeChoice = 'light' | 'dark' | 'auto' | 'migraine'
-export type FontChoice = 'none' | 'lexend' | 'opendyslexic'
+export type FontChoice = 'none' | 'lexend'
 
 interface SettingsState {
   theme: ThemeChoice
@@ -15,6 +15,7 @@ const DEFAULTS: SettingsState = { theme: 'auto', dyslexicFont: 'none' }
 
 export const useSettingsStore = defineStore('settings', () => {
   const initial = getJSON<SettingsState>(STORAGE_KEY, DEFAULTS)
+  if ((initial.dyslexicFont as string) === 'opendyslexic') initial.dyslexicFont = 'none'
   const theme = ref<ThemeChoice>(initial.theme)
   const dyslexicFont = ref<FontChoice>(initial.dyslexicFont)
 

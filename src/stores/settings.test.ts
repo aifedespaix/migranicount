@@ -67,11 +67,18 @@ describe('useSettingsStore', () => {
   it('persists theme and dyslexicFont across store instances', () => {
     const store = useSettingsStore()
     store.setTheme('migraine')
-    store.setDyslexicFont('opendyslexic')
+    store.setDyslexicFont('lexend')
 
     setActivePinia(createPinia())
     const reloaded = useSettingsStore()
     expect(reloaded.theme).toBe('migraine')
-    expect(reloaded.dyslexicFont).toBe('opendyslexic')
+    expect(reloaded.dyslexicFont).toBe('lexend')
+  })
+
+  it('migrates stored "opendyslexic" to "none" on load', () => {
+    localStorage.setItem('settings', JSON.stringify({ theme: 'auto', dyslexicFont: 'opendyslexic' }))
+    setActivePinia(createPinia())
+    const store = useSettingsStore()
+    expect(store.dyslexicFont).toBe('none')
   })
 })

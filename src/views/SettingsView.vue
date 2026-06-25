@@ -61,31 +61,31 @@
           <span class="font-preview" style="font-family: 'Lexend', sans-serif">Aa Bb Cc</span>
           <span class="font-option-label">Lexend</span>
         </button>
-        <button
-          type="button"
-          class="font-option"
-          :class="{ active: settings.dyslexicFont === 'opendyslexic' }"
-          @click="settings.setDyslexicFont('opendyslexic')"
-        >
-          <span class="font-preview" style="font-family: 'OpenDyslexic', sans-serif">Aa Bb Cc</span>
-          <span class="font-option-label">OpenDyslexic</span>
-        </button>
       </div>
     </section>
 
     <section>
-      <h2>Export</h2>
-      <button @click="doExport">Télécharger mes données (JSON)</button>
+      <h2>Données</h2>
+      <div class="data-actions">
+        <button class="action-btn" @click="doExport">
+          <span>⬇</span> Exporter mes données (JSON)
+        </button>
+        <label class="action-btn import-label">
+          <span>⬆</span> Importer un fichier
+          <input type="file" accept="application/json" class="sr-only" @change="onFileSelected" />
+        </label>
+      </div>
     </section>
-    <section>
-      <h2>Import</h2>
-      <input type="file" accept="application/json" @change="onFileSelected" />
-      <p v-if="confirming" class="confirm-box">
-        Importer ce fichier remplacera toutes les données actuelles. Confirmer ?
-        <button @click="confirmImport">Oui, remplacer</button>
-        <button @click="confirming = false">Annuler</button>
-      </p>
-    </section>
+
+    <ConfirmDialog
+      v-if="confirming"
+      title="Remplacer les données ?"
+      message="Importer ce fichier remplacera toutes vos données actuelles. Cette action est irréversible."
+      confirm-label="Oui, remplacer"
+      cancel-label="Annuler"
+      @confirm="confirmImport"
+      @cancel="confirming = false"
+    />
   </div>
 </template>
 
@@ -93,6 +93,7 @@
 import { ref } from 'vue'
 import { exportAll, importAll } from '../storage/migraineRepository'
 import { useSettingsStore } from '../stores/settings'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
 
 const settings = useSettingsStore()
 const confirming = ref(false)
@@ -163,5 +164,44 @@ function confirmImport() {
 .font-option-label {
   font-size: 0.8rem;
   color: var(--color-muted);
+}
+.data-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 24rem;
+}
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-muted);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.action-btn:hover {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 5%, var(--color-surface));
+}
+.import-label {
+  cursor: pointer;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 </style>
