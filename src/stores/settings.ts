@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watchEffect } from 'vue'
 import { getJSON, setJSON } from '../storage/storage'
+import { pb } from '../lib/pocketbase'
+import { patchPreferences } from '../lib/pbSync'
 
 export type ThemeChoice = 'light' | 'dark' | 'auto' | 'migraine'
 export type FontChoice = 'none' | 'lexend'
@@ -56,11 +58,17 @@ export const useSettingsStore = defineStore('settings', () => {
   function setTheme(t: ThemeChoice): void {
     theme.value = t
     persist()
+    if (pb.authStore.isValid) {
+      patchPreferences({ theme: t }).catch(console.error)
+    }
   }
 
   function setDyslexicFont(f: FontChoice): void {
     dyslexicFont.value = f
     persist()
+    if (pb.authStore.isValid) {
+      patchPreferences({ dyslexicFont: f }).catch(console.error)
+    }
   }
 
   return { theme, dyslexicFont, resolvedTheme, setTheme, setDyslexicFont }

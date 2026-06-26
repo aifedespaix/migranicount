@@ -35,6 +35,7 @@
       >
         <SettingsIcon :size="18" />
       </button>
+      <AuthButton />
       <button class="add-btn" :class="{ 'add-btn--resume': props.hasDraft }" @click="$emit('add')">
         {{ props.hasDraft ? '↩ Reprendre' : '+ Ajouter' }}
       </button>
@@ -48,6 +49,7 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { BookOpen, BarChart2, List, Settings as SettingsIcon } from 'lucide-vue-next'
 import CatalogModal from './CatalogModal.vue'
+import AuthButton from './AuthButton.vue'
 
 const props = defineProps<{ hasDraft?: boolean }>()
 defineEmits<{ add: [] }>()
