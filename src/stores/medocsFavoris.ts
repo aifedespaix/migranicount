@@ -4,6 +4,7 @@ import {
   listMedocsFavoris,
   registerMedocUsage,
   updateMedocFavoriDescription,
+  updateMedocFavoriPosologie,
   addMedocFavori,
   deleteMedocFavori,
   renameMedocFavori,
@@ -41,6 +42,13 @@ export const useMedocsFavorisStore = defineStore('medocsFavoris', () => {
     if (pb.authStore.isValid) deleteMedocFavoriRemote(nom).catch(console.error)
   }
 
+  function updatePosologie(nom: string, posologieParJour?: number, intervalleHeures?: number): void {
+    updateMedocFavoriPosologie(nom, posologieParJour, intervalleHeures)
+    favoris.value = listMedocsFavoris()
+    const updated = favoris.value.find((f) => f.nom === nom)
+    if (updated && pb.authStore.isValid) pushMedocFavori(updated).catch(console.error)
+  }
+
   function renameMedoc(oldNom: string, newNom: string): void {
     renameMedocFavori(oldNom, newNom)
     favoris.value = listMedocsFavoris()
@@ -55,5 +63,5 @@ export const useMedocsFavorisStore = defineStore('medocsFavoris', () => {
     favoris.value = listMedocsFavoris()
   }
 
-  return { favoris, registerUsage, updateDescription, addMedoc, deleteMedoc, renameMedoc, refresh }
+  return { favoris, registerUsage, updateDescription, updatePosologie, addMedoc, deleteMedoc, renameMedoc, refresh }
 })

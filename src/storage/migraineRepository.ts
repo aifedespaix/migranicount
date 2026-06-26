@@ -79,6 +79,19 @@ export function updateMedocFavoriDescription(nom: string, description: string): 
   setJSON(MEDOCS_KEY, favoris)
 }
 
+export function updateMedocFavoriPosologie(
+  nom: string,
+  posologieParJour?: number,
+  intervalleHeures?: number,
+): void {
+  const favoris = listMedocsFavoris()
+  const existing = favoris.find((f) => f.nom === nom)
+  if (!existing) return
+  existing.posologieParJour = posologieParJour || undefined
+  existing.intervalleHeures = intervalleHeures || undefined
+  setJSON(MEDOCS_KEY, favoris)
+}
+
 export function listDeclencheursFavoris(): string[] {
   return getJSON<string[]>(DECLENCHEURS_KEY, [])
 }

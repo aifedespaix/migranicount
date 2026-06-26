@@ -11,7 +11,7 @@
             :key="i"
             type="button"
             class="stepper-btn"
-            :class="{ active: i === stepIndex, past: i < stepIndex }"
+            :class="{ active: i === stepIndex, past: i !== stepIndex }"
             @click="goToStep(i)"
           >
             <component :is="icon" :size="14" />
@@ -39,6 +39,8 @@
                   <div v-if="editingMedoc?.nom === item.nom" class="catalog-edit-form">
                     <input v-model="editingMedoc.newNom" placeholder="Nom" class="catalog-input" @keyup.enter="saveMedocEdit" @keyup.escape="editingMedoc = null" />
                     <input v-model="editingMedoc.description" placeholder="Description (optionnel)" class="catalog-input" @keyup.enter="saveMedocEdit" @keyup.escape="editingMedoc = null" />
+                    <input v-model.number="editingMedoc.posologieParJour" type="number" min="1" max="24" placeholder="Prises/jour (optionnel)" class="catalog-input" @keyup.enter="saveMedocEdit" @keyup.escape="editingMedoc = null" />
+                    <input v-model.number="editingMedoc.intervalleHeures" type="number" min="0.5" max="48" step="0.5" placeholder="Intervalle (heures, optionnel)" class="catalog-input" @keyup.enter="saveMedocEdit" @keyup.escape="editingMedoc = null" />
                     <div class="catalog-edit-actions">
                       <button type="button" class="btn-secondary btn-sm" @click="editingMedoc = null">Annuler</button>
                       <button type="button" class="btn-primary btn-sm" @click="saveMedocEdit">Enregistrer</button>
@@ -48,6 +50,7 @@
                     <div class="catalog-item-info">
                       <span class="catalog-item-nom">{{ item.nom }}</span>
                       <span v-if="item.description" class="catalog-item-desc">{{ item.description }}</span>
+                      <span v-if="item.posologieParJour || item.intervalleHeures" class="catalog-item-desc">{{ [item.posologieParJour ? `${item.posologieParJour}× /jour` : null, item.intervalleHeures ? `≥${item.intervalleHeures}h entre prises` : null].filter(Boolean).join(' · ') }}</span>
                     </div>
                     <div class="catalog-item-actions">
                       <button type="button" class="icon-action-btn" title="Modifier" @click="startMedocEdit(item)">
@@ -217,7 +220,13 @@ function goToStep(i: number) {
 
 // Médicaments
 const newMedocNom = ref('')
-const editingMedoc = ref<{ nom: string; newNom: string; description: string } | null>(null)
+const editingMedoc = ref<{
+  nom: string
+  newNom: string
+  description: string
+  posologieParJour: number | undefined
+  intervalleHeures: number | undefined
+} | null>(null)
 
 function addMedoc() {
   if (!newMedocNom.value.trim()) return
@@ -225,14 +234,26 @@ function addMedoc() {
   newMedocNom.value = ''
 }
 function startMedocEdit(item: MedocFavori) {
-  editingMedoc.value = { nom: item.nom, newNom: item.nom, description: item.description ?? '' }
+  editingMedoc.value = {
+    nom: item.nom,
+    newNom: item.nom,
+    description: item.description ?? '',
+    posologieParJour: item.posologieParJour,
+    intervalleHeures: item.intervalleHeures,
+  }
 }
 function saveMedocEdit() {
   if (!editingMedoc.value) return
-  const { nom, newNom, description } = editingMedoc.value
+  const { nom, newNom, description, posologieParJour, intervalleHeures } = editingMedoc.value
   const capitalized = capitalizeFirstLetter(newNom.trim())
   if (capitalized && capitalized !== nom) medocs.renameMedoc(nom, capitalized)
-  medocs.updateDescription(capitalized || nom, description)
+  const finalNom = capitalized || nom
+  medocs.updateDescription(finalNom, description)
+  medocs.updatePosologie(
+    finalNom,
+    posologieParJour && !isNaN(posologieParJour) ? posologieParJour : undefined,
+    intervalleHeures && !isNaN(intervalleHeures) ? intervalleHeures : undefined,
+  )
   editingMedoc.value = null
 }
 
