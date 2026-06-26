@@ -1,17 +1,66 @@
 <template>
   <div class="step">
-    <div class="pill-group">
-      <button v-for="f in favoris.favoris" :key="f.nom" type="button" class="pill-btn" @click="addFromFavori(f)">
-        {{ f.nom }}
+    <!-- Raccourcis favoris -->
+    <div v-if="favoris.favoris.length > 0" class="favorites-section">
+      <p class="field-label">Raccourcis</p>
+      <div class="pill-group">
+        <button
+          v-for="f in favoris.favoris"
+          :key="f.nom"
+          type="button"
+          class="pill-btn"
+          :class="{ active: nomInput === f.nom }"
+          @click="prefillFromFavori(f)"
+        >
+          {{ f.nom }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Formulaire d'ajout -->
+    <form class="medoc-add-form" @submit.prevent="addNew">
+      <div class="field-group">
+        <label class="field-label" for="medoc-nom">Médicament</label>
+        <input
+          id="medoc-nom"
+          v-model="nomInput"
+          placeholder="Nom du médicament"
+          required
+          class="form-input"
+        />
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="medoc-desc">Description</label>
+        <input
+          id="medoc-desc"
+          v-model="descriptionInput"
+          placeholder="Dosage, forme... (optionnel)"
+          class="form-input"
+        />
+      </div>
+      <div class="field-group">
+        <label class="field-label">Heure de prise</label>
+        <TimeField v-model="heureInput" />
+      </div>
+      <button type="submit" class="pill-btn pill-btn--primary">
+        <Plus :size="15" />
+        Ajouter cette prise
       </button>
+    </form>
+
+    <!-- Prises enregistrées -->
+    <div v-if="model.medocs.length > 0" class="prises-section">
+      <p class="field-label">Prises enregistrées</p>
+      <div v-for="(p, i) in model.medocs" :key="p.id" class="form-card medoc-row">
+        <span class="medoc-nom">{{ p.nom }}</span>
+        <TimeField v-model="model.medocs[i].heure" class="medoc-heure-inline" />
+        <button type="button" class="icon-btn" @click="remove(i)" aria-label="Supprimer">
+          <X :size="14" />
+        </button>
+      </div>
     </div>
 
-    <div v-for="(p, i) in model.medocs" :key="p.id" class="form-card medoc-row">
-      <span class="medoc-nom">{{ p.nom }}</span>
-      <TimeField v-model="model.medocs[i].heure" class="medoc-heure-inline" />
-      <button type="button" class="icon-btn" @click="remove(i)" aria-label="Supprimer">✕</button>
-    </div>
-
+    <!-- Section avortée -->
     <div v-if="model.medocs.length > 0" class="avortee-section">
       <p class="field-label">Migraine avortée par ce traitement ?</p>
       <div class="pill-group">
@@ -35,18 +84,12 @@
         >Non</button>
       </div>
     </div>
-
-    <form class="medoc-add-form" @submit.prevent="addNew">
-      <input v-model="nomInput" placeholder="Nom du médicament" required />
-      <input v-model="descriptionInput" placeholder="Description (optionnel)" />
-      <TimeField v-model="heureInput" />
-      <button type="submit" class="pill-btn">+ Ajouter une prise</button>
-    </form>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { Plus, X } from 'lucide-vue-next'
 import { newId } from '../../utils/uuid'
 import { addMinutesToHHmm } from '../../utils/date'
 import { capitalizeFirstLetter } from '../../utils/text'
@@ -62,9 +105,9 @@ const nomInput = ref('')
 const descriptionInput = ref('')
 const heureInput = ref(addMinutesToHHmm(model.value.heureDebut, 15))
 
-function addFromFavori(f: MedocFavori) {
-  model.value.medocs.push({ id: newId(), nom: f.nom, description: f.description, heure: heureInput.value })
-  favoris.registerUsage(f.nom, f.description)
+function prefillFromFavori(f: MedocFavori) {
+  nomInput.value = f.nom
+  descriptionInput.value = f.description ?? ''
 }
 
 function addNew() {
@@ -82,28 +125,59 @@ function remove(index: number) {
 </script>
 
 <style scoped>
+.favorites-section {
+  margin-bottom: 1rem;
+}
+.field-label {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  display: block;
+}
 .medoc-add-form {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-  margin-top: 0.75rem;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  background: var(--color-bg);
+  border-radius: 0.5rem;
+  margin-bottom: 0.75rem;
 }
-.medoc-add-form input {
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.form-input {
   padding: 0.5rem 0.75rem;
   border-radius: 0.5rem;
   border: 1px solid var(--color-muted);
   background: var(--color-surface);
   color: var(--color-text);
-  flex: 1;
-  min-width: 140px;
+  font-size: 0.9rem;
+}
+.pill-btn--primary {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  border-color: var(--color-accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  align-self: flex-start;
+}
+.prises-section {
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--color-bg);
+  padding-top: 0.75rem;
 }
 .icon-btn {
   background: none;
   border: none;
   cursor: pointer;
   color: var(--color-danger);
-  font-size: 1rem;
+  display: flex;
+  align-items: center;
 }
 .medoc-row {
   display: flex;
@@ -116,6 +190,7 @@ function remove(index: number) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 0.9rem;
 }
 .medoc-heure-inline {
   flex-shrink: 0;
