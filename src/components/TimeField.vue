@@ -6,9 +6,12 @@
       v-model="textValue"
       placeholder="HH:mm"
       @blur="onBlur"
-      @keydown.enter="onEnter"
+      @keydown.enter.prevent="onEnter"
+      @click="openPopup"
     />
-    <button type="button" class="time-field-icon" @click="togglePopup" aria-label="Choisir une heure">🕐</button>
+    <button type="button" class="time-field-icon" @click="togglePopup" aria-label="Choisir une heure">
+      <Clock :size="16" />
+    </button>
     <Teleport to="body">
       <div v-if="showPopup" ref="popupRef" class="time-field-popup" :style="popupStyle">
         <div class="time-column">
@@ -42,6 +45,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { Clock } from 'lucide-vue-next'
 import { parseLooseTime } from '../utils/date'
 
 const model = defineModel<string>({ required: true })
@@ -85,13 +89,35 @@ function updatePopupPosition() {
   popupStyle.value = { top: `${top}px`, left: `${left}px` }
 }
 
-function togglePopup() {
-  showPopup.value = !showPopup.value
-  if (showPopup.value) {
-    hourPicked.value = false
-    minutePicked.value = false
+function scrollToSelected() {
+  nextTick(() => {
+    const cols = popupRef.value?.querySelectorAll('.time-column')
+    if (!cols) return
+    const hBtn = cols[0]?.querySelector('.time-cell.selected') as HTMLElement | null
+    const mBtn = cols[1]?.querySelector('.time-cell.selected') as HTMLElement | null
+    hBtn?.scrollIntoView({ block: 'center' })
+    mBtn?.scrollIntoView({ block: 'center' })
+  })
+}
+
+function openPopup() {
+  if (showPopup.value) return
+  showPopup.value = true
+  // L'heure existante est déjà valide — un clic sur une minute suffit pour appliquer
+  hourPicked.value = true
+  minutePicked.value = false
+  updatePopupPosition()
+  nextTick(() => {
     updatePopupPosition()
-    nextTick(updatePopupPosition)
+    scrollToSelected()
+  })
+}
+
+function togglePopup() {
+  if (showPopup.value) {
+    showPopup.value = false
+  } else {
+    openPopup()
   }
 }
 
@@ -131,6 +157,8 @@ function onEnter() {
 
 function onOutsideClick(e: MouseEvent) {
   if (showPopup.value && rootRef.value && !rootRef.value.contains(e.target as Node)) {
+    const popupEl = popupRef.value
+    if (popupEl && popupEl.contains(e.target as Node)) return
     showPopup.value = false
   }
 }
@@ -166,12 +194,16 @@ onUnmounted(() => {
   color: var(--color-text);
   font-size: 0.95rem;
   width: 5rem;
+  cursor: pointer;
 }
 .time-field-icon {
   background: none;
   border: none;
   font-size: 1.2rem;
   cursor: pointer;
+  color: var(--color-muted);
+  display: flex;
+  align-items: center;
 }
 .time-field-popup {
   position: fixed;
