@@ -25,6 +25,7 @@
       </div>
 
       <div class="modal-body" :class="{ transitioning: isTransitioning }">
+        <div class="modal-body-inner">
         <Transition
           :name="transitionName"
           @before-enter="isTransitioning = true"
@@ -129,6 +130,7 @@
             </div>
           </div>
         </Transition>
+        </div>
       </div>
 
       <div class="modal-actions">
@@ -286,22 +288,21 @@ function executeDelete() {
 <style scoped>
 .modal-backdrop {
   position: fixed;
-  inset: 0;
+  top: 3.5rem;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: flex-end;
   z-index: 30;
 }
 .modal-sheet {
   background: var(--color-surface);
   width: 100%;
-  max-width: 100vw;
   box-sizing: border-box;
-  min-height: 50vh;
-  max-height: 90vh;
+  height: calc(100dvh - 3.5rem);
   display: flex;
   flex-direction: column;
-  border-radius: 1rem 1rem 0 0;
+  border-radius: 0;
   overflow: hidden;
 }
 .modal-header {
@@ -382,11 +383,20 @@ function executeDelete() {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
   position: relative;
 }
 .modal-body.transitioning {
   overflow: hidden;
+}
+.modal-body-inner {
+  margin: auto;
+  width: 100%;
+  padding: 1.25rem 1.5rem;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  position: relative;
 }
 .step-content {
   min-height: 100%;
@@ -572,14 +582,15 @@ function executeDelete() {
 }
 @media (min-width: 1024px) {
   .modal-backdrop {
-    align-items: flex-end;
+    top: 0;
+    display: flex;
+    align-items: center;
     justify-content: center;
-    padding-bottom: 2rem;
+    padding: 2rem;
   }
   .modal-sheet {
     width: 480px;
-    min-height: 0;
-    max-height: calc(100dvh - 7rem);
+    height: calc(100dvh - 4rem);
     border-radius: 1rem;
   }
 }
