@@ -13,9 +13,13 @@ export interface Migraine {
   medocs: MedocPris[]
   intensite: number
   avortee: boolean | 'probable'
-  nausee: boolean
-  vomissement: boolean
-  aura: boolean
+  symptomes: string[]
+  /** @deprecated remplacé par symptomes */
+  nausee?: boolean
+  /** @deprecated remplacé par symptomes */
+  vomissement?: boolean
+  /** @deprecated remplacé par symptomes */
+  aura?: boolean
   localisation: 'gauche' | 'droite' | 'bilaterale' | 'nuque' | null
   declencheurs: string[]
   notes?: string

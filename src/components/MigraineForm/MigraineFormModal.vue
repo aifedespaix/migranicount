@@ -1,5 +1,5 @@
 <template>
-  <div class="modal-backdrop" @click.self="requestClose">
+  <div class="modal-backdrop" @click.self="requestClose" @pointerdown.stop>
     <div class="modal-sheet">
       <header class="modal-header">
         <div class="stepper-nav" ref="stepperNavRef" role="tablist">
@@ -32,8 +32,12 @@
         <div class="progress-bar-fill" :style="{ width: progressPercent + '%' }"></div>
       </div>
 
-      <div class="modal-body" ref="modalBodyRef">
-        <Transition :name="transitionName">
+      <div class="modal-body" :class="{ transitioning: isTransitioning }" ref="modalBodyRef">
+        <Transition
+          :name="transitionName"
+          @before-enter="isTransitioning = true"
+          @after-leave="isTransitioning = false"
+        >
           <component :is="steps[stepIndex]" v-model="draft" :key="stepIndex" />
         </Transition>
       </div>
@@ -42,11 +46,11 @@
         <button
           type="button"
           class="action-btn action-btn-prev"
-          :disabled="stepIndex === 0"
+          :style="prevLabel ? {} : { visibility: 'hidden' }"
           @click="goPrev"
         >
           <ArrowLeft :size="18" />
-          Précédent
+          {{ prevLabel }}
         </button>
         <button
           type="button"
@@ -60,10 +64,10 @@
         <button
           type="button"
           class="action-btn action-btn-next"
-          :disabled="stepIndex === steps.length - 1"
+          :style="nextLabel ? {} : { visibility: 'hidden' }"
           @click="goNext"
         >
-          Suivant
+          {{ nextLabel }}
           <ArrowRight :size="18" />
         </button>
       </div>
@@ -117,6 +121,10 @@ const canSave = computed(() => canSaveDraft(draft.value))
 const modalBodyRef = ref<HTMLElement | null>(null)
 const stepperNavRef = ref<HTMLElement | null>(null)
 const transitionName = ref<'slide-next' | 'slide-prev'>('slide-next')
+const isTransitioning = ref(false)
+
+const prevLabel = computed(() => stepIndex.value > 0 ? stepTitles[stepIndex.value - 1] : null)
+const nextLabel = computed(() => stepIndex.value < steps.length - 1 ? stepTitles[stepIndex.value + 1] : null)
 
 function goNext() {
   const next = nextStepIndex(stepIndex.value, steps.length)
@@ -281,6 +289,9 @@ function submit() {
   padding: 1.25rem 1.5rem;
   position: relative;
 }
+.modal-body.transitioning {
+  overflow: hidden;
+}
 .slide-next-enter-active,
 .slide-next-leave-active,
 .slide-prev-enter-active,
@@ -368,13 +379,14 @@ function submit() {
 }
 @media (min-width: 1024px) {
   .modal-backdrop {
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
+    padding-bottom: 2rem;
   }
   .modal-sheet {
     width: 480px;
     min-height: 0;
-    max-height: 85vh;
+    max-height: calc(100dvh - 7rem);
     border-radius: 1rem;
   }
 }

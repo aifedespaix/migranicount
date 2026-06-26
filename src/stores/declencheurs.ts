@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { listDeclencheursFavoris, registerDeclencheur } from '../storage/migraineRepository'
+import { listDeclencheursFavoris, registerDeclencheur, deleteDeclencheur } from '../storage/migraineRepository'
 
 const DEFAULTS = ['stress', 'manque de sommeil', 'règles', 'alcool', 'écrans', 'météo', 'alimentation', 'déshydratation', 'effort physique', 'odeurs fortes']
 
@@ -12,7 +12,13 @@ export const useDeclencheursStore = defineStore('declencheurs', () => {
     customTags.value = listDeclencheursFavoris()
   }
 
-  const tags = () => Array.from(new Set([...DEFAULTS, ...customTags.value]))
+  function deleteCustom(tag: string): void {
+    deleteDeclencheur(tag)
+    customTags.value = listDeclencheursFavoris()
+  }
 
-  return { customTags, tags, register }
+  const tags = () => Array.from(new Set([...DEFAULTS, ...customTags.value]))
+  const isDefault = (tag: string) => DEFAULTS.includes(tag)
+
+  return { customTags, tags, register, deleteCustom, isDefault }
 })

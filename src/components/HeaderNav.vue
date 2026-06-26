@@ -1,9 +1,9 @@
 <template>
   <header class="header-nav">
-    <div class="header-brand">
+    <RouterLink :to="{ name: 'stats' }" class="header-brand">
       <img src="/icons/favicon-32.png" alt="" class="brand-icon" aria-hidden="true" />
       <span class="brand-name">Migracount</span>
-    </div>
+    </RouterLink>
 
     <nav class="header-links">
       <RouterLink :to="{ name: 'stats' }" class="nav-link">
@@ -18,18 +18,17 @@
 
     <div class="header-actions">
       <button
-        v-if="favoris.favoris.length > 0"
         type="button"
         class="icon-btn"
-        title="Modifier les médicaments"
-        aria-label="Modifier les médicaments"
-        @click="showMedocsEdit = true"
+        title="Modifier le répertoire"
+        aria-label="Modifier le répertoire"
+        @click="showCatalog = true"
       >
-        <Pencil :size="18" />
+        <BookOpen :size="18" />
       </button>
       <button
         type="button"
-        class="icon-btn"
+        :class="['icon-btn', { 'icon-btn--active': isSettings }]"
         title="Réglages"
         aria-label="Réglages"
         @click="router.push({ name: 'settings' })"
@@ -41,22 +40,22 @@
       </button>
     </div>
   </header>
-  <MedocsEditModal v-if="showMedocsEdit" @close="showMedocsEdit = false" />
+  <CatalogModal v-if="showCatalog" @close="showCatalog = false" />
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { Pencil, BarChart2, List, Settings as SettingsIcon } from 'lucide-vue-next'
-import { useMedocsFavorisStore } from '../stores/medocsFavoris'
-import MedocsEditModal from './MedocsEditModal.vue'
+import { ref, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { BookOpen, BarChart2, List, Settings as SettingsIcon } from 'lucide-vue-next'
+import CatalogModal from './CatalogModal.vue'
 
 const props = defineProps<{ hasDraft?: boolean }>()
 defineEmits<{ add: [] }>()
 
 const router = useRouter()
-const favoris = useMedocsFavorisStore()
-const showMedocsEdit = ref(false)
+const route = useRoute()
+const showCatalog = ref(false)
+const isSettings = computed(() => route.name === 'settings')
 </script>
 
 <style scoped>
@@ -82,6 +81,8 @@ const showMedocsEdit = ref(false)
   align-items: center;
   gap: 0.5rem;
   flex-shrink: 0;
+  text-decoration: none;
+  color: inherit;
 }
 .brand-icon {
   width: 24px;
@@ -133,6 +134,10 @@ const showMedocsEdit = ref(false)
 .icon-btn:hover {
   color: var(--color-text);
   background: color-mix(in srgb, var(--color-muted) 12%, transparent);
+}
+.icon-btn--active {
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 .add-btn {
   display: none;

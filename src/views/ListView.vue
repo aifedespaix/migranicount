@@ -18,7 +18,7 @@
           class="filter-input"
           placeholder="Rechercher (médoc, note, déclencheur, localisation)"
         />
-        <input v-model="month" type="month" class="filter-input" />
+        <MonthPickerField v-model="month" />
       </div>
 
       <div v-if="filtered.length === 0" class="empty-state">
@@ -42,6 +42,7 @@ import { useMigrainesStore } from '../stores/migraines'
 import { filterMigraines } from '../utils/migraineFilters'
 import MigraineListItem from '../components/MigraineListItem.vue'
 import MigraineFormModal from '../components/MigraineForm/MigraineFormModal.vue'
+import MonthPickerField from '../components/MonthPickerField.vue'
 import { useToastStore } from '../stores/toast'
 
 const migraines = useMigrainesStore()

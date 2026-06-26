@@ -128,7 +128,9 @@ function onEnter() {
 }
 
 function onOutsideClick(e: MouseEvent) {
-  if (showPopup.value && rootRef.value && !rootRef.value.contains(e.target as Node)) {
+  if (showPopup.value
+    && !rootRef.value?.contains(e.target as Node)
+    && !popupRef.value?.contains(e.target as Node)) {
     showPopup.value = false
   }
 }

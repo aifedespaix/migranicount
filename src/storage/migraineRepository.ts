@@ -5,11 +5,23 @@ import type { Migraine, MedocFavori } from '../types/migraine'
 const MIGRAINES_KEY = 'migraines'
 const MEDOCS_KEY = 'medocsFavoris'
 const DECLENCHEURS_KEY = 'declencheursFavoris'
+const SYMPTOMES_KEY = 'symptomesCustom'
 const SCHEMA_VERSION_KEY = 'schemaVersion'
-const SCHEMA_VERSION = 1
+const SCHEMA_VERSION = 2
+
+function migrateMigraine(m: any): Migraine {
+  if (!Array.isArray(m.symptomes)) {
+    m.symptomes = [
+      m.nausee ? 'Nausée' : null,
+      m.vomissement ? 'Vomissement' : null,
+      m.aura ? 'Aura visuelle' : null,
+    ].filter(Boolean) as string[]
+  }
+  return m as Migraine
+}
 
 export function listMigraines(): Migraine[] {
-  return getJSON<Migraine[]>(MIGRAINES_KEY, [])
+  return getJSON<Migraine[]>(MIGRAINES_KEY, []).map(migrateMigraine)
 }
 
 export function getMigraine(id: string): Migraine | undefined {
@@ -70,6 +82,47 @@ export function listDeclencheursFavoris(): string[] {
 export function registerDeclencheur(tag: string): void {
   const tags = listDeclencheursFavoris()
   if (!tags.includes(tag)) setJSON(DECLENCHEURS_KEY, [...tags, tag])
+}
+
+export function deleteDeclencheur(tag: string): void {
+  setJSON(DECLENCHEURS_KEY, listDeclencheursFavoris().filter((t) => t !== tag))
+}
+
+export function addMedocFavori(nom: string, description?: string): void {
+  const favoris = listMedocsFavoris()
+  if (!favoris.find((f) => f.nom === nom)) {
+    favoris.push({ nom, description, usageCount: 0 })
+    setJSON(MEDOCS_KEY, favoris)
+  }
+}
+
+export function deleteMedocFavori(nom: string): void {
+  setJSON(MEDOCS_KEY, listMedocsFavoris().filter((f) => f.nom !== nom))
+}
+
+export function renameMedocFavori(oldNom: string, newNom: string): void {
+  const favoris = listMedocsFavoris()
+  const existing = favoris.find((f) => f.nom === oldNom)
+  if (!existing) return
+  existing.nom = newNom
+  setJSON(MEDOCS_KEY, favoris)
+}
+
+export function listSymptomesCustom(): string[] {
+  return getJSON<string[]>(SYMPTOMES_KEY, [])
+}
+
+export function addSymptomeCustom(nom: string): void {
+  const items = listSymptomesCustom()
+  if (!items.includes(nom)) setJSON(SYMPTOMES_KEY, [...items, nom])
+}
+
+export function deleteSymptomeCustom(nom: string): void {
+  setJSON(SYMPTOMES_KEY, listSymptomesCustom().filter((s) => s !== nom))
+}
+
+export function renameSymptomeCustom(oldNom: string, newNom: string): void {
+  setJSON(SYMPTOMES_KEY, listSymptomesCustom().map((s) => (s === oldNom ? newNom : s)))
 }
 
 export function exportAll(): string {

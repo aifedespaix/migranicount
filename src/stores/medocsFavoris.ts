@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { listMedocsFavoris, registerMedocUsage, updateMedocFavoriDescription } from '../storage/migraineRepository'
+import { listMedocsFavoris, registerMedocUsage, updateMedocFavoriDescription, addMedocFavori, deleteMedocFavori, renameMedocFavori } from '../storage/migraineRepository'
 
 export const useMedocsFavorisStore = defineStore('medocsFavoris', () => {
   const favoris = ref(listMedocsFavoris())
@@ -15,5 +15,20 @@ export const useMedocsFavorisStore = defineStore('medocsFavoris', () => {
     favoris.value = listMedocsFavoris()
   }
 
-  return { favoris, registerUsage, updateDescription }
+  function addMedoc(nom: string, description?: string): void {
+    addMedocFavori(nom, description)
+    favoris.value = listMedocsFavoris()
+  }
+
+  function deleteMedoc(nom: string): void {
+    deleteMedocFavori(nom)
+    favoris.value = listMedocsFavoris()
+  }
+
+  function renameMedoc(oldNom: string, newNom: string): void {
+    renameMedocFavori(oldNom, newNom)
+    favoris.value = listMedocsFavoris()
+  }
+
+  return { favoris, registerUsage, updateDescription, addMedoc, deleteMedoc, renameMedoc }
 })
