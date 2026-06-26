@@ -17,8 +17,8 @@ describe('useMigrainesStore', () => {
     const store = useMigrainesStore()
     store.save({
       date: '2026-06-24', heureDebut: '08:00', heureFin: null,
-      medocs: [], intensite: 5, avortee: false, nausee: false,
-      vomissement: false, aura: false, localisation: null, declencheurs: [],
+      medocs: [], intensite: 5, avortee: false, symptomes: [],
+      localisation: null, declencheurs: [],
     })
     expect(store.migraines).toHaveLength(1)
   })
@@ -27,8 +27,8 @@ describe('useMigrainesStore', () => {
     const store = useMigrainesStore()
     const m = store.save({
       date: '2026-06-24', heureDebut: '08:00', heureFin: null,
-      medocs: [], intensite: 5, avortee: false, nausee: false,
-      vomissement: false, aura: false, localisation: null, declencheurs: [],
+      medocs: [], intensite: 5, avortee: false, symptomes: [],
+      localisation: null, declencheurs: [],
     })
     store.remove(m.id)
     expect(store.migraines).toHaveLength(0)

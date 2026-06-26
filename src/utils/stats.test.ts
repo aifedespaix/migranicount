@@ -9,8 +9,8 @@ import type { Migraine } from '../types/migraine'
 function makeMigraine(overrides: Partial<Migraine>): Migraine {
   return {
     id: 'x', date: '2026-06-01', heureDebut: '08:00', heureFin: '10:00',
-    medocs: [], intensite: 5, avortee: false, nausee: false, vomissement: false,
-    aura: false, localisation: null, declencheurs: [], createdAt: '', updatedAt: '',
+    medocs: [], intensite: 5, avortee: false, symptomes: [],
+    localisation: null, declencheurs: [], createdAt: '', updatedAt: '',
     ...overrides,
   }
 }
