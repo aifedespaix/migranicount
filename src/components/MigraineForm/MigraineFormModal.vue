@@ -45,7 +45,7 @@
             @before-enter="onBeforeEnter"
             @after-leave="onAfterLeave"
           >
-            <component :is="steps[stepIndex]" v-model="draft" :key="stepIndex" @delete="showDeleteConfirm = true" />
+            <component :is="steps[stepIndex]" v-model="draft" :key="stepIndex" :edit-id="props.editId" @delete="showDeleteConfirm = true" />
           </Transition>
         </div>
       </div>

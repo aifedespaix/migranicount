@@ -28,12 +28,11 @@
             <button
               type="button"
               class="medoc-recap-item"
-              :disabled="!m.description"
-              @click="toggleExpanded(m.id)"
+              :disabled="!m.description && !m.posologieParJour && !m.intervalleHeures"
+              @click="activeMedoc = m"
             >
               {{ m.nom }} ({{ m.heure }})
             </button>
-            <p v-if="expandedId === m.id" class="medoc-recap-description">{{ m.description }}</p>
           </li>
         </ul>
       </div>
@@ -76,6 +75,14 @@
         <p class="recap-value">{{ model.notes }}</p>
       </div>
     </div>
+
+    <div v-if="editId" class="recap-delete-zone">
+      <button type="button" class="btn-delete-ghost" @click="$emit('delete')">
+        Supprimer cette migraine
+      </button>
+    </div>
+
+    <MedocInfoDialog v-if="activeMedoc" :medoc="activeMedoc" @close="activeMedoc = null" />
   </div>
 </template>
 
@@ -84,6 +91,11 @@ import { ref, computed } from 'vue'
 import { intensityColor, intensityLabel } from '../../utils/intensity'
 import { zoneLabel } from '../../utils/zone'
 import type { MigraineDraft } from './draft'
+import type { MedocPris } from '../../types/migraine'
+import MedocInfoDialog from '../MedocInfoDialog.vue'
+
+defineProps<{ editId?: string }>()
+defineEmits<{ delete: [] }>()
 
 const model = defineModel<MigraineDraft>({ required: true })
 
@@ -94,11 +106,7 @@ const hasSymptoms = computed(
   () => model.value.avortee || model.value.symptomes.length > 0
 )
 
-const expandedId = ref<string | null>(null)
-
-function toggleExpanded(id: string) {
-  expandedId.value = expandedId.value === id ? null : id
-}
+const activeMedoc = ref<MedocPris | null>(null)
 </script>
 
 <style scoped>
@@ -122,11 +130,6 @@ function toggleExpanded(id: string) {
   cursor: default;
   opacity: 0.7;
 }
-.medoc-recap-description {
-  margin: 0.2rem 0 0;
-  font-size: 0.85rem;
-  color: var(--color-muted);
-}
 .intensity-badge {
   display: inline-flex;
   align-items: center;
@@ -138,5 +141,19 @@ function toggleExpanded(id: string) {
   font-weight: 700;
   font-size: 0.8rem;
   margin-right: 0.4rem;
+}
+.btn-delete-ghost {
+  width: 100%;
+  margin-top: 1.5rem;
+  padding: 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-danger);
+  background: transparent;
+  color: var(--color-danger);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.btn-delete-ghost:hover {
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
 }
 </style>
