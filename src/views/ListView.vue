@@ -80,8 +80,13 @@ function resetFilters() {
 }
 
 function onEditSaved() {
+  const wasDeleted = editId.value && !migraines.getById(editId.value)
   editId.value = null
-  toastStore.add({ message: 'Migraine mise à jour !', type: 'success', persistent: false })
+  if (wasDeleted) {
+    toastStore.add({ message: 'Migraine supprimée.', type: 'success', persistent: false })
+  } else {
+    toastStore.add({ message: 'Migraine mise à jour !', type: 'success', persistent: false })
+  }
 }
 
 function onAddSaved() {

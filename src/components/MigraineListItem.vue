@@ -34,6 +34,12 @@
         <span v-for="d in migraine.declencheurs.slice(0, 2)" :key="d" class="footer-tag">{{ d }}</span>
         <span v-if="migraine.declencheurs.length > 2" class="footer-more">+{{ migraine.declencheurs.length - 2 }}</span>
       </div>
+
+      <div v-if="missingCount > 0" class="card-incomplete">
+        <AppTooltip :content="incompleteTooltip" placement="top">
+          <AlertCircle :size="12" class="incomplete-icon" />
+        </AppTooltip>
+      </div>
     </div>
   </li>
 </template>
@@ -44,6 +50,9 @@ import { formatRelative, formatDuration } from '../utils/date'
 import type { Migraine } from '../types/migraine'
 import { intensityColor as intensityColorFn } from '../utils/intensity'
 import { zoneLabel as zoneLabelFn } from '../utils/zone'
+import { stepMissingCount } from '../utils/stepValidation'
+import { AlertCircle } from 'lucide-vue-next'
+import AppTooltip from './AppTooltip.vue'
 
 const props = defineProps<{ migraine: Migraine }>()
 defineEmits<{ click: [] }>()
@@ -57,6 +66,17 @@ const durationLabel = computed(() => {
 
 const intensityColorValue = computed(() => intensityColorFn(props.migraine.intensite))
 const zoneLabel = computed(() => zoneLabelFn(props.migraine.zone))
+
+const missingCount = computed(() =>
+  stepMissingCount(0, props.migraine) + stepMissingCount(4, props.migraine)
+)
+
+const incompleteTooltip = computed(() => {
+  const parts = []
+  if (stepMissingCount(0, props.migraine) > 0) parts.push('heure de fin manquante')
+  if (stepMissingCount(4, props.migraine) > 0) parts.push('zone non renseignée')
+  return 'Saisie incomplète : ' + parts.join(', ')
+})
 </script>
 
 <style scoped>
@@ -184,5 +204,15 @@ const zoneLabel = computed(() => zoneLabelFn(props.migraine.zone))
 .footer-more {
   font-size: 0.65rem;
   color: var(--color-muted);
+}
+.card-incomplete {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.2rem;
+}
+.incomplete-icon {
+  color: var(--color-muted);
+  flex-shrink: 0;
+  margin-left: auto;
 }
 </style>

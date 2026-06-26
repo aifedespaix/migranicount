@@ -17,24 +17,26 @@
     </nav>
 
     <div class="header-actions">
-      <button
-        type="button"
-        class="icon-btn"
-        title="Modifier le répertoire"
-        aria-label="Modifier le répertoire"
-        @click="showCatalog = true"
-      >
-        <BookOpen :size="18" />
-      </button>
-      <button
-        type="button"
-        :class="['icon-btn', { 'icon-btn--active': isSettings }]"
-        title="Réglages"
-        aria-label="Réglages"
-        @click="router.push({ name: 'settings' })"
-      >
-        <SettingsIcon :size="18" />
-      </button>
+      <AppTooltip content="Modifier le répertoire" placement="bottom">
+        <button
+          type="button"
+          class="icon-btn"
+          aria-label="Modifier le répertoire"
+          @click="showCatalog = true"
+        >
+          <BookOpen :size="18" />
+        </button>
+      </AppTooltip>
+      <AppTooltip content="Réglages" placement="bottom">
+        <button
+          type="button"
+          :class="['icon-btn', { 'icon-btn--active': isSettings }]"
+          aria-label="Réglages"
+          @click="router.push({ name: 'settings' })"
+        >
+          <SettingsIcon :size="18" />
+        </button>
+      </AppTooltip>
       <AuthButton />
       <button class="add-btn" :class="{ 'add-btn--resume': props.hasDraft }" @click="$emit('add')">
         {{ props.hasDraft ? '↩ Reprendre' : '+ Ajouter' }}
@@ -50,6 +52,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { BookOpen, BarChart2, List, Settings as SettingsIcon } from 'lucide-vue-next'
 import CatalogModal from './CatalogModal.vue'
 import AuthButton from './AuthButton.vue'
+import AppTooltip from './AppTooltip.vue'
 
 const props = defineProps<{ hasDraft?: boolean }>()
 defineEmits<{ add: [] }>()
