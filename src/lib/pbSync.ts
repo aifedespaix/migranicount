@@ -79,6 +79,8 @@ export async function pushMedocFavori(f: MedocFavori): Promise<void> {
       nom: f.nom,
       description: f.description ?? null,
       usageCount: Math.max(f.usageCount, (existing['usageCount'] as number) ?? 0),
+      posologieParJour: f.posologieParJour ?? null,
+      intervalleHeures: f.intervalleHeures ?? null,
     })
   } catch {
     await pb.collection('medocs_favoris').create({
@@ -87,6 +89,8 @@ export async function pushMedocFavori(f: MedocFavori): Promise<void> {
       nom: f.nom,
       description: f.description ?? null,
       usageCount: f.usageCount,
+      posologieParJour: f.posologieParJour ?? null,
+      intervalleHeures: f.intervalleHeures ?? null,
     })
   }
 }

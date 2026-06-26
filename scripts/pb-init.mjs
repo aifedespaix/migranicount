@@ -103,6 +103,8 @@ async function createMedocsFavorisCollection() {
       { type: 'text', name: 'nom', required: true },
       { type: 'text', name: 'description' },
       { type: 'number', name: 'usageCount', required: true, min: 0 },
+      { type: 'number', name: 'posologieParJour', required: false },
+      { type: 'number', name: 'intervalleHeures', required: false },
     ],
     indexes: [
       'CREATE UNIQUE INDEX idx_medocs_user_local ON medocs_favoris (userId, localId)',
