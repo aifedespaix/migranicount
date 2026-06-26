@@ -198,6 +198,54 @@ export function averageIntensityByWeek(
   return result.map(({ week, total, count }) => ({ week, avg: count === 0 ? 0 : Math.round((total / count) * 10) / 10 }))
 }
 
+export function durationDistribution(migraines: Migraine[]): { label: string; count: number }[] {
+  const buckets = [
+    { label: '<2h', min: 0, max: 120 },
+    { label: '2-4h', min: 120, max: 240 },
+    { label: '4-8h', min: 240, max: 480 },
+    { label: '>8h', min: 480, max: Infinity },
+  ]
+  const counts = buckets.map((b) => ({ label: b.label, count: 0 }))
+  for (const m of migraines) {
+    if (!m.heureFin) continue
+    const dur = toMinutes(m.heureFin) - toMinutes(m.heureDebut)
+    const idx = buckets.findIndex((b) => dur >= b.min && dur < b.max)
+    if (idx >= 0) counts[idx].count++
+  }
+  return counts
+}
+
+export function triggerFrequency(migraines: Migraine[]): { tag: string; count: number }[] {
+  const map = new Map<string, number>()
+  for (const m of migraines) {
+    for (const d of m.declencheurs) {
+      map.set(d, (map.get(d) ?? 0) + 1)
+    }
+  }
+  return Array.from(map.entries())
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10)
+}
+
+export function intensityStats(migraines: Migraine[]): { avg: number; max: number; severeCount: number } {
+  if (!migraines.length) return { avg: 0, max: 0, severeCount: 0 }
+  const avg = averageIntensity(migraines)
+  const max = Math.max(...migraines.map((m) => m.intensite))
+  const severeCount = migraines.filter((m) => m.intensite >= 7).length
+  return { avg, max, severeCount }
+}
+
+export function durationStats(migraines: Migraine[]): { avgMin: number; maxMin: number } {
+  const durations = migraines
+    .filter((m) => m.heureFin)
+    .map((m) => toMinutes(m.heureFin!) - toMinutes(m.heureDebut))
+  if (!durations.length) return { avgMin: 0, maxMin: 0 }
+  const avg = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+  const max = Math.max(...durations)
+  return { avgMin: avg, maxMin: max }
+}
+
 export type Period = 'day' | 'week' | 'month'
 
 export function defaultPeriod(migraines: Migraine[]): Period {

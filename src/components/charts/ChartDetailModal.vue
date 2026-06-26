@@ -5,10 +5,24 @@
         <h2>{{ title }}</h2>
         <button class="close-btn" @click="$emit('close')" aria-label="Fermer">×</button>
       </header>
+
+      <div v-if="hasPeriodSelector" class="period-selector">
+        <button
+          v-for="p in (['day', 'week', 'month'] as const)"
+          :key="p"
+          type="button"
+          :class="['period-btn', { active: localPeriod === p }]"
+          @click="localPeriod = p"
+        >{{ periodLabels[p] }}</button>
+      </div>
+
       <div class="chart-detail-body">
         <div class="chart-detail-chart">
-          <FrequencyChart v-if="chart === 'frequency'" :migraines="migraines" />
-          <IntensityChart v-else-if="chart === 'intensity'" :migraines="migraines" />
+          <FrequencyChart v-if="chart === 'frequency'" :migraines="migraines" :period="localPeriod" />
+          <IntensityChart v-else-if="chart === 'intensity'" :migraines="migraines" :period="localPeriod" />
+          <IntensityDistributionChart v-else-if="chart === 'intensity-distribution'" :migraines="migraines" />
+          <MedocEfficacyChart v-else-if="chart === 'medoc-efficacy'" :migraines="migraines" />
+          <DurationChart v-else-if="chart === 'duration'" :migraines="migraines" />
         </div>
         <div class="chart-detail-stats">
           <template v-if="chart === 'frequency'">
@@ -22,10 +36,21 @@
             </p>
           </template>
           <template v-else-if="chart === 'intensity'">
-            <p><strong>Intensité moyenne :</strong> {{ avgIntensity }}/10</p>
-            <ul class="stat-list">
-              <li v-for="d in intensityDist" :key="d.level">Niveau {{ d.level }} : {{ d.count }} crise(s)</li>
-            </ul>
+            <p><strong>Intensité moyenne :</strong> {{ iStats.avg }}/10</p>
+            <p><strong>Maximum :</strong> {{ iStats.max }}/10</p>
+            <p><strong>Crises sévères (≥7) :</strong> {{ iStats.severeCount }}</p>
+          </template>
+          <template v-else-if="chart === 'intensity-distribution'">
+            <p><strong>Intensité moyenne :</strong> {{ iStats.avg }}/10</p>
+            <p><strong>Crises sévères (≥7) :</strong> {{ iStats.severeCount }}</p>
+          </template>
+          <template v-else-if="chart === 'medoc-efficacy'">
+            <p v-if="topMedoc"><strong>Médicament le plus efficace :</strong> {{ topMedoc.nom }} ({{ topMedoc.pctAvortee }}%)</p>
+            <p v-else>Aucune donnée de médicament disponible.</p>
+          </template>
+          <template v-else-if="chart === 'duration'">
+            <p><strong>Durée moyenne :</strong> {{ formatDuration(dStats.avgMin) }}</p>
+            <p><strong>Durée maximale :</strong> {{ formatDuration(dStats.maxMin) }}</p>
           </template>
         </div>
       </div>
@@ -34,14 +59,41 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import FrequencyChart from './FrequencyChart.vue'
 import IntensityChart from './IntensityChart.vue'
-import { frequencyTrendStats, intensityDistribution, averageIntensity } from '../../utils/stats'
+import IntensityDistributionChart from './IntensityDistributionChart.vue'
+import MedocEfficacyChart from './MedocEfficacyChart.vue'
+import DurationChart from './DurationChart.vue'
+import { frequencyTrendStats, intensityStats, durationStats, efficacyRanking, type Period } from '../../utils/stats'
+import { formatDuration } from '../../utils/date'
 import type { Migraine } from '../../types/migraine'
 
-const props = defineProps<{ chart: 'frequency' | 'intensity'; migraines: Migraine[] }>()
+type ChartType = 'frequency' | 'intensity' | 'intensity-distribution' | 'medoc-efficacy' | 'duration'
+
+const props = defineProps<{ chart: ChartType; migraines: Migraine[]; initialPeriod?: Period }>()
 const emit = defineEmits<{ close: [] }>()
+
+const localPeriod = ref<Period>(props.initialPeriod ?? 'month')
+const hasPeriodSelector = computed(() => props.chart === 'frequency' || props.chart === 'intensity')
+
+const periodLabels: Record<Period, string> = { day: 'Jour', week: 'Semaine', month: 'Mois' }
+
+const title = computed(() => {
+  const titles: Record<ChartType, string> = {
+    frequency: 'Fréquence des crises',
+    intensity: 'Intensité moyenne',
+    'intensity-distribution': 'Distribution des intensités',
+    'medoc-efficacy': 'Efficacité médicaments',
+    duration: 'Durée des crises',
+  }
+  return titles[props.chart]
+})
+
+const frequencyStats = computed(() => frequencyTrendStats(props.migraines))
+const iStats = computed(() => intensityStats(props.migraines))
+const dStats = computed(() => durationStats(props.migraines))
+const topMedoc = computed(() => efficacyRanking(props.migraines)[0] ?? null)
 
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') emit('close')
@@ -49,15 +101,6 @@ function handleKeydown(e: KeyboardEvent) {
 
 onMounted(() => document.addEventListener('keydown', handleKeydown))
 onUnmounted(() => document.removeEventListener('keydown', handleKeydown))
-
-const title = computed(() => {
-  if (props.chart === 'frequency') return 'Fréquence (12 derniers mois)'
-  return 'Intensité moyenne'
-})
-
-const frequencyStats = computed(() => frequencyTrendStats(props.migraines))
-const intensityDist = computed(() => intensityDistribution(props.migraines))
-const avgIntensity = computed(() => averageIntensity(props.migraines))
 </script>
 
 <style scoped>
@@ -86,6 +129,7 @@ const avgIntensity = computed(() => averageIntensity(props.migraines))
   justify-content: space-between;
   padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--color-muted);
+  flex-shrink: 0;
 }
 .close-btn {
   background: none;
@@ -93,6 +137,27 @@ const avgIntensity = computed(() => averageIntensity(props.migraines))
   font-size: 1.5rem;
   cursor: pointer;
   color: var(--color-text);
+}
+.period-selector {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem 0;
+  flex-shrink: 0;
+}
+.period-btn {
+  padding: 0.3rem 0.75rem;
+  border-radius: 1rem;
+  border: 1px solid var(--color-muted);
+  background: none;
+  color: var(--color-muted);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.period-btn.active {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  border-color: var(--color-accent);
 }
 .chart-detail-body {
   flex: 1;
@@ -105,14 +170,6 @@ const avgIntensity = computed(() => averageIntensity(props.migraines))
 }
 .chart-detail-chart {
   flex: 1;
-  min-height: 280px;
-}
-.stat-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.stat-list li {
-  padding: 0.25rem 0;
+  min-height: 240px;
 }
 </style>
