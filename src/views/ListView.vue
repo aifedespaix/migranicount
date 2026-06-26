@@ -16,9 +16,24 @@
           v-model="keyword"
           type="search"
           class="filter-input"
-          placeholder="Rechercher (médoc, note, déclencheur, localisation)"
+          placeholder="Rechercher (médoc, note, symptôme, déclencheur, zone)"
         />
-        <MonthPickerField v-model="month" />
+        <div class="date-range">
+          <div class="date-range-field">
+            <label class="date-range-label">Du</label>
+            <div class="date-range-input-wrap">
+              <input type="date" v-model="dateFrom" class="filter-input filter-input--date" />
+              <button v-if="dateFrom" type="button" class="date-clear-btn" @click="dateFrom = ''">×</button>
+            </div>
+          </div>
+          <div class="date-range-field">
+            <label class="date-range-label">Au</label>
+            <div class="date-range-input-wrap">
+              <input type="date" v-model="dateTo" class="filter-input filter-input--date" />
+              <button v-if="dateTo" type="button" class="date-clear-btn" @click="dateTo = ''">×</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div v-if="filtered.length === 0" class="empty-state">
@@ -42,7 +57,6 @@ import { useMigrainesStore } from '../stores/migraines'
 import { filterMigraines } from '../utils/migraineFilters'
 import MigraineListItem from '../components/MigraineListItem.vue'
 import MigraineFormModal from '../components/MigraineForm/MigraineFormModal.vue'
-import MonthPickerField from '../components/MonthPickerField.vue'
 import { useToastStore } from '../stores/toast'
 
 const migraines = useMigrainesStore()
@@ -50,17 +64,19 @@ const toastStore = useToastStore()
 const editId = ref<string | null>(null)
 const addFormOpen = ref(false)
 const keyword = ref('')
-const month = ref('')
+const dateFrom = ref('')
+const dateTo = ref('')
 
 const sorted = computed(() =>
   [...migraines.migraines].sort((a, b) => (a.date + a.heureDebut < b.date + b.heureDebut ? 1 : -1))
 )
 
-const filtered = computed(() => filterMigraines(sorted.value, { keyword: keyword.value, month: month.value }))
+const filtered = computed(() => filterMigraines(sorted.value, { keyword: keyword.value, dateFrom: dateFrom.value, dateTo: dateTo.value }))
 
 function resetFilters() {
   keyword.value = ''
-  month.value = ''
+  dateFrom.value = ''
+  dateTo.value = ''
 }
 
 function onEditSaved() {
@@ -115,6 +131,42 @@ function onAddSaved() {
   background: var(--color-surface);
   color: var(--color-text);
   font-size: 0.95rem;
+}
+.date-range {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.date-range-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.date-range-label {
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  font-weight: 500;
+}
+.date-range-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.filter-input--date {
+  flex: none;
+  min-width: auto;
+  padding-right: 1.75rem;
+}
+.date-clear-btn {
+  position: absolute;
+  right: 0.4rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-muted);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
 }
 .migraine-grid {
   display: grid;

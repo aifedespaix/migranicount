@@ -1,33 +1,31 @@
 <template>
   <div class="step">
-    <!-- Raccourcis favoris -->
-    <div v-if="favoris.favoris.length > 0" class="favorites-section">
-      <p class="field-label">Raccourcis</p>
-      <div class="pill-group">
-        <button
-          v-for="f in favoris.favoris"
-          :key="f.nom"
-          type="button"
-          class="pill-btn"
-          :class="{ active: nomInput === f.nom }"
-          @click="prefillFromFavori(f)"
-        >
-          {{ f.nom }}
-        </button>
-      </div>
-    </div>
-
     <!-- Formulaire d'ajout -->
     <form class="medoc-add-form" @submit.prevent="addNew">
       <div class="field-group">
         <label class="field-label" for="medoc-nom">Médicament</label>
-        <input
-          id="medoc-nom"
-          v-model="nomInput"
-          placeholder="Nom du médicament"
-          required
-          class="form-input"
-        />
+        <div class="combobox-wrapper">
+          <input
+            id="medoc-nom"
+            v-model="nomInput"
+            placeholder="Nom du médicament"
+            class="form-input"
+            autocomplete="off"
+            @focus="showDropdown = true"
+            @blur="scheduleCloseDropdown"
+          />
+          <ul v-if="showDropdown && filteredFavoris.length" class="combobox-dropdown">
+            <li
+              v-for="f in filteredFavoris"
+              :key="f.nom"
+              class="combobox-item"
+              @mousedown.prevent="selectFavori(f)"
+            >
+              <span class="combobox-item-nom">{{ f.nom }}</span>
+              <span v-if="f.description" class="combobox-item-desc">{{ f.description }}</span>
+            </li>
+          </ul>
+        </div>
       </div>
       <div class="field-group">
         <label class="field-label" for="medoc-desc">Description</label>
@@ -42,7 +40,33 @@
         <label class="field-label">Heure de prise</label>
         <TimeField v-model="heureInput" />
       </div>
-      <button type="submit" class="pill-btn pill-btn--primary">
+
+      <!-- Section avortée (avant le bouton Ajouter) -->
+      <div class="avortee-section">
+        <p class="field-label">Migraine avortée par ce traitement ?</p>
+        <div class="pill-group">
+          <button
+            type="button"
+            class="pill-btn"
+            :class="{ active: model.avortee === true }"
+            @click="model.avortee = true"
+          >Oui</button>
+          <button
+            type="button"
+            class="pill-btn"
+            :class="{ active: model.avortee === 'probable' }"
+            @click="model.avortee = 'probable'"
+          >Probable</button>
+          <button
+            type="button"
+            class="pill-btn"
+            :class="{ active: model.avortee === false }"
+            @click="model.avortee = false"
+          >Non</button>
+        </div>
+      </div>
+
+      <button type="submit" class="pill-btn pill-btn--primary" :disabled="!nomInput.trim()">
         <Plus :size="15" />
         Ajouter cette prise
       </button>
@@ -59,36 +83,11 @@
         </button>
       </div>
     </div>
-
-    <!-- Section avortée -->
-    <div v-if="model.medocs.length > 0" class="avortee-section">
-      <p class="field-label">Migraine avortée par ce traitement ?</p>
-      <div class="pill-group">
-        <button
-          type="button"
-          class="pill-btn"
-          :class="{ active: model.avortee === true }"
-          @click="model.avortee = true"
-        >Oui</button>
-        <button
-          type="button"
-          class="pill-btn"
-          :class="{ active: model.avortee === 'probable' }"
-          @click="model.avortee = 'probable'"
-        >Probable</button>
-        <button
-          type="button"
-          class="pill-btn"
-          :class="{ active: model.avortee === false }"
-          @click="model.avortee = false"
-        >Non</button>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { Plus, X } from 'lucide-vue-next'
 import { newId } from '../../utils/uuid'
 import { addMinutesToHHmm } from '../../utils/date'
@@ -104,14 +103,30 @@ const favoris = useMedocsFavorisStore()
 const nomInput = ref('')
 const descriptionInput = ref('')
 const heureInput = ref(addMinutesToHHmm(model.value.heureDebut, 15))
+const showDropdown = ref(false)
 
-function prefillFromFavori(f: MedocFavori) {
+function normalize(s: string) {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+}
+
+const filteredFavoris = computed(() => {
+  const q = normalize(nomInput.value.trim())
+  if (!q) return favoris.favoris
+  return favoris.favoris.filter(f => normalize(f.nom).includes(q))
+})
+
+function selectFavori(f: MedocFavori) {
   nomInput.value = f.nom
   descriptionInput.value = f.description ?? ''
+  showDropdown.value = false
+}
+
+function scheduleCloseDropdown() {
+  setTimeout(() => { showDropdown.value = false }, 150)
 }
 
 function addNew() {
-  if (!nomInput.value) return
+  if (!nomInput.value.trim()) return
   const nom = capitalizeFirstLetter(nomInput.value)
   model.value.medocs.push({ id: newId(), nom, description: descriptionInput.value || undefined, heure: heureInput.value })
   favoris.registerUsage(nom, descriptionInput.value || undefined)
@@ -125,9 +140,6 @@ function remove(index: number) {
 </script>
 
 <style scoped>
-.favorites-section {
-  margin-bottom: 1rem;
-}
 .field-label {
   font-size: 0.75rem;
   color: var(--color-muted);
@@ -156,6 +168,44 @@ function remove(index: number) {
   background: var(--color-surface);
   color: var(--color-text);
   font-size: 0.9rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+.combobox-wrapper {
+  position: relative;
+}
+.combobox-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-muted);
+  border-radius: 0.5rem;
+  z-index: 10;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 0.2rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  list-style: none;
+  padding: 0;
+}
+.combobox-item {
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.combobox-item:hover {
+  background: var(--color-bg);
+}
+.combobox-item-nom {
+  font-size: 0.9rem;
+}
+.combobox-item-desc {
+  font-size: 0.75rem;
+  color: var(--color-muted);
 }
 .pill-btn--primary {
   background: var(--color-accent);
@@ -165,6 +215,13 @@ function remove(index: number) {
   align-items: center;
   gap: 0.35rem;
   align-self: flex-start;
+}
+.pill-btn--primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.avortee-section {
+  margin-top: 0.25rem;
 }
 .prises-section {
   margin-top: 0.5rem;
@@ -194,10 +251,5 @@ function remove(index: number) {
 }
 .medoc-heure-inline {
   flex-shrink: 0;
-}
-.avortee-section {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--color-bg);
 }
 </style>

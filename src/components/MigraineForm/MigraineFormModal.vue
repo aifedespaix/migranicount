@@ -11,7 +11,7 @@
             :key="i"
             type="button"
             class="stepper-btn"
-            :class="{ active: i === stepIndex, past: i < stepIndex }"
+            :class="{ active: i === stepIndex, past: props.editId ? i !== stepIndex : i < stepIndex }"
             role="tab"
             :aria-selected="i === stepIndex"
             :aria-label="stepTitles[i]"

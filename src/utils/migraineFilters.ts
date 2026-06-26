@@ -15,19 +15,22 @@ function matchesKeyword(migraine: Migraine, keyword: string): boolean {
     migraine.notes ?? '',
     ...migraine.declencheurs,
     zoneLabel(migraine.zone) ?? '',
+    ...migraine.symptomes,
   ]
   return haystacks.some((h) => normalize(h).includes(needle))
 }
 
 export function filterMigraines(
   migraines: Migraine[],
-  opts: { keyword?: string; month?: string }
+  opts: { keyword?: string; dateFrom?: string; dateTo?: string }
 ): Migraine[] {
   const keyword = opts.keyword?.trim()
-  const month = opts.month?.trim()
+  const dateFrom = opts.dateFrom?.trim()
+  const dateTo = opts.dateTo?.trim()
   return migraines.filter((m) => {
     if (keyword && !matchesKeyword(m, keyword)) return false
-    if (month && !m.date.startsWith(month)) return false
+    if (dateFrom && m.date < dateFrom) return false
+    if (dateTo && m.date > dateTo) return false
     return true
   })
 }
