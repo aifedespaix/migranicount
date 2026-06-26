@@ -20,7 +20,7 @@ export interface Migraine {
   vomissement?: boolean
   /** @deprecated remplacé par symptomes */
   aura?: boolean
-  localisation: 'gauche' | 'droite' | 'bilaterale' | 'nuque' | null
+  zone: 'gauche' | 'droite' | 'bilaterale' | 'nuque' | null
   declencheurs: string[]
   notes?: string
   createdAt: string

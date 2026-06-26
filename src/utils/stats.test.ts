@@ -10,7 +10,7 @@ function makeMigraine(overrides: Partial<Migraine>): Migraine {
   return {
     id: 'x', date: '2026-06-01', heureDebut: '08:00', heureFin: '10:00',
     medocs: [], intensite: 5, avortee: false, symptomes: [],
-    localisation: null, declencheurs: [], createdAt: '', updatedAt: '',
+    zone: null, declencheurs: [], createdAt: '', updatedAt: '',
     ...overrides,
   }
 }

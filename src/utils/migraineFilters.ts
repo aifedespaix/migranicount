@@ -1,5 +1,5 @@
 import type { Migraine } from '../types/migraine'
-import { localisationLabel } from './localisation'
+import { zoneLabel } from './zone'
 
 function normalize(s: string): string {
   return s
@@ -14,7 +14,7 @@ function matchesKeyword(migraine: Migraine, keyword: string): boolean {
     ...migraine.medocs.map((m) => m.nom),
     migraine.notes ?? '',
     ...migraine.declencheurs,
-    localisationLabel(migraine.localisation) ?? '',
+    zoneLabel(migraine.zone) ?? '',
   ]
   return haystacks.some((h) => normalize(h).includes(needle))
 }

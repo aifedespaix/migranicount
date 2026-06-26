@@ -16,7 +16,7 @@ export function emptyDraft(): MigraineDraft {
     intensite: 5,
     avortee: false,
     symptomes: [],
-    localisation: null,
+    zone: null,
     declencheurs: [],
     notes: '',
   }

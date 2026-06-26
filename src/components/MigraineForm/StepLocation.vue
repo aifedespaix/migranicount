@@ -6,8 +6,8 @@
         :key="opt"
         type="button"
         class="pill-btn"
-        :class="{ active: model.localisation === opt }"
-        @click="model.localisation = opt"
+        :class="{ active: model.zone === opt }"
+        @click="model.zone = opt"
       >
         {{ labels[opt] }}
       </button>

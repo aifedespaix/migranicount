@@ -46,18 +46,16 @@
         <div class="pill-group">
           <span v-if="model.avortee === true" class="pill-btn active">Avortée ✓</span>
           <span v-else-if="model.avortee === 'probable'" class="pill-btn active" style="background: var(--color-muted)">Avortée (probable)</span>
-          <span v-if="model.nausee" class="pill-btn">Nausée</span>
-          <span v-if="model.vomissement" class="pill-btn">Vomissement</span>
-          <span v-if="model.aura" class="pill-btn">Aura</span>
+          <span v-for="s in model.symptomes" :key="s" class="pill-btn">{{ s }}</span>
         </div>
       </div>
     </div>
 
-    <div class="recap-row" v-if="localisationLabelValue">
+    <div class="recap-row" v-if="zoneLabelValue">
       <span class="recap-icon">📍</span>
       <div class="recap-content">
-        <p class="recap-label">Localisation</p>
-        <p class="recap-value">{{ localisationLabelValue }}</p>
+        <p class="recap-label">Zone</p>
+        <p class="recap-value">{{ zoneLabelValue }}</p>
       </div>
     </div>
 
@@ -84,16 +82,16 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { intensityColor, intensityLabel } from '../../utils/intensity'
-import { localisationLabel } from '../../utils/localisation'
+import { zoneLabel } from '../../utils/zone'
 import type { MigraineDraft } from './draft'
 
 const model = defineModel<MigraineDraft>({ required: true })
 
 const intensityColorValue = computed(() => intensityColor(model.value.intensite))
 const intensityLabelValue = computed(() => intensityLabel(model.value.intensite))
-const localisationLabelValue = computed(() => localisationLabel(model.value.localisation))
+const zoneLabelValue = computed(() => zoneLabel(model.value.zone))
 const hasSymptoms = computed(
-  () => model.value.avortee || model.value.nausee || model.value.vomissement || model.value.aura
+  () => model.value.avortee || model.value.symptomes.length > 0
 )
 
 const expandedId = ref<string | null>(null)

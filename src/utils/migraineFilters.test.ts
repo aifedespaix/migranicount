@@ -6,7 +6,7 @@ function makeMigraine(overrides: Partial<Migraine>): Migraine {
   return {
     id: 'x', date: '2026-06-01', heureDebut: '08:00', heureFin: '10:00',
     medocs: [], intensite: 5, avortee: false, symptomes: [],
-    localisation: null, declencheurs: [], createdAt: '', updatedAt: '',
+    zone: null, declencheurs: [], createdAt: '', updatedAt: '',
     ...overrides,
   }
 }
@@ -44,10 +44,10 @@ describe('filterMigraines', () => {
     expect(result.map((m) => m.id)).toEqual(['a'])
   })
 
-  it('filters by keyword matching the localisation label', () => {
+  it('filters by keyword matching the zone label', () => {
     const data = [
-      makeMigraine({ id: 'a', localisation: 'bilaterale' }),
-      makeMigraine({ id: 'b', localisation: 'nuque' }),
+      makeMigraine({ id: 'a', zone: 'bilaterale' }),
+      makeMigraine({ id: 'b', zone: 'nuque' }),
     ]
     const result = filterMigraines(data, { keyword: 'bilat' })
     expect(result.map((m) => m.id)).toEqual(['a'])

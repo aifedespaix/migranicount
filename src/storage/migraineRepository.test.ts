@@ -17,7 +17,7 @@ describe('saveMigraine', () => {
     const m = saveMigraine({
       date: '2026-06-24', heureDebut: '08:00', heureFin: null,
       medocs: [], intensite: 5, avortee: false, symptomes: [],
-      localisation: null, declencheurs: [],
+      zone: null, declencheurs: [],
     })
     expect(m.id).toBeTruthy()
     expect(m.createdAt).toBeTruthy()
@@ -28,7 +28,7 @@ describe('saveMigraine', () => {
     const m = saveMigraine({
       date: '2026-06-24', heureDebut: '08:00', heureFin: null,
       medocs: [], intensite: 5, avortee: false, symptomes: [],
-      localisation: null, declencheurs: [],
+      zone: null, declencheurs: [],
     })
     saveMigraine({ ...m, intensite: 9 })
     expect(listMigraines()).toHaveLength(1)
@@ -41,7 +41,7 @@ describe('deleteMigraine', () => {
     const m = saveMigraine({
       date: '2026-06-24', heureDebut: '08:00', heureFin: null,
       medocs: [], intensite: 5, avortee: false, symptomes: [],
-      localisation: null, declencheurs: [],
+      zone: null, declencheurs: [],
     })
     deleteMigraine(m.id)
     expect(listMigraines()).toHaveLength(0)
@@ -74,7 +74,7 @@ describe('exportAll / importAll', () => {
     saveMigraine({
       date: '2026-06-24', heureDebut: '08:00', heureFin: null,
       medocs: [], intensite: 5, avortee: false, symptomes: [],
-      localisation: null, declencheurs: [],
+      zone: null, declencheurs: [],
     })
     registerMedocUsage('Doliprane')
     registerDeclencheur('stress')

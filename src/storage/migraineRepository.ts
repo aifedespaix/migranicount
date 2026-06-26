@@ -17,6 +17,10 @@ function migrateMigraine(m: any): Migraine {
       m.aura ? 'Aura visuelle' : null,
     ].filter(Boolean) as string[]
   }
+  if ('localisation' in m && !('zone' in m)) {
+    m.zone = m.localisation
+    delete m.localisation
+  }
   return m as Migraine
 }
 

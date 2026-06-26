@@ -12,7 +12,7 @@
       <span v-if="migraine.avortee" class="badge">Avortée</span>
       <span v-for="s in migraine.symptomes.slice(0, 3)" :key="s" class="badge subtle">{{ s }}</span>
       <span v-if="migraine.symptomes.length > 3" class="badge subtle">+{{ migraine.symptomes.length - 3 }}</span>
-      <span v-if="localisationLabel" class="badge subtle">{{ localisationLabel }}</span>
+      <span v-if="zoneLabel" class="badge subtle">{{ zoneLabel }}</span>
     </div>
   </li>
 </template>
@@ -22,7 +22,7 @@ import { computed } from 'vue'
 import { formatRelative, formatDuration } from '../utils/date'
 import type { Migraine } from '../types/migraine'
 import { intensityColor as intensityColorFn } from '../utils/intensity'
-import { localisationLabel as localisationLabelFn } from '../utils/localisation'
+import { zoneLabel as zoneLabelFn } from '../utils/zone'
 
 const props = defineProps<{ migraine: Migraine }>()
 defineEmits<{ click: [] }>()
@@ -36,13 +36,13 @@ const durationLabel = computed(() => {
 
 const intensityColorValue = computed(() => intensityColorFn(props.migraine.intensite))
 
-const localisationLabel = computed(() => localisationLabelFn(props.migraine.localisation))
+const zoneLabel = computed(() => zoneLabelFn(props.migraine.zone))
 
 const hasBadges = computed(
   () =>
     props.migraine.avortee ||
     props.migraine.symptomes.length > 0 ||
-    localisationLabel.value !== null
+    zoneLabel.value !== null
 )
 </script>
 
