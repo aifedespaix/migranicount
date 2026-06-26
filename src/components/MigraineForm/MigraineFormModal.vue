@@ -3,7 +3,7 @@
     <div class="modal-sheet">
       <header class="modal-header">
         <div class="modal-title-row">
-          <span class="modal-form-title">{{ props.editId ? 'Modifier une migraine' : 'Référencer une migraine' }}</span>
+          <span class="modal-form-title">{{ modalTitle }}</span>
         </div>
         <div class="stepper-nav" ref="stepperNavRef" role="tablist">
           <button
@@ -19,6 +19,9 @@
           >
             <component :is="icon" :size="14" />
             <span class="stepper-label">{{ stepShortTitles[i] }}</span>
+            <span v-if="!props.editId && i < stepIndex && stepMissingCount(i, draft) > 0" class="step-warning-badge">
+              {{ stepMissingCount(i, draft) }}
+            </span>
           </button>
         </div>
         <button
@@ -42,7 +45,7 @@
             @before-enter="onBeforeEnter"
             @after-leave="onAfterLeave"
           >
-            <component :is="steps[stepIndex]" v-model="draft" :key="stepIndex" />
+            <component :is="steps[stepIndex]" v-model="draft" :key="stepIndex" @delete="showDeleteConfirm = true" />
           </Transition>
         </div>
       </div>
@@ -77,13 +80,23 @@
         </button>
       </div>
     </div>
+    <ConfirmDialog
+      v-if="showDeleteConfirm"
+      title="Supprimer cette migraine ?"
+      message="Cette action est irréversible."
+      confirm-label="Supprimer"
+      cancel-label="Annuler"
+      @confirm="executeDelete"
+      @cancel="showDeleteConfirm = false"
+      @dismiss="showDeleteConfirm = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useSwipe } from '@vueuse/core'
-import { Save, ArrowRight, ArrowLeft, Clock, Gauge, Pill, Heart, MapPin, Zap, FileText, CheckSquare } from 'lucide-vue-next'
+import { Save, ArrowRight, ArrowLeft, Clock, Gauge, Pill, Heart, Brain, Zap, FileText, CheckSquare } from 'lucide-vue-next'
 import { nextStepIndex, prevStepIndex } from './stepNav'
 import StepWhen from './StepWhen.vue'
 import StepIntensity from './StepIntensity.vue'
@@ -95,6 +108,9 @@ import StepNotes from './StepNotes.vue'
 import StepRecap from './StepRecap.vue'
 import { loadDraft, saveDraft, clearDraft, canSaveDraft, loadDraftStep, saveDraftStep } from './draft'
 import { useMigrainesStore } from '../../stores/migraines'
+import { formatMigraineTitleDate } from '../../utils/date'
+import { stepMissingCount } from '../../utils/stepValidation'
+import ConfirmDialog from '../ConfirmDialog.vue'
 
 const props = defineProps<{ editId?: string }>()
 const emit = defineEmits<{ close: []; saved: [] }>()
@@ -103,13 +119,22 @@ const migraines = useMigrainesStore()
 const steps = [StepWhen, StepIntensity, StepMedocs, StepSymptoms, StepLocation, StepTriggers, StepNotes, StepRecap]
 const stepTitles = ['Quand ?', 'Intensité', 'Médicaments', 'Symptômes', 'Zone', 'Déclencheurs', 'Notes', 'Récapitulatif']
 const stepShortTitles = ['Quand', 'Intensité', 'Médocs', 'Symptômes', 'Zone', 'Déclencheurs', 'Notes', 'Récap']
-const stepIcons = [Clock, Gauge, Pill, Heart, MapPin, Zap, FileText, CheckSquare]
+const stepIcons = [Clock, Gauge, Pill, Heart, Brain, Zap, FileText, CheckSquare]
 
 const stepIndex = ref(props.editId ? steps.length - 1 : loadDraftStep())
 const draft = ref(props.editId ? { ...migraines.getById(props.editId)! } : loadDraft())
+const showDeleteConfirm = ref(false)
 
 const progressPercent = computed(() => ((stepIndex.value + 1) / steps.length) * 100)
 const canSave = computed(() => canSaveDraft(draft.value))
+const modalTitle = computed(() => {
+  const date = draft.value.date
+  if (date) {
+    const suffix = ` du ${formatMigraineTitleDate(date)}`
+    return props.editId ? `Modifier la migraine${suffix}` : `Référencer la migraine${suffix}`
+  }
+  return props.editId ? 'Modifier une migraine' : 'Référencer une migraine'
+})
 
 const modalBodyRef = ref<HTMLElement | null>(null)
 const stepperNavRef = ref<HTMLElement | null>(null)
@@ -181,6 +206,13 @@ function requestClose() {
 function submit() {
   migraines.save(draft.value)
   if (!props.editId) clearDraft()
+  emit('saved')
+}
+
+function executeDelete() {
+  if (!props.editId) return
+  migraines.remove(props.editId)
+  showDeleteConfirm.value = false
   emit('saved')
 }
 </script>
@@ -262,6 +294,23 @@ function submit() {
   color: var(--color-muted);
   scroll-snap-align: start;
   min-width: 3rem;
+  position: relative;
+}
+.step-warning-badge {
+  position: absolute;
+  top: 0.1rem;
+  right: 0.1rem;
+  background: var(--color-danger);
+  color: white;
+  font-size: 0.5rem;
+  font-weight: 700;
+  border-radius: 50%;
+  width: 0.9rem;
+  height: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 .stepper-btn.past {
   color: var(--color-accent);
