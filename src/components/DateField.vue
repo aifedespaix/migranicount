@@ -7,28 +7,70 @@
       placeholder="JJ/MM/AAAA"
       @blur="onBlur"
       @keydown.enter="onEnter"
+      @click="openPopup"
     />
-    <button type="button" class="date-field-icon" @click="togglePopup" aria-label="Choisir une date">📅</button>
+    <button type="button" class="date-field-icon" @click="togglePopup" aria-label="Choisir une date">
+      <CalendarDays :size="16" />
+    </button>
     <Teleport to="body">
       <div v-if="showPopup" ref="popupRef" class="date-field-popup" :style="popupStyle">
         <div class="calendar-header">
-          <button type="button" @click="prevMonth">‹</button>
-          <span>{{ monthLabel }}</span>
-          <button type="button" @click="nextMonth">›</button>
+          <button type="button" class="calendar-nav-btn" @click="shiftPeriod(-1)">‹</button>
+          <div class="calendar-header-labels">
+            <button type="button" class="calendar-label-btn" @click="viewMode = 'month'">
+              {{ monthNames[viewMonth] }}
+            </button>
+            <button type="button" class="calendar-label-btn" @click="viewMode = 'year'">
+              {{ viewYear }}
+            </button>
+          </div>
+          <button type="button" class="calendar-nav-btn" @click="shiftPeriod(1)">›</button>
         </div>
-        <div class="calendar-weekdays">
-          <span v-for="wd in weekdayLabels" :key="wd">{{ wd }}</span>
-        </div>
-        <div class="calendar-grid">
+
+        <!-- Mode jour -->
+        <template v-if="viewMode === 'day'">
+          <div class="calendar-weekdays">
+            <span v-for="wd in weekdayLabels" :key="wd">{{ wd }}</span>
+          </div>
+          <div class="calendar-grid">
+            <button
+              v-for="cell in grid.flat()"
+              :key="cell.iso"
+              type="button"
+              class="calendar-cell"
+              :class="{ 'out-of-month': !cell.inCurrentMonth, selected: cell.iso === model, today: cell.iso === todayIso }"
+              @click="selectDay(cell.iso)"
+            >
+              {{ cell.day }}
+            </button>
+          </div>
+        </template>
+
+        <!-- Mode mois -->
+        <div v-else-if="viewMode === 'month'" class="picker-grid">
           <button
-            v-for="cell in grid.flat()"
-            :key="cell.iso"
+            v-for="(name, i) in monthNames"
+            :key="i"
             type="button"
-            class="calendar-cell"
-            :class="{ 'out-of-month': !cell.inCurrentMonth, selected: cell.iso === model, today: cell.iso === todayIso }"
-            @click="selectDay(cell.iso)"
+            class="picker-cell"
+            :class="{ active: i === viewMonth }"
+            @click="selectMonth(i)"
           >
-            {{ cell.day }}
+            {{ name.slice(0, 3) }}
+          </button>
+        </div>
+
+        <!-- Mode année -->
+        <div v-else-if="viewMode === 'year'" class="picker-grid">
+          <button
+            v-for="y in yearRange"
+            :key="y"
+            type="button"
+            class="picker-cell"
+            :class="{ active: y === viewYear }"
+            @click="selectYear(y)"
+          >
+            {{ y }}
           </button>
         </div>
       </div>
@@ -38,6 +80,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { CalendarDays } from 'lucide-vue-next'
 import { buildCalendarGrid } from '../utils/calendar'
 import { parseLooseISODate, todayISO } from '../utils/date'
 
@@ -50,6 +93,9 @@ const showPopup = ref(false)
 const popupStyle = ref({ top: '0px', left: '0px' })
 const todayIso = todayISO()
 
+type ViewMode = 'day' | 'month' | 'year'
+const viewMode = ref<ViewMode>('day')
+
 const initial = model.value ? new Date(model.value + 'T00:00:00') : new Date()
 const viewYear = ref(initial.getFullYear())
 const viewMonth = ref(initial.getMonth())
@@ -59,7 +105,12 @@ const monthNames = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
 ]
-const monthLabel = computed(() => `${monthNames[viewMonth.value]} ${viewYear.value}`)
+
+const yearRange = computed(() => {
+  const base = viewYear.value
+  return Array.from({ length: 12 }, (_, i) => base - 5 + i)
+})
+
 const grid = computed(() => buildCalendarGrid(viewYear.value, viewMonth.value))
 
 watch(model, (v) => { textValue.value = v })
@@ -81,36 +132,55 @@ function updatePopupPosition() {
   popupStyle.value = { top: `${top}px`, left: `${left}px` }
 }
 
+function openPopup() {
+  if (showPopup.value) return
+  showPopup.value = true
+  viewMode.value = 'day'
+  updatePopupPosition()
+  nextTick(updatePopupPosition)
+}
+
 function togglePopup() {
-  showPopup.value = !showPopup.value
   if (showPopup.value) {
-    updatePopupPosition()
-    nextTick(updatePopupPosition)
+    showPopup.value = false
+  } else {
+    openPopup()
+  }
+}
+
+function shiftPeriod(dir: -1 | 1) {
+  if (viewMode.value === 'day') {
+    if (dir === -1) prevMonth()
+    else nextMonth()
+  } else if (viewMode.value === 'year') {
+    viewYear.value += dir * 12
   }
 }
 
 function prevMonth() {
-  if (viewMonth.value === 0) {
-    viewMonth.value = 11
-    viewYear.value--
-  } else {
-    viewMonth.value--
-  }
+  if (viewMonth.value === 0) { viewMonth.value = 11; viewYear.value-- }
+  else viewMonth.value--
 }
 
 function nextMonth() {
-  if (viewMonth.value === 11) {
-    viewMonth.value = 0
-    viewYear.value++
-  } else {
-    viewMonth.value++
-  }
+  if (viewMonth.value === 11) { viewMonth.value = 0; viewYear.value++ }
+  else viewMonth.value++
 }
 
 function selectDay(iso: string) {
   model.value = iso
   textValue.value = iso
   showPopup.value = false
+}
+
+function selectMonth(i: number) {
+  viewMonth.value = i
+  viewMode.value = 'day'
+}
+
+function selectYear(y: number) {
+  viewYear.value = y
+  viewMode.value = 'month'
 }
 
 function onBlur() {
@@ -128,11 +198,12 @@ function onEnter() {
 }
 
 function onOutsideClick(e: MouseEvent) {
-  if (showPopup.value
-    && !rootRef.value?.contains(e.target as Node)
-    && !popupRef.value?.contains(e.target as Node)) {
-    showPopup.value = false
-  }
+  if (!showPopup.value) return
+  const root = rootRef.value
+  const popup = popupRef.value
+  if (root && root.contains(e.target as Node)) return
+  if (popup && popup.contains(e.target as Node)) return
+  showPopup.value = false
 }
 
 function onViewportChange() {
@@ -166,12 +237,15 @@ onUnmounted(() => {
   color: var(--color-text);
   font-size: 0.95rem;
   width: 9rem;
+  cursor: pointer;
 }
 .date-field-icon {
   background: none;
   border: none;
-  font-size: 1.2rem;
   cursor: pointer;
+  color: var(--color-muted);
+  display: flex;
+  align-items: center;
 }
 .date-field-popup {
   position: fixed;
@@ -188,14 +262,35 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 0.5rem;
-  font-weight: 600;
 }
-.calendar-header button {
+.calendar-nav-btn {
   background: none;
   border: none;
   font-size: 1.1rem;
   cursor: pointer;
   color: var(--color-text);
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.3rem;
+}
+.calendar-nav-btn:hover {
+  background: var(--color-bg);
+}
+.calendar-header-labels {
+  display: flex;
+  gap: 0.2rem;
+}
+.calendar-label-btn {
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--color-text);
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.3rem;
+}
+.calendar-label-btn:hover {
+  background: var(--color-bg);
 }
 .calendar-weekdays {
   display: grid;
@@ -230,6 +325,29 @@ onUnmounted(() => {
   border: 1px solid var(--color-accent);
 }
 .calendar-cell.selected {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+.picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.3rem;
+  margin-top: 0.25rem;
+}
+.picker-cell {
+  background: none;
+  border: none;
+  padding: 0.5rem 0.3rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  color: var(--color-text);
+  font-size: 0.85rem;
+  text-align: center;
+}
+.picker-cell:hover {
+  background: var(--color-bg);
+}
+.picker-cell.active {
   background: var(--color-accent);
   color: var(--color-accent-contrast);
 }
