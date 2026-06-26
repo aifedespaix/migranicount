@@ -55,7 +55,7 @@
         <button
           type="button"
           class="action-btn action-btn-save"
-          :disabled="stepIndex !== steps.length - 1 || !canSave"
+          :disabled="!canSave"
           @click="submit"
         >
           <Save :size="18" />
