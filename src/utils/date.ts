@@ -78,3 +78,21 @@ export function addMinutesToHHmm(hhmm: string, minutes: number): string {
 function pad(n: number): string {
   return n.toString().padStart(2, '0')
 }
+
+/**
+ * Formats an ISO date string (YYYY-MM-DD) to "Mer. 12 juin" in French.
+ * Returns '' if isoDate is falsy.
+ */
+export function formatMigraineTitleDate(isoDate: string): string {
+  if (!isoDate) return ''
+
+  const daysAbbr = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
+  const monthsLower = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'août', 'sep', 'oct', 'nov', 'déc']
+
+  const d = new Date(isoDate + 'T00:00:00')
+  const dayAbbrWithDot = daysAbbr[d.getDay()] + '.'
+  const dayOfMonth = d.getDate()
+  const month = monthsLower[d.getMonth()]
+
+  return `${dayAbbrWithDot} ${dayOfMonth} ${month}`
+}

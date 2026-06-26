@@ -3,6 +3,8 @@ export interface MedocPris {
   nom: string
   description?: string
   heure: string
+  posologieParJour?: number
+  intervalleHeures?: number
 }
 
 export interface Migraine {
@@ -31,4 +33,6 @@ export interface MedocFavori {
   nom: string
   description?: string
   usageCount: number
+  posologieParJour?: number
+  intervalleHeures?: number
 }
