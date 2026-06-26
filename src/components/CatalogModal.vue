@@ -2,17 +2,20 @@
   <div class="modal-backdrop" @click.self="$emit('close')" @pointerdown.stop>
     <div class="modal-sheet">
       <header class="modal-header">
+        <div class="modal-title-row">
+          <span class="modal-form-title">Modifier le répertoire</span>
+        </div>
         <div class="stepper-nav">
           <button
-            v-for="(label, i) in stepShortTitles"
+            v-for="(icon, i) in stepIcons"
             :key="i"
             type="button"
             class="stepper-btn"
             :class="{ active: i === stepIndex, past: i < stepIndex }"
             @click="goToStep(i)"
           >
-            <span class="stepper-num">{{ i + 1 }}</span>
-            <span class="stepper-label">{{ label }}</span>
+            <component :is="icon" :size="14" />
+            <span class="stepper-label">{{ stepShortTitles[i] }}</span>
           </button>
         </div>
         <button type="button" class="modal-close-btn" aria-label="Fermer" @click="$emit('close')">×</button>
@@ -58,7 +61,10 @@
               </ul>
               <form class="catalog-add-form" @submit.prevent="addMedoc">
                 <input v-model="newMedocNom" placeholder="Ajouter un médicament" class="catalog-input" />
-                <button type="submit" class="btn-primary btn-sm">Ajouter</button>
+                <button type="submit" class="btn-primary btn-sm">
+                  <Plus :size="14" />
+                  Ajouter
+                </button>
               </form>
             </div>
 
@@ -91,7 +97,10 @@
               </ul>
               <form class="catalog-add-form" @submit.prevent="addSymptome">
                 <input v-model="newSymptomeNom" placeholder="Ajouter un symptôme" class="catalog-input" />
-                <button type="submit" class="btn-primary btn-sm">Ajouter</button>
+                <button type="submit" class="btn-primary btn-sm">
+                  <Plus :size="14" />
+                  Ajouter
+                </button>
               </form>
             </div>
 
@@ -112,7 +121,10 @@
               </ul>
               <form class="catalog-add-form" @submit.prevent="addDeclencheur">
                 <input v-model="newDeclencheurTag" placeholder="Ajouter un déclencheur" class="catalog-input" />
-                <button type="submit" class="btn-primary btn-sm">Ajouter</button>
+                <button type="submit" class="btn-primary btn-sm">
+                  <Plus :size="14" />
+                  Ajouter
+                </button>
               </form>
             </div>
           </div>
@@ -123,11 +135,11 @@
         <button
           type="button"
           class="action-btn action-btn-prev"
-          :style="prevLabel ? {} : { visibility: 'hidden' }"
+          :style="prevVisible ? {} : { visibility: 'hidden' }"
           @click="goPrev"
         >
-          <ArrowLeft :size="18" />
-          {{ prevLabel }}
+          <ArrowLeft :size="16" />
+          Préc.
         </button>
         <button type="button" class="action-btn action-btn-close" @click="$emit('close')">
           Fermer
@@ -135,11 +147,11 @@
         <button
           type="button"
           class="action-btn action-btn-next"
-          :style="nextLabel ? {} : { visibility: 'hidden' }"
+          :style="nextVisible ? {} : { visibility: 'hidden' }"
           @click="goNext"
         >
-          {{ nextLabel }}
-          <ArrowRight :size="18" />
+          Suiv.
+          <ArrowRight :size="16" />
         </button>
       </div>
     </div>
@@ -159,11 +171,12 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { ArrowLeft, ArrowRight, Pencil, Trash2 } from 'lucide-vue-next'
+import { ArrowLeft, ArrowRight, Pencil, Trash2, Plus, Pill, Heart, Zap } from 'lucide-vue-next'
 import ConfirmDialog from './ConfirmDialog.vue'
 import { useMedocsFavorisStore } from '../stores/medocsFavoris'
 import { useSymptomesStore } from '../stores/symptomes'
 import { useDeclencheursStore } from '../stores/declencheurs'
+import { capitalizeFirstLetter } from '../utils/text'
 import type { MedocFavori } from '../types/migraine'
 
 defineEmits<{ close: [] }>()
@@ -174,14 +187,15 @@ const declencheurs = useDeclencheursStore()
 
 const stepTitles = ['Médicaments', 'Symptômes', 'Déclencheurs']
 const stepShortTitles = ['Médocs', 'Symptômes', 'Déclencheurs']
+const stepIcons = [Pill, Heart, Zap]
 const stepIndex = ref(0)
 
 const progressPercent = computed(() => ((stepIndex.value + 1) / stepTitles.length) * 100)
 const transitionName = ref<'slide-next' | 'slide-prev'>('slide-next')
 const isTransitioning = ref(false)
 
-const prevLabel = computed(() => stepIndex.value > 0 ? stepTitles[stepIndex.value - 1] : null)
-const nextLabel = computed(() => stepIndex.value < stepTitles.length - 1 ? stepTitles[stepIndex.value + 1] : null)
+const prevVisible = computed(() => stepIndex.value > 0)
+const nextVisible = computed(() => stepIndex.value < stepTitles.length - 1)
 
 function goNext() {
   if (stepIndex.value >= stepTitles.length - 1) return
@@ -205,7 +219,7 @@ const editingMedoc = ref<{ nom: string; newNom: string; description: string } | 
 
 function addMedoc() {
   if (!newMedocNom.value.trim()) return
-  medocs.addMedoc(newMedocNom.value.trim())
+  medocs.addMedoc(capitalizeFirstLetter(newMedocNom.value.trim()))
   newMedocNom.value = ''
 }
 function startMedocEdit(item: MedocFavori) {
@@ -214,10 +228,9 @@ function startMedocEdit(item: MedocFavori) {
 function saveMedocEdit() {
   if (!editingMedoc.value) return
   const { nom, newNom, description } = editingMedoc.value
-  if (newNom.trim() && newNom.trim() !== nom) {
-    medocs.renameMedoc(nom, newNom.trim())
-  }
-  medocs.updateDescription(newNom.trim() || nom, description)
+  const capitalized = capitalizeFirstLetter(newNom.trim())
+  if (capitalized && capitalized !== nom) medocs.renameMedoc(nom, capitalized)
+  medocs.updateDescription(capitalized || nom, description)
   editingMedoc.value = null
 }
 
@@ -227,7 +240,7 @@ const editingSymptome = ref<{ nom: string; newNom: string } | null>(null)
 
 function addSymptome() {
   if (!newSymptomeNom.value.trim()) return
-  symptomes.add(newSymptomeNom.value.trim())
+  symptomes.add(capitalizeFirstLetter(newSymptomeNom.value.trim()))
   newSymptomeNom.value = ''
 }
 function startSymptomeEdit(nom: string) {
@@ -236,9 +249,8 @@ function startSymptomeEdit(nom: string) {
 function saveSymptomeEdit() {
   if (!editingSymptome.value) return
   const { nom, newNom } = editingSymptome.value
-  if (newNom.trim() && newNom.trim() !== nom) {
-    symptomes.rename(nom, newNom.trim())
-  }
+  const capitalized = capitalizeFirstLetter(newNom.trim())
+  if (capitalized && capitalized !== nom) symptomes.rename(nom, capitalized)
   editingSymptome.value = null
 }
 
@@ -246,7 +258,7 @@ function saveSymptomeEdit() {
 const newDeclencheurTag = ref('')
 function addDeclencheur() {
   if (!newDeclencheurTag.value.trim()) return
-  declencheurs.register(newDeclencheurTag.value.trim())
+  declencheurs.register(capitalizeFirstLetter(newDeclencheurTag.value.trim()))
   newDeclencheurTag.value = ''
 }
 
@@ -294,30 +306,52 @@ function executeDelete() {
 }
 .modal-header {
   display: flex;
+  flex-direction: column;
+  padding: 0.6rem 1rem 0.4rem;
+  gap: 0.3rem;
+  position: relative;
+}
+.modal-title-row {
+  display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1rem 0.5rem;
-  gap: 0.5rem;
+}
+.modal-form-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.modal-close-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-muted);
+  padding: 0.25rem;
 }
 .stepper-nav {
   display: flex;
   gap: 0.25rem;
-  flex: 1;
-  min-width: 0;
+  padding-right: 2rem;
 }
 .stepper-btn {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.15rem;
+  gap: 0.2rem;
   padding: 0.3rem 0.5rem;
   border-radius: 0.4rem;
   border: 1px solid transparent;
   background: none;
   cursor: pointer;
   color: var(--color-muted);
-  min-width: 2.5rem;
+  min-width: 3rem;
 }
 .stepper-btn.past {
   color: var(--color-accent);
@@ -328,23 +362,9 @@ function executeDelete() {
   border-color: var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
-.stepper-num {
-  font-size: 0.65rem;
-  font-weight: 700;
-  line-height: 1;
-}
 .stepper-label {
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   white-space: nowrap;
-}
-.modal-close-btn {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  line-height: 1;
-  cursor: pointer;
-  color: var(--color-muted);
-  padding: 0.25rem;
 }
 .progress-bar {
   height: 0.25rem;
@@ -382,22 +402,10 @@ function executeDelete() {
   right: 0;
   padding: 1.25rem 1.5rem;
 }
-.slide-next-enter-from {
-  transform: translateX(100%);
-  opacity: 0;
-}
-.slide-next-leave-to {
-  transform: translateX(-100%);
-  opacity: 0;
-}
-.slide-prev-enter-from {
-  transform: translateX(-100%);
-  opacity: 0;
-}
-.slide-prev-leave-to {
-  transform: translateX(100%);
-  opacity: 0;
-}
+.slide-next-enter-from { transform: translateX(100%); opacity: 0; }
+.slide-next-leave-to { transform: translateX(-100%); opacity: 0; }
+.slide-prev-enter-from { transform: translateX(-100%); opacity: 0; }
+.slide-prev-leave-to { transform: translateX(100%); opacity: 0; }
 .catalog-list {
   list-style: none;
   padding: 0;
@@ -465,9 +473,7 @@ function executeDelete() {
 .icon-action-btn:hover {
   background: color-mix(in srgb, var(--color-muted) 15%, transparent);
 }
-.icon-action-btn--danger {
-  color: var(--color-danger);
-}
+.icon-action-btn--danger { color: var(--color-danger); }
 .icon-action-btn--danger:hover {
   background: color-mix(in srgb, var(--color-danger) 12%, transparent);
 }
@@ -485,6 +491,7 @@ function executeDelete() {
 .catalog-add-form {
   display: flex;
   gap: 0.5rem;
+  align-items: center;
 }
 .catalog-input {
   padding: 0.5rem 0.75rem;
@@ -500,10 +507,13 @@ function executeDelete() {
   color: white;
   border: none;
   border-radius: 0.5rem;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.85rem;
   cursor: pointer;
   white-space: nowrap;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 .btn-secondary {
   background: none;
@@ -523,23 +533,27 @@ function executeDelete() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: 1rem 1.5rem;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
   border-top: 1px solid var(--color-bg);
+  flex-shrink: 0;
 }
 .action-btn {
   flex: 1;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-  padding: 0.65rem 1rem;
+  gap: 0.35rem;
+  padding: 0.6rem 0.5rem;
   border-radius: 0.5rem;
   border: 1px solid var(--color-muted);
   background: var(--color-surface);
   color: var(--color-text);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
 }
 .action-btn-close {
   background: var(--color-muted);
