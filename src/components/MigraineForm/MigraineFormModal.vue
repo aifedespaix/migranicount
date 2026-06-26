@@ -2,9 +2,12 @@
   <div class="modal-backdrop" @click.self="requestClose" @pointerdown.stop>
     <div class="modal-sheet">
       <header class="modal-header">
+        <div class="modal-title-row">
+          <span class="modal-form-title">{{ props.editId ? 'Modifier une migraine' : 'Référencer une migraine' }}</span>
+        </div>
         <div class="stepper-nav" ref="stepperNavRef" role="tablist">
           <button
-            v-for="(label, i) in stepShortTitles"
+            v-for="(icon, i) in stepIcons"
             :key="i"
             type="button"
             class="stepper-btn"
@@ -14,8 +17,8 @@
             :aria-label="stepTitles[i]"
             @click="goToStep(i)"
           >
-            <span class="stepper-num">{{ i + 1 }}</span>
-            <span class="stepper-label">{{ label }}</span>
+            <component :is="icon" :size="14" />
+            <span class="stepper-label">{{ stepShortTitles[i] }}</span>
           </button>
         </div>
         <button
@@ -32,11 +35,11 @@
         <div class="progress-bar-fill" :style="{ width: progressPercent + '%' }"></div>
       </div>
 
-      <div class="modal-body" :class="{ transitioning: isTransitioning }" ref="modalBodyRef">
+      <div class="modal-body" :class="{ transitioning: isTransitioning }" ref="modalBodyRef" :style="transitionBodyStyle">
         <Transition
           :name="transitionName"
-          @before-enter="isTransitioning = true"
-          @after-leave="isTransitioning = false"
+          @before-enter="onBeforeEnter"
+          @after-leave="onAfterLeave"
         >
           <component :is="steps[stepIndex]" v-model="draft" :key="stepIndex" />
         </Transition>
@@ -46,11 +49,11 @@
         <button
           type="button"
           class="action-btn action-btn-prev"
-          :style="prevLabel ? {} : { visibility: 'hidden' }"
+          :style="prevVisible ? {} : { visibility: 'hidden' }"
           @click="goPrev"
         >
-          <ArrowLeft :size="18" />
-          {{ prevLabel }}
+          <ArrowLeft :size="16" />
+          Préc.
         </button>
         <button
           type="button"
@@ -58,38 +61,27 @@
           :disabled="!canSave"
           @click="submit"
         >
-          <Save :size="18" />
+          <Save :size="16" />
           Enregistrer
         </button>
         <button
           type="button"
           class="action-btn action-btn-next"
-          :style="nextLabel ? {} : { visibility: 'hidden' }"
+          :style="nextVisible ? {} : { visibility: 'hidden' }"
           @click="goNext"
         >
-          {{ nextLabel }}
-          <ArrowRight :size="18" />
+          Suiv.
+          <ArrowRight :size="16" />
         </button>
       </div>
     </div>
-
-    <ConfirmDialog
-      v-if="showConfirmDialog"
-      title="Annuler les modifications ?"
-      message="Vous avez des modifications non enregistrées. Voulez-vous vraiment fermer sans enregistrer ?"
-      confirm-label="Quitter sans enregistrer"
-      cancel-label="Continuer l'édition"
-      @confirm="confirmDiscardClose"
-      @cancel="showConfirmDialog = false"
-      @dismiss="showConfirmDialog = false"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useSwipe } from '@vueuse/core'
-import { Save, ArrowRight, ArrowLeft } from 'lucide-vue-next'
+import { Save, ArrowRight, ArrowLeft, Clock, Gauge, Pill, Heart, MapPin, Zap, FileText, CheckSquare } from 'lucide-vue-next'
 import { nextStepIndex, prevStepIndex } from './stepNav'
 import StepWhen from './StepWhen.vue'
 import StepIntensity from './StepIntensity.vue'
@@ -99,7 +91,6 @@ import StepLocation from './StepLocation.vue'
 import StepTriggers from './StepTriggers.vue'
 import StepNotes from './StepNotes.vue'
 import StepRecap from './StepRecap.vue'
-import ConfirmDialog from '../ConfirmDialog.vue'
 import { loadDraft, saveDraft, clearDraft, canSaveDraft, loadDraftStep, saveDraftStep } from './draft'
 import { useMigrainesStore } from '../../stores/migraines'
 
@@ -108,12 +99,12 @@ const emit = defineEmits<{ close: []; saved: [] }>()
 const migraines = useMigrainesStore()
 
 const steps = [StepWhen, StepIntensity, StepMedocs, StepSymptoms, StepLocation, StepTriggers, StepNotes, StepRecap]
-const stepTitles = ['Quand ?', 'Intensité', 'Médicaments', 'Symptômes', 'Localisation', 'Déclencheurs', 'Notes', 'Récapitulatif']
-const stepShortTitles = ['Quand', 'Intensité', 'Médocs', 'Symptômes', 'Lieu', 'Déclencheurs', 'Notes', 'Récap']
+const stepTitles = ['Quand ?', 'Intensité', 'Médicaments', 'Symptômes', 'Zone', 'Déclencheurs', 'Notes', 'Récapitulatif']
+const stepShortTitles = ['Quand', 'Intensité', 'Médocs', 'Symptômes', 'Zone', 'Déclencheurs', 'Notes', 'Récap']
+const stepIcons = [Clock, Gauge, Pill, Heart, MapPin, Zap, FileText, CheckSquare]
+
 const stepIndex = ref(props.editId ? steps.length - 1 : loadDraftStep())
 const draft = ref(props.editId ? { ...migraines.getById(props.editId)! } : loadDraft())
-const initialSnapshot = props.editId ? JSON.stringify(draft.value) : null
-const showConfirmDialog = ref(false)
 
 const progressPercent = computed(() => ((stepIndex.value + 1) / steps.length) * 100)
 const canSave = computed(() => canSaveDraft(draft.value))
@@ -122,9 +113,26 @@ const modalBodyRef = ref<HTMLElement | null>(null)
 const stepperNavRef = ref<HTMLElement | null>(null)
 const transitionName = ref<'slide-next' | 'slide-prev'>('slide-next')
 const isTransitioning = ref(false)
+const transitionBodyHeight = ref<number | null>(null)
 
-const prevLabel = computed(() => stepIndex.value > 0 ? stepTitles[stepIndex.value - 1] : null)
-const nextLabel = computed(() => stepIndex.value < steps.length - 1 ? stepTitles[stepIndex.value + 1] : null)
+const transitionBodyStyle = computed(() =>
+  transitionBodyHeight.value !== null
+    ? { minHeight: transitionBodyHeight.value + 'px' }
+    : {}
+)
+
+const prevVisible = computed(() => stepIndex.value > 0)
+const nextVisible = computed(() => stepIndex.value < steps.length - 1)
+
+function onBeforeEnter() {
+  transitionBodyHeight.value = modalBodyRef.value?.offsetHeight ?? null
+  isTransitioning.value = true
+}
+
+function onAfterLeave() {
+  isTransitioning.value = false
+  transitionBodyHeight.value = null
+}
 
 function goNext() {
   const next = nextStepIndex(stepIndex.value, steps.length)
@@ -164,21 +172,7 @@ watch(stepIndex, async (i) => {
   btn?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
 })
 
-function isDirty(): boolean {
-  if (!props.editId) return false
-  return JSON.stringify(draft.value) !== initialSnapshot
-}
-
 function requestClose() {
-  if (isDirty()) {
-    showConfirmDialog.value = true
-  } else {
-    emit('close')
-  }
-}
-
-function confirmDiscardClose() {
-  showConfirmDialog.value = false
   emit('close')
 }
 
@@ -212,20 +206,45 @@ function submit() {
 }
 .modal-header {
   display: flex;
+  flex-direction: column;
+  padding: 0.6rem 1rem 0.4rem;
+  gap: 0.3rem;
+}
+.modal-title-row {
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1rem 0.5rem;
-  gap: 0.5rem;
+}
+.modal-form-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.modal-header {
+  position: relative;
+}
+.modal-close-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-muted);
+  padding: 0.25rem;
 }
 .stepper-nav {
   display: flex;
-  gap: 0.25rem;
+  gap: 0.2rem;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  flex: 1;
-  min-width: 0;
+  padding-right: 2rem;
 }
 .stepper-nav::-webkit-scrollbar { display: none; }
 .stepper-btn {
@@ -233,7 +252,7 @@ function submit() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.15rem;
+  gap: 0.2rem;
   padding: 0.3rem 0.5rem;
   border-radius: 0.4rem;
   border: 1px solid transparent;
@@ -241,7 +260,7 @@ function submit() {
   cursor: pointer;
   color: var(--color-muted);
   scroll-snap-align: start;
-  min-width: 2.5rem;
+  min-width: 3rem;
 }
 .stepper-btn.past {
   color: var(--color-accent);
@@ -252,23 +271,9 @@ function submit() {
   border-color: var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
-.stepper-num {
-  font-size: 0.65rem;
-  font-weight: 700;
-  line-height: 1;
-}
 .stepper-label {
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   white-space: nowrap;
-}
-.modal-close-btn {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  line-height: 1;
-  cursor: pointer;
-  color: var(--color-muted);
-  padding: 0.25rem;
 }
 .progress-bar {
   height: 0.25rem;
@@ -323,23 +328,28 @@ function submit() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: 1rem 1.5rem;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
   border-top: 1px solid var(--color-bg);
+  flex-shrink: 0;
 }
 .action-btn {
   flex: 1;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-  padding: 0.65rem 1rem;
+  gap: 0.35rem;
+  padding: 0.6rem 0.5rem;
   border-radius: 0.5rem;
   border: 1px solid var(--color-muted);
   background: var(--color-surface);
   color: var(--color-text);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .action-btn:disabled {
   opacity: 0.4;
@@ -361,21 +371,10 @@ function submit() {
   color: var(--color-info-contrast);
   border-color: var(--color-info);
 }
-.action-btn-next:disabled {
-  background: var(--color-muted);
-  border-color: var(--color-muted);
-  color: var(--color-surface);
-  opacity: 0.6;
-}
 .action-btn-prev {
   background: transparent;
   color: var(--color-info);
   border-color: var(--color-info);
-}
-.action-btn-prev:disabled {
-  color: var(--color-muted);
-  border-color: var(--color-muted);
-  opacity: 0.6;
 }
 @media (min-width: 1024px) {
   .modal-backdrop {
