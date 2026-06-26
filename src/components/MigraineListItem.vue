@@ -10,10 +10,9 @@
     </div>
     <div class="row badges-row" v-if="hasBadges">
       <span v-if="migraine.avortee" class="badge">Avortée</span>
-      <span v-if="migraine.nausee" class="badge subtle">🤢 Nausée</span>
-      <span v-if="migraine.vomissement" class="badge subtle">🤮 Vomissement</span>
-      <span v-if="migraine.aura" class="badge subtle">✨ Aura</span>
-      <span v-if="localisationLabel" class="badge subtle">📍 {{ localisationLabel }}</span>
+      <span v-for="s in migraine.symptomes.slice(0, 3)" :key="s" class="badge subtle">{{ s }}</span>
+      <span v-if="migraine.symptomes.length > 3" class="badge subtle">+{{ migraine.symptomes.length - 3 }}</span>
+      <span v-if="localisationLabel" class="badge subtle">{{ localisationLabel }}</span>
     </div>
   </li>
 </template>
@@ -42,9 +41,7 @@ const localisationLabel = computed(() => localisationLabelFn(props.migraine.loca
 const hasBadges = computed(
   () =>
     props.migraine.avortee ||
-    props.migraine.nausee ||
-    props.migraine.vomissement ||
-    props.migraine.aura ||
+    props.migraine.symptomes.length > 0 ||
     localisationLabel.value !== null
 )
 </script>
