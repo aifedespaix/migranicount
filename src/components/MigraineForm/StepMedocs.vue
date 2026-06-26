@@ -104,6 +104,7 @@ const nomInput = ref('')
 const descriptionInput = ref('')
 const heureInput = ref(addMinutesToHHmm(model.value.heureDebut, 15))
 const showDropdown = ref(false)
+const selectedFavori = ref<MedocFavori | null>(null)
 
 function normalize(s: string) {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -118,6 +119,7 @@ const filteredFavoris = computed(() => {
 function selectFavori(f: MedocFavori) {
   nomInput.value = f.nom
   descriptionInput.value = f.description ?? ''
+  selectedFavori.value = f
   showDropdown.value = false
 }
 
@@ -128,10 +130,18 @@ function scheduleCloseDropdown() {
 function addNew() {
   if (!nomInput.value.trim()) return
   const nom = capitalizeFirstLetter(nomInput.value)
-  model.value.medocs.push({ id: newId(), nom, description: descriptionInput.value || undefined, heure: heureInput.value })
+  model.value.medocs.push({
+    id: newId(),
+    nom,
+    description: descriptionInput.value || undefined,
+    heure: heureInput.value,
+    posologieParJour: selectedFavori.value?.posologieParJour,
+    intervalleHeures: selectedFavori.value?.intervalleHeures,
+  })
   favoris.registerUsage(nom, descriptionInput.value || undefined)
   nomInput.value = ''
   descriptionInput.value = ''
+  selectedFavori.value = null
 }
 
 function remove(index: number) {
