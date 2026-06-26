@@ -1,5 +1,6 @@
 <template>
   <div class="step">
+    <p class="notes-hint">Notez ce qui pourrait être utile : contexte, ressenti, environnement... Ex : «Journée très stressante» ou «Mauvais sommeil la nuit d'avant»</p>
     <textarea
       v-model="model.notes"
       rows="5"
@@ -17,6 +18,12 @@ const model = defineModel<MigraineDraft>({ required: true })
 </script>
 
 <style scoped>
+.notes-hint {
+  font-size: 0.82rem;
+  color: var(--color-muted);
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
 .notes-textarea {
   width: 100%;
   box-sizing: border-box;
