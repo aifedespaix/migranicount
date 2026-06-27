@@ -1,5 +1,5 @@
 <template>
-  <HeaderNav @add="openForm" :has-draft="hasDraft" />
+  <HeaderNav @add="openForm" :has-draft="hasDraft" @catalog="catalogOpen = true" />
   <main class="app-main" ref="mainRef">
     <RouterView v-slot="{ Component }">
       <Transition :name="pageTransition">
@@ -9,6 +9,7 @@
   </main>
   <BottomNav @add="openForm" :has-draft="hasDraft" />
   <MigraineFormModal v-if="formOpen" @close="onFormClose" @saved="onFormSaved" />
+  <CatalogModal v-if="catalogOpen" @close="catalogOpen = false" />
   <ConfirmDialog
     v-if="showDraftDialog"
     title="Saisie en cours"
@@ -29,6 +30,7 @@ import { useSwipe } from '@vueuse/core'
 import HeaderNav from './components/HeaderNav.vue'
 import BottomNav from './components/BottomNav.vue'
 import MigraineFormModal from './components/MigraineForm/MigraineFormModal.vue'
+import CatalogModal from './components/CatalogModal.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
 import ToastContainer from './components/ToastContainer.vue'
 import { useSettingsStore } from './stores/settings'
@@ -58,6 +60,7 @@ onUnmounted(() => {
 const router = useRouter()
 const toastStore = useToastStore()
 const formOpen = ref(false)
+const catalogOpen = ref(false)
 const showDraftDialog = ref(false)
 const hasDraft = ref(hasSavedDraft())
 const mainRef = ref<HTMLElement | null>(null)
@@ -98,6 +101,7 @@ function onFormClose() {
 
 useSwipe(mainRef, {
   onSwipeEnd(_event, direction) {
+    if (formOpen.value || catalogOpen.value) return
     const currentOrder = routeOrder[router.currentRoute.value.name as string]
     if (currentOrder === undefined) return
     if (direction === 'left' && currentOrder < 1) {

@@ -60,19 +60,19 @@
           <ArrowLeft :size="16" />
           Préc.
         </button>
+        <div class="modal-actions-spacer" />
         <button
+          v-if="isLastStep"
           type="button"
-          class="action-btn action-btn-save"
-          :disabled="!canSave"
-          @click="submit"
+          class="action-btn action-btn-close-form"
+          @click="closeForm"
         >
-          <Save :size="16" />
-          Enregistrer
+          Fermer
         </button>
         <button
+          v-else
           type="button"
           class="action-btn action-btn-next"
-          :style="nextVisible ? {} : { visibility: 'hidden' }"
           @click="goNext"
         >
           Suiv.
@@ -96,7 +96,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useSwipe } from '@vueuse/core'
-import { Save, ArrowRight, ArrowLeft, Clock, Gauge, Pill, Heart, Brain, Zap, FileText, CheckSquare } from 'lucide-vue-next'
+import { ArrowRight, ArrowLeft, Clock, Gauge, Pill, Heart, Brain, Zap, FileText, CheckSquare } from 'lucide-vue-next'
 import { nextStepIndex, prevStepIndex } from './stepNav'
 import StepWhen from './StepWhen.vue'
 import StepIntensity from './StepIntensity.vue'
@@ -149,7 +149,7 @@ const transitionBodyStyle = computed(() =>
 )
 
 const prevVisible = computed(() => stepIndex.value > 0)
-const nextVisible = computed(() => stepIndex.value < steps.length - 1)
+const isLastStep = computed(() => stepIndex.value === steps.length - 1)
 
 function onBeforeEnter() {
   transitionBodyHeight.value = modalBodyRef.value?.offsetHeight ?? null
@@ -161,7 +161,14 @@ function onAfterLeave() {
   transitionBodyHeight.value = null
 }
 
+function saveIfPossible() {
+  if (!canSave.value) return
+  migraines.save(draft.value)
+  if (!props.editId) clearDraft()
+}
+
 function goNext() {
+  saveIfPossible()
   const next = nextStepIndex(stepIndex.value, steps.length)
   if (next === stepIndex.value) return
   transitionName.value = 'slide-next'
@@ -170,6 +177,7 @@ function goNext() {
 }
 
 function goPrev() {
+  saveIfPossible()
   const prev = prevStepIndex(stepIndex.value, steps.length)
   if (prev === stepIndex.value) return
   transitionName.value = 'slide-prev'
@@ -179,13 +187,21 @@ function goPrev() {
 
 function goToStep(i: number) {
   if (i === stepIndex.value) return
+  saveIfPossible()
   transitionName.value = i > stepIndex.value ? 'slide-next' : 'slide-prev'
   stepIndex.value = i
   if (!props.editId) saveDraftStep(stepIndex.value)
 }
 
+function closeForm() {
+  saveIfPossible()
+  if (props.editId) emit('saved')
+  else emit('close')
+}
+
 useSwipe(modalBodyRef, {
-  onSwipeEnd(_event, direction) {
+  onSwipeEnd(event, direction) {
+    if ((event.target as HTMLElement)?.closest('input[type="range"]')) return
     if (direction === 'left') goNext()
     else if (direction === 'right') goPrev()
   },
@@ -201,12 +217,6 @@ watch(stepIndex, async (i) => {
 
 function requestClose() {
   emit('close')
-}
-
-function submit() {
-  migraines.save(draft.value)
-  if (!props.editId) clearDraft()
-  emit('saved')
 }
 
 function executeDelete() {
@@ -414,16 +424,13 @@ function executeDelete() {
   opacity: 0.4;
   cursor: not-allowed;
 }
-.action-btn-save {
-  background: var(--color-success);
-  color: var(--color-success-contrast);
-  border-color: var(--color-success);
+.modal-actions-spacer {
+  flex: 1;
 }
-.action-btn-save:disabled {
-  background: var(--color-muted);
+.action-btn-close-form {
+  background: transparent;
+  color: var(--color-muted);
   border-color: var(--color-muted);
-  color: var(--color-surface);
-  opacity: 0.6;
 }
 .action-btn-next {
   background: var(--color-info);

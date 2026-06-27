@@ -12,9 +12,13 @@ export default defineConfig({
         name: 'Migracount',
         short_name: 'Migracount',
         description: "Suivi et analyse de vos crises de migraine, avec synchronisation cloud optionnelle.",
+        id: '/',
+        start_url: '/',
         theme_color: '#8b5cf6',
         background_color: '#faf8fc',
         display: 'standalone',
+        display_override: ['standalone', 'minimal-ui'],
+        orientation: 'portrait-primary',
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },

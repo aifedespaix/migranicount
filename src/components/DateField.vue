@@ -1,90 +1,126 @@
 <template>
   <div class="date-field" ref="rootRef">
-    <input
-      type="text"
-      class="date-field-input"
-      v-model="textValue"
-      placeholder="JJ/MM/AAAA"
-      @blur="onBlur"
-      @keydown.enter="onEnter"
-      @click="openPopup"
-    />
-    <button type="button" class="date-field-icon" @click="togglePopup" aria-label="Choisir une date">
-      <CalendarDays :size="16" />
-    </button>
-    <Teleport to="body">
-      <div v-if="showPopup" ref="popupRef" class="date-field-popup" :style="popupStyle">
-        <div class="calendar-header">
-          <button type="button" class="calendar-nav-btn" @click="shiftPeriod(-1)">‹</button>
-          <div class="calendar-header-labels">
-            <button type="button" class="calendar-label-btn" @click="viewMode = 'month'">
-              {{ monthNames[viewMonth] }}
-            </button>
-            <button type="button" class="calendar-label-btn" @click="viewMode = 'year'">
-              {{ viewYear }}
-            </button>
-          </div>
-          <button type="button" class="calendar-nav-btn" @click="shiftPeriod(1)">›</button>
-        </div>
+    <!-- Mobile: native OS date picker -->
+    <template v-if="isMobile">
+      <input
+        type="date"
+        class="date-field-input date-field-native"
+        :value="model"
+        @change="onNativeChange"
+      />
+      <button
+        v-if="model !== todayIso"
+        type="button"
+        class="date-today-btn"
+        @click="selectDay(todayIso)"
+        title="Aujourd'hui"
+      >
+        Auj.
+      </button>
+    </template>
 
-        <!-- Mode jour -->
-        <template v-if="viewMode === 'day'">
-          <div class="calendar-weekdays">
-            <span v-for="wd in weekdayLabels" :key="wd">{{ wd }}</span>
+    <!-- Desktop: custom calendar popup -->
+    <template v-else>
+      <input
+        type="text"
+        class="date-field-input"
+        v-model="textValue"
+        placeholder="JJ/MM/AAAA"
+        @blur="onBlur"
+        @keydown.enter="onEnter"
+        @click="openPopup"
+      />
+      <button type="button" class="date-field-icon" @click="togglePopup" aria-label="Choisir une date">
+        <CalendarDays :size="16" />
+      </button>
+      <Teleport to="body">
+        <div v-if="showPopup" ref="popupRef" class="date-field-popup" :style="popupStyle">
+          <div class="calendar-header">
+            <button type="button" class="calendar-nav-btn" @click="shiftPeriod(-1)">‹</button>
+            <div class="calendar-header-labels">
+              <button type="button" class="calendar-label-btn" @click="viewMode = 'month'">
+                {{ monthNames[viewMonth] }}
+              </button>
+              <button type="button" class="calendar-label-btn" @click="viewMode = 'year'">
+                {{ viewYear }}
+              </button>
+            </div>
+            <button type="button" class="calendar-nav-btn" @click="shiftPeriod(1)">›</button>
           </div>
-          <div class="calendar-grid">
+
+          <!-- Mode jour -->
+          <template v-if="viewMode === 'day'">
+            <div class="calendar-weekdays">
+              <span v-for="wd in weekdayLabels" :key="wd">{{ wd }}</span>
+            </div>
+            <div class="calendar-grid">
+              <button
+                v-for="cell in grid.flat()"
+                :key="cell.iso"
+                type="button"
+                class="calendar-cell"
+                :class="{ 'out-of-month': !cell.inCurrentMonth, selected: cell.iso === model, today: cell.iso === todayIso }"
+                @click="selectDay(cell.iso)"
+              >
+                {{ cell.day }}
+              </button>
+            </div>
+          </template>
+
+          <!-- Mode mois -->
+          <div v-else-if="viewMode === 'month'" class="picker-grid">
             <button
-              v-for="cell in grid.flat()"
-              :key="cell.iso"
+              v-for="(name, i) in monthNames"
+              :key="i"
               type="button"
-              class="calendar-cell"
-              :class="{ 'out-of-month': !cell.inCurrentMonth, selected: cell.iso === model, today: cell.iso === todayIso }"
-              @click="selectDay(cell.iso)"
+              class="picker-cell"
+              :class="{ active: i === viewMonth }"
+              @click="selectMonth(i)"
             >
-              {{ cell.day }}
+              {{ name.slice(0, 3) }}
             </button>
           </div>
-        </template>
 
-        <!-- Mode mois -->
-        <div v-else-if="viewMode === 'month'" class="picker-grid">
-          <button
-            v-for="(name, i) in monthNames"
-            :key="i"
-            type="button"
-            class="picker-cell"
-            :class="{ active: i === viewMonth }"
-            @click="selectMonth(i)"
-          >
-            {{ name.slice(0, 3) }}
-          </button>
-        </div>
+          <!-- Mode année -->
+          <div v-else-if="viewMode === 'year'" class="picker-grid">
+            <button
+              v-for="y in yearRange"
+              :key="y"
+              type="button"
+              class="picker-cell"
+              :class="{ active: y === viewYear }"
+              @click="selectYear(y)"
+            >
+              {{ y }}
+            </button>
+          </div>
 
-        <!-- Mode année -->
-        <div v-else-if="viewMode === 'year'" class="picker-grid">
-          <button
-            v-for="y in yearRange"
-            :key="y"
-            type="button"
-            class="picker-cell"
-            :class="{ active: y === viewYear }"
-            @click="selectYear(y)"
-          >
-            {{ y }}
-          </button>
+          <div class="calendar-footer">
+            <button
+              type="button"
+              class="today-btn"
+              :class="{ 'today-btn--current': model === todayIso }"
+              @click="selectDay(todayIso)"
+            >
+              Aujourd'hui
+            </button>
+          </div>
         </div>
-      </div>
-    </Teleport>
+      </Teleport>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { CalendarDays } from 'lucide-vue-next'
+import { useMediaQuery } from '@vueuse/core'
 import { buildCalendarGrid } from '../utils/calendar'
 import { parseLooseISODate, todayISO } from '../utils/date'
 
 const model = defineModel<string>({ required: true })
+
+const isMobile = useMediaQuery('(pointer: coarse)')
 
 const rootRef = ref<HTMLElement | null>(null)
 const popupRef = ref<HTMLElement | null>(null)
@@ -114,6 +150,11 @@ const yearRange = computed(() => {
 const grid = computed(() => buildCalendarGrid(viewYear.value, viewMonth.value))
 
 watch(model, (v) => { textValue.value = v })
+
+function onNativeChange(e: Event) {
+  const val = (e.target as HTMLInputElement).value
+  if (val) model.value = val
+}
 
 function updatePopupPosition() {
   if (!rootRef.value) return
@@ -239,6 +280,20 @@ onUnmounted(() => {
   width: 9rem;
   cursor: pointer;
 }
+.date-field-native {
+  width: auto;
+  min-width: 9rem;
+}
+.date-today-btn {
+  background: none;
+  border: 1px solid var(--color-muted);
+  border-radius: 0.4rem;
+  color: var(--color-accent);
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
 .date-field-icon {
   background: none;
   border: none;
@@ -350,5 +405,29 @@ onUnmounted(() => {
 .picker-cell.active {
   background: var(--color-accent);
   color: var(--color-accent-contrast);
+}
+.calendar-footer {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid var(--color-bg);
+  padding-top: 0.4rem;
+}
+.today-btn {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.3rem;
+  opacity: 0.8;
+}
+.today-btn:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+.today-btn--current {
+  font-weight: 700;
 }
 </style>

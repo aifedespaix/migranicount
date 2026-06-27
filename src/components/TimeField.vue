@@ -1,54 +1,77 @@
 <template>
   <div class="time-field" ref="rootRef">
-    <input
-      type="text"
-      class="time-field-input"
-      v-model="textValue"
-      placeholder="HH:mm"
-      @blur="onBlur"
-      @keydown.enter.prevent="onEnter"
-      @click="openPopup"
-    />
-    <button type="button" class="time-field-icon" @click="togglePopup" aria-label="Choisir une heure">
-      <Clock :size="16" />
-    </button>
-    <Teleport to="body">
-      <div v-if="showPopup" ref="popupRef" class="time-field-popup" :style="popupStyle">
-        <div class="time-column">
-          <button
-            v-for="h in hours"
-            :key="h"
-            type="button"
-            class="time-cell"
-            :class="{ selected: h === selectedHour }"
-            @click="pickHour(h)"
-          >
-            {{ h }}
-          </button>
+    <!-- Mobile: native OS time picker -->
+    <template v-if="isMobile">
+      <input
+        type="time"
+        class="time-field-input time-field-native"
+        :value="model"
+        @change="onNativeChange"
+      />
+    </template>
+
+    <!-- Desktop: custom scrollable columns -->
+    <template v-else>
+      <input
+        type="text"
+        class="time-field-input"
+        v-model="textValue"
+        placeholder="HH:mm"
+        @blur="onBlur"
+        @keydown.enter.prevent="onEnter"
+        @click="openPopup"
+      />
+      <button type="button" class="time-field-icon" @click="togglePopup" aria-label="Choisir une heure">
+        <Clock :size="16" />
+      </button>
+      <Teleport to="body">
+        <div v-if="showPopup" ref="popupRef" class="time-field-popup" :style="popupStyle">
+          <div class="time-columns">
+            <div class="time-column">
+              <button
+                v-for="h in hours"
+                :key="h"
+                type="button"
+                class="time-cell"
+                :class="{ selected: h === selectedHour }"
+                @click="pickHour(h)"
+              >
+                {{ h }}
+              </button>
+            </div>
+            <div class="time-column">
+              <button
+                v-for="m in minutes"
+                :key="m"
+                type="button"
+                class="time-cell"
+                :class="{ selected: m === selectedMinute }"
+                @click="pickMinute(m)"
+              >
+                {{ m }}
+              </button>
+            </div>
+          </div>
+          <div class="time-popup-footer">
+            <button type="button" class="time-confirm-btn" @click="confirm">
+              Confirmer
+            </button>
+          </div>
         </div>
-        <div class="time-column">
-          <button
-            v-for="m in minutes"
-            :key="m"
-            type="button"
-            class="time-cell"
-            :class="{ selected: m === selectedMinute }"
-            @click="pickMinute(m)"
-          >
-            {{ m }}
-          </button>
-        </div>
-      </div>
-    </Teleport>
+      </Teleport>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { Clock } from 'lucide-vue-next'
+import { useMediaQuery } from '@vueuse/core'
 import { parseLooseTime } from '../utils/date'
 
 const model = defineModel<string>({ required: true })
+
+const isMobile = useMediaQuery('(pointer: coarse)')
 
 const rootRef = ref<HTMLElement | null>(null)
 const popupRef = ref<HTMLElement | null>(null)
@@ -59,8 +82,6 @@ const popupStyle = ref({ top: '0px', left: '0px' })
 const [initialHour, initialMinute] = model.value.split(':')
 const selectedHour = ref(initialHour)
 const selectedMinute = ref(initialMinute)
-const hourPicked = ref(false)
-const minutePicked = ref(false)
 
 const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'))
 const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'))
@@ -72,11 +93,16 @@ watch(model, (v) => {
   selectedMinute.value = m
 })
 
+function onNativeChange(e: Event) {
+  const val = (e.target as HTMLInputElement).value
+  if (val) model.value = val
+}
+
 function updatePopupPosition() {
   if (!rootRef.value) return
   const rect = rootRef.value.getBoundingClientRect()
-  const popupWidth = popupRef.value?.offsetWidth ?? 140
-  const popupHeight = popupRef.value?.offsetHeight ?? 160
+  const popupWidth = popupRef.value?.offsetWidth ?? 160
+  const popupHeight = popupRef.value?.offsetHeight ?? 200
   let top = rect.bottom + 4
   if (top + popupHeight > window.innerHeight) {
     top = Math.max(8, rect.top - popupHeight - 4)
@@ -103,9 +129,6 @@ function scrollToSelected() {
 function openPopup() {
   if (showPopup.value) return
   showPopup.value = true
-  // L'heure existante est déjà valide — un clic sur une minute suffit pour appliquer
-  hourPicked.value = true
-  minutePicked.value = false
   updatePopupPosition()
   nextTick(() => {
     updatePopupPosition()
@@ -121,24 +144,24 @@ function togglePopup() {
   }
 }
 
-function applyIfBothPicked() {
-  if (hourPicked.value && minutePicked.value) {
-    model.value = `${selectedHour.value}:${selectedMinute.value}`
-    textValue.value = model.value
-    showPopup.value = false
-  }
+function applySelection() {
+  model.value = `${selectedHour.value}:${selectedMinute.value}`
+  textValue.value = model.value
+}
+
+function confirm() {
+  applySelection()
+  showPopup.value = false
 }
 
 function pickHour(h: string) {
   selectedHour.value = h
-  hourPicked.value = true
-  applyIfBothPicked()
+  applySelection()
 }
 
 function pickMinute(m: string) {
   selectedMinute.value = m
-  minutePicked.value = true
-  applyIfBothPicked()
+  applySelection()
 }
 
 function onBlur() {
@@ -196,6 +219,10 @@ onUnmounted(() => {
   width: 5rem;
   cursor: pointer;
 }
+.time-field-native {
+  width: auto;
+  min-width: 5rem;
+}
 .time-field-icon {
   background: none;
   border: none;
@@ -213,6 +240,11 @@ onUnmounted(() => {
   border-radius: 0.5rem;
   padding: 0.5rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.time-columns {
   display: flex;
   gap: 0.5rem;
 }
@@ -237,5 +269,25 @@ onUnmounted(() => {
 .time-cell.selected {
   background: var(--color-accent);
   color: var(--color-accent-contrast);
+}
+.time-popup-footer {
+  border-top: 1px solid var(--color-bg);
+  padding-top: 0.4rem;
+  display: flex;
+  justify-content: center;
+}
+.time-confirm-btn {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  border: none;
+  border-radius: 0.4rem;
+  padding: 0.3rem 1rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-weight: 600;
+  width: 100%;
+}
+.time-confirm-btn:hover {
+  opacity: 0.9;
 }
 </style>

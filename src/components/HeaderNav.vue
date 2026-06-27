@@ -22,7 +22,7 @@
           type="button"
           class="icon-btn"
           aria-label="Modifier le répertoire"
-          @click="showCatalog = true"
+          @click="$emit('catalog')"
         >
           <BookOpen :size="18" />
         </button>
@@ -37,30 +37,39 @@
           <SettingsIcon :size="18" />
         </button>
       </AppTooltip>
+      <AppTooltip v-if="canInstall" content="Installer l'application" placement="bottom">
+        <button
+          type="button"
+          class="icon-btn"
+          aria-label="Installer l'application"
+          @click="install"
+        >
+          <Download :size="18" />
+        </button>
+      </AppTooltip>
       <AuthButton />
       <button class="add-btn" :class="{ 'add-btn--resume': props.hasDraft }" @click="$emit('add')">
         {{ props.hasDraft ? '↩ Reprendre' : '+ Ajouter' }}
       </button>
     </div>
   </header>
-  <CatalogModal v-if="showCatalog" @close="showCatalog = false" />
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { BookOpen, BarChart2, List, Settings as SettingsIcon } from 'lucide-vue-next'
-import CatalogModal from './CatalogModal.vue'
+import { BookOpen, BarChart2, List, Settings as SettingsIcon, Download } from 'lucide-vue-next'
 import AuthButton from './AuthButton.vue'
 import AppTooltip from './AppTooltip.vue'
+import { usePwaInstall } from '../composables/usePwaInstall'
 
 const props = defineProps<{ hasDraft?: boolean }>()
-defineEmits<{ add: [] }>()
+defineEmits<{ add: []; catalog: [] }>()
 
 const router = useRouter()
 const route = useRoute()
-const showCatalog = ref(false)
 const isSettings = computed(() => route.name === 'settings')
+const { canInstall, install } = usePwaInstall()
 </script>
 
 <style scoped>

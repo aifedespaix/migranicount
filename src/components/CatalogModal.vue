@@ -14,7 +14,9 @@
             :class="{ active: i === stepIndex, past: i !== stepIndex }"
             @click="goToStep(i)"
           >
-            <component :is="icon" :size="14" />
+            <BadgeCount :count="stepCounts[i]">
+              <component :is="icon" :size="14" />
+            </BadgeCount>
             <span class="stepper-label">{{ stepShortTitles[i] }}</span>
           </button>
         </div>
@@ -178,6 +180,7 @@
 import { ref, computed } from 'vue'
 import { ArrowLeft, ArrowRight, Pencil, Trash2, Plus, Pill, Heart, Zap } from 'lucide-vue-next'
 import ConfirmDialog from './ConfirmDialog.vue'
+import BadgeCount from './BadgeCount.vue'
 import { useMedocsFavorisStore } from '../stores/medocsFavoris'
 import { useSymptomesStore } from '../stores/symptomes'
 import { useDeclencheursStore } from '../stores/declencheurs'
@@ -197,6 +200,11 @@ const stepIndex = ref(0)
 
 const progressPercent = computed(() => ((stepIndex.value + 1) / stepTitles.length) * 100)
 const transitionName = ref<'slide-next' | 'slide-prev'>('slide-next')
+const stepCounts = computed(() => [
+  medocs.favoris.length,
+  symptomes.symptomes().length,
+  declencheurs.tags().length,
+])
 const isTransitioning = ref(false)
 
 const prevVisible = computed(() => stepIndex.value > 0)
