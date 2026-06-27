@@ -4,16 +4,15 @@
     <button
       v-if="!authStore.isLoggedIn"
       type="button"
-      class="icon-btn"
-      :class="{ 'icon-btn--loading': loading }"
-      :title="error ? error : 'Synchroniser avec un compte'"
-      :aria-label="'Connexion Google'"
+      class="auth-login-btn"
       :disabled="loading"
+      :title="error ? error : 'Se connecter avec Google'"
+      :aria-label="'Se connecter avec Google'"
       @click="handleLogin"
     >
-      <Loader2 v-if="loading" :size="18" class="spin" />
-      <CloudOff v-else-if="error" :size="18" class="icon-error" />
-      <Cloud v-else :size="18" />
+      <Loader2 v-if="loading" :size="14" class="spin" />
+      <LogIn v-else :size="14" />
+      Se connecter
     </button>
 
     <!-- Connecté -->
@@ -54,7 +53,7 @@
 import { ref, computed } from 'vue'
 import { onClickOutside } from '@vueuse/core'
 import { useRouter } from 'vue-router'
-import { Cloud, CloudOff, Loader2 } from 'lucide-vue-next'
+import { LogIn, Loader2 } from 'lucide-vue-next'
 import { useAuthStore } from '../stores/auth'
 import { useSync } from '../composables/useSync'
 import ConfirmDialog from './ConfirmDialog.vue'
@@ -192,8 +191,27 @@ function toggleMenu() {
   background: color-mix(in srgb, var(--color-muted) 12%, transparent);
 }
 
-.icon-error {
-  color: var(--color-danger, #e53e3e);
+.auth-login-btn {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.auth-login-btn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+.auth-login-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .spin {

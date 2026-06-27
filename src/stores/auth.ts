@@ -6,7 +6,7 @@ import type { RecordModel } from 'pocketbase'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<RecordModel | null>(pb.authStore.record)
-  const isLoggedIn = computed(() => pb.authStore.isValid)
+  const isLoggedIn = computed(() => user.value !== null)
 
   pb.authStore.onChange((_token, record) => {
     user.value = record as RecordModel | null
