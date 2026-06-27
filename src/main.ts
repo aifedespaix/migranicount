@@ -14,9 +14,12 @@ const app = createApp(App).use(pinia).use(router)
 
 app.mount('#app')
 
-// Restore PocketBase session and start realtime sync if already authenticated
+// Restore PocketBase session, merge remote changes, then start realtime sync
 if (pb.authStore.isValid) {
-  useSync().startRealtimeSync().catch(console.error)
+  const sync = useSync()
+  sync.mergeOnLogin()
+    .then(() => sync.startRealtimeSync())
+    .catch(console.error)
 }
 
 if ('serviceWorker' in navigator) {
