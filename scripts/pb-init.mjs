@@ -143,6 +143,22 @@ async function createUserPreferencesCollection() {
   console.log(`✓ Collection "${name}" créée`)
 }
 
+async function configureUsersDeleteRule() {
+  try {
+    const usersCollection = await pb.collections.getOne('users')
+    const desired = 'id = @request.auth.id'
+    if (usersCollection.deleteRule === desired) {
+      console.log('· Collection "users" deleteRule deja configuree — skip')
+      return
+    }
+    await pb.collections.update('users', { deleteRule: desired })
+    console.log('✓ Collection "users" deleteRule configuree : ' + desired)
+  } catch (e) {
+    console.error('✗ Impossible de configurer deleteRule sur "users" :', e.message)
+    throw e
+  }
+}
+
 async function main() {
   console.log(`\nConnexion à ${PB_URL}...\n`)
 
@@ -152,6 +168,9 @@ async function main() {
   await createMigrainesCollection()
   await createMedocsFavorisCollection()
   await createUserPreferencesCollection()
+
+  console.log('\nConfiguration des regles de suppression...\n')
+  await configureUsersDeleteRule()
 
   console.log(`
 ┌─────────────────────────────────────────────────────────┐
@@ -168,6 +187,7 @@ async function main() {
 │  ${PB_URL}api/oauth2-redirect                           │
 └─────────────────────────────────────────────────────────┘
 `)
+  console.log('  → deleteRule "users" : id = @request.auth.id (suppression compte activee)')
 }
 
 main().catch((e) => {
