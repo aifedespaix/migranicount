@@ -5,6 +5,12 @@ import { useMedocsFavorisStore } from '../stores/medocsFavoris'
 import { useDeclencheursStore } from '../stores/declencheurs'
 import { useSymptomesStore } from '../stores/symptomes'
 import { useSettingsStore } from '../stores/settings'
+import { useToastStore } from '../stores/toast'
+import {
+  computeMigrainesDiff,
+  computeCatalogueDiff,
+  buildSyncToasts,
+} from '../lib/syncDiff'
 import {
   listMigraines,
   listMedocsFavoris,
@@ -22,11 +28,45 @@ import type { RecordModel } from 'pocketbase'
 const SETTINGS_KEY = 'settings'
 
 let realtimeUnsubscribers: Array<() => void> = []
+let diffAccumulator: {
+  migrainesAdded: Migraine[]
+  migrainesModified: Migraine[]
+  migrainesRemoved: Migraine[]
+  catalogueItems: string[]
+} = { migrainesAdded: [], migrainesModified: [], migrainesRemoved: [], catalogueItems: [] }
+let flushTimer: ReturnType<typeof setTimeout> | null = null
+
+function scheduleFlushToasts() {
+  if (flushTimer) clearTimeout(flushTimer)
+  flushTimer = setTimeout(() => {
+    const toastStore = useToastStore()
+    const migrainesDiff = {
+      added: diffAccumulator.migrainesAdded,
+      modified: diffAccumulator.migrainesModified,
+      removed: diffAccumulator.migrainesRemoved,
+    }
+    const catalogueDiff = {
+      total: diffAccumulator.catalogueItems.length,
+      items: diffAccumulator.catalogueItems,
+    }
+    const msgs = buildSyncToasts(migrainesDiff, catalogueDiff)
+    for (const msg of msgs) {
+      toastStore.add({ message: msg, type: 'success', persistent: false })
+    }
+    diffAccumulator = { migrainesAdded: [], migrainesModified: [], migrainesRemoved: [], catalogueItems: [] }
+    flushTimer = null
+  }, 300)
+}
 
 export function useSync() {
   async function mergeOnLogin(): Promise<void> {
     if (!pb.authStore.isValid) return
     const userId = pb.authStore.record!.id
+
+    const beforeMigraines = listMigraines()
+    const beforeMedocs = listMedocsFavoris()
+    const beforeDecl = listDeclencheursFavoris()
+    const beforeSympt = listSymptomesCustom()
 
     await Promise.all([
       _mergeMigraines(userId),
@@ -34,11 +74,69 @@ export function useSync() {
       _mergePreferences(userId),
     ])
 
-    // Refresh all stores from updated localStorage
     useMigrainesStore().refresh()
     useMedocsFavorisStore().refresh()
     useDeclencheursStore().refresh()
     useSymptomesStore().refresh()
+
+    const afterMigraines = listMigraines()
+    const afterMedocs = listMedocsFavoris()
+    const afterDecl = listDeclencheursFavoris()
+    const afterSympt = listSymptomesCustom()
+
+    const migrainesDiff = computeMigrainesDiff(beforeMigraines, afterMigraines)
+    const catalogueDiff = computeCatalogueDiff(
+      beforeMedocs, afterMedocs,
+      beforeDecl, afterDecl,
+      beforeSympt, afterSympt,
+    )
+    const msgs = buildSyncToasts(migrainesDiff, catalogueDiff)
+    if (msgs.length > 0) {
+      const toastStore = useToastStore()
+      for (const msg of msgs) {
+        toastStore.add({ message: msg, type: 'success', persistent: false })
+      }
+    }
+  }
+
+  async function refreshFromRemote(): Promise<void> {
+    if (!pb.authStore.isValid) return
+    const userId = pb.authStore.record!.id
+
+    const beforeMigraines = listMigraines()
+    const beforeMedocs = listMedocsFavoris()
+    const beforeDecl = listDeclencheursFavoris()
+    const beforeSympt = listSymptomesCustom()
+
+    await Promise.all([
+      _mergeMigraines(userId),
+      _mergeMedocs(userId),
+      _mergePreferences(userId),
+    ])
+
+    useMigrainesStore().refresh()
+    useMedocsFavorisStore().refresh()
+    useDeclencheursStore().refresh()
+    useSymptomesStore().refresh()
+
+    const afterMigraines = listMigraines()
+    const afterMedocs = listMedocsFavoris()
+    const afterDecl = listDeclencheursFavoris()
+    const afterSympt = listSymptomesCustom()
+
+    const migrainesDiff = computeMigrainesDiff(beforeMigraines, afterMigraines)
+    const catalogueDiff = computeCatalogueDiff(
+      beforeMedocs, afterMedocs,
+      beforeDecl, afterDecl,
+      beforeSympt, afterSympt,
+    )
+    const msgs = buildSyncToasts(migrainesDiff, catalogueDiff)
+    if (msgs.length > 0) {
+      const toastStore = useToastStore()
+      for (const msg of msgs) {
+        toastStore.add({ message: msg, type: 'success', persistent: false })
+      }
+    }
   }
 
   async function _mergeMigraines(userId: string): Promise<void> {
@@ -63,9 +161,7 @@ export function useSync() {
         const remoteDate = new Date((remote['localUpdatedAt'] as string) || 0).getTime()
         const winner = localDate >= remoteDate ? local : remoteToMigraine(remote)
         mergedLocally.push(winner)
-        if (localDate > remoteDate) {
-          toUpload.push(winner)
-        }
+        if (localDate > remoteDate) toUpload.push(winner)
       } else if (local && !remote) {
         mergedLocally.push(local)
         toUpload.push(local)
@@ -74,10 +170,8 @@ export function useSync() {
       }
     }
 
-    // Write merged data directly to localStorage
     setJSON('migraines', mergedLocally)
 
-    // Push local-only and local-winner records to PocketBase
     await Promise.allSettled(
       toUpload.map(async (m) => {
         const payload = { ...migraineToRemote(m), userId }
@@ -110,10 +204,8 @@ export function useSync() {
       if (local && remote) {
         const mergedUsage = Math.max(local.usageCount, (remote['usageCount'] as number) ?? 0)
         if (local.usageCount < mergedUsage) {
-          // Remote had higher usage — update local
           registerMedocUsage(nom, local.description)
         }
-        // If local usage was lower, it's been bumped; if higher it stays. Either way push.
         toUpload.push({ ...local, usageCount: mergedUsage })
       } else if (local && !remote) {
         toUpload.push(local)
@@ -122,7 +214,6 @@ export function useSync() {
       }
     }
 
-    // Push local-winner / local-only records
     await Promise.allSettled(
       toUpload.map(async (f) => {
         const remote = remoteMap.get(f.nom)
@@ -147,7 +238,7 @@ export function useSync() {
     try {
       remotePrefs = await pb.collection('user_preferences').getFirstListItem(`userId="${userId}"`)
     } catch {
-      // no remote prefs yet — we'll create them
+      // no remote prefs yet
     }
 
     const localDeclencheurs = listDeclencheursFavoris()
@@ -158,7 +249,6 @@ export function useSync() {
     })
 
     if (!remotePrefs) {
-      // Push local to remote
       await patchPreferences({
         declencheursFavoris: localDeclencheurs,
         symptomesCustom: localSymptomes,
@@ -168,7 +258,6 @@ export function useSync() {
       return
     }
 
-    // Merge: union for arrays, remote wins for theme/font
     const remoteDeclencheurs = (remotePrefs['declencheursFavoris'] as string[]) || []
     const remoteSymptomes = (remotePrefs['symptomesCustom'] as string[]) || []
 
@@ -177,17 +266,14 @@ export function useSync() {
     const mergedTheme = (remotePrefs['theme'] as string) || localSettings.theme
     const mergedFont = (remotePrefs['dyslexicFont'] as string) || localSettings.dyslexicFont
 
-    // Write merged values to localStorage
     setJSON(SETTINGS_KEY, { theme: mergedTheme, dyslexicFont: mergedFont })
     for (const tag of mergedDeclencheurs) registerDeclencheur(tag)
     for (const s of mergedSymptomes) addSymptomeCustom(s)
 
-    // Update the settings store live
     const settings = useSettingsStore()
     settings.setTheme(mergedTheme as Parameters<typeof settings.setTheme>[0])
     settings.setDyslexicFont(mergedFont as Parameters<typeof settings.setDyslexicFont>[0])
 
-    // Push merged back to remote
     await patchPreferences({
       declencheursFavoris: mergedDeclencheurs,
       symptomesCustom: mergedSymptomes,
@@ -199,42 +285,97 @@ export function useSync() {
   async function startRealtimeSync(): Promise<void> {
     if (!pb.authStore.isValid) return
     const userId = pb.authStore.record!.id
-
     const migrainesStore = useMigrainesStore()
+    const medocsStore = useMedocsFavorisStore()
+    const declStore = useDeclencheursStore()
+    const symptStore = useSymptomesStore()
 
-    const unsub = await pb.collection('migraines').subscribe(
-      '*',
-      (e) => {
-        if ((e.record['userId'] as string) !== userId) return
-        if (e.action === 'create' || e.action === 'update') {
-          const incoming = remoteToMigraine(e.record as unknown as Record<string, unknown>)
-          const existing = migrainesStore.getById(incoming.id)
-          if (!existing || new Date(incoming.updatedAt) > new Date(existing.updatedAt)) {
-            const all = listMigraines()
-            const idx = all.findIndex((m) => m.id === incoming.id)
-            if (idx >= 0) {
-              all[idx] = incoming
-            } else {
-              all.push(incoming)
-            }
-            setJSON('migraines', all)
-            migrainesStore.refresh()
+    // Migraines
+    const unsubMigraines = await pb.collection('migraines').subscribe('*', (e) => {
+      if ((e.record['userId'] as string) !== userId) return
+      if (e.action === 'create' || e.action === 'update') {
+        const incoming = remoteToMigraine(e.record as unknown as Record<string, unknown>)
+        const existing = migrainesStore.getById(incoming.id)
+        if (!existing || new Date(incoming.updatedAt) > new Date(existing.updatedAt)) {
+          const all = listMigraines()
+          const idx = all.findIndex((m) => m.id === incoming.id)
+          const isNew = idx < 0
+          if (isNew) {
+            all.push(incoming)
+            diffAccumulator.migrainesAdded.push(incoming)
+          } else {
+            all[idx] = incoming
+            diffAccumulator.migrainesModified.push(incoming)
           }
-        } else if (e.action === 'delete') {
-          const localId = e.record['localId'] as string
-          setJSON('migraines', listMigraines().filter((m) => m.id !== localId))
+          setJSON('migraines', all)
           migrainesStore.refresh()
+          scheduleFlushToasts()
+        }
+      } else if (e.action === 'delete') {
+        const localId = e.record['localId'] as string
+        const removed = listMigraines().find((m) => m.id === localId)
+        if (removed) diffAccumulator.migrainesRemoved.push(removed)
+        setJSON('migraines', listMigraines().filter((m) => m.id !== localId))
+        migrainesStore.refresh()
+        scheduleFlushToasts()
+      }
+    })
+
+    // Médocs favoris
+    const unsubMedocs = await pb.collection('medocs_favoris').subscribe('*', (e) => {
+      if ((e.record['userId'] as string) !== userId) return
+      if (e.action === 'create' || e.action === 'update') {
+        const nom = e.record['nom'] as string
+        const description = (e.record['description'] as string) ?? undefined
+        const existing = listMedocsFavoris().find((f) => f.nom === nom)
+        if (!existing) {
+          addMedocFavori(nom, description)
+          diffAccumulator.catalogueItems.push(`${nom} ajouté au catalogue`)
+          medocsStore.refresh()
+          scheduleFlushToasts()
         }
       }
-    )
+    })
 
-    realtimeUnsubscribers.push(unsub)
+    // Préférences (déclencheurs + symptômes)
+    const unsubPrefs = await pb.collection('user_preferences').subscribe('*', (e) => {
+      if ((e.record['userId'] as string) !== userId) return
+      const remoteDeclencheurs = (e.record['declencheursFavoris'] as string[]) || []
+      const remoteSymptomes = (e.record['symptomesCustom'] as string[]) || []
+
+      const localDecl = listDeclencheursFavoris()
+      const localSympt = listSymptomesCustom()
+
+      for (const d of remoteDeclencheurs) {
+        if (!localDecl.includes(d)) {
+          registerDeclencheur(d)
+          diffAccumulator.catalogueItems.push(`Déclencheur « ${d} » ajouté`)
+        }
+      }
+      for (const s of remoteSymptomes) {
+        if (!localSympt.includes(s)) {
+          addSymptomeCustom(s)
+          diffAccumulator.catalogueItems.push(`Symptôme « ${s} » ajouté`)
+        }
+      }
+
+      declStore.refresh()
+      symptStore.refresh()
+      if (diffAccumulator.catalogueItems.length > 0) scheduleFlushToasts()
+    })
+
+    realtimeUnsubscribers.push(unsubMigraines, unsubMedocs, unsubPrefs)
   }
 
   function stopRealtimeSync(): void {
     realtimeUnsubscribers.forEach((fn) => fn())
     realtimeUnsubscribers = []
+    if (flushTimer) {
+      clearTimeout(flushTimer)
+      flushTimer = null
+    }
+    diffAccumulator = { migrainesAdded: [], migrainesModified: [], migrainesRemoved: [], catalogueItems: [] }
   }
 
-  return { mergeOnLogin, startRealtimeSync, stopRealtimeSync }
+  return { mergeOnLogin, refreshFromRemote, startRealtimeSync, stopRealtimeSync }
 }

@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSwipe } from '@vueuse/core'
 import HeaderNav from './components/HeaderNav.vue'
@@ -34,8 +34,26 @@ import ToastContainer from './components/ToastContainer.vue'
 import { useSettingsStore } from './stores/settings'
 import { useToastStore } from './stores/toast'
 import { hasSavedDraft, clearDraft } from './components/MigraineForm/draft'
+import { pb } from './lib/pocketbase'
+import { useSync } from './composables/useSync'
 
 useSettingsStore()
+
+const sync = useSync()
+
+function onVisibilityChange() {
+  if (document.visibilityState === 'visible' && pb.authStore.isValid) {
+    sync.refreshFromRemote().catch(console.error)
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('visibilitychange', onVisibilityChange)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', onVisibilityChange)
+})
 
 const router = useRouter()
 const toastStore = useToastStore()
