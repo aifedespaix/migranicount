@@ -94,7 +94,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import { useSwipe } from '@vueuse/core'
 import { ArrowRight, ArrowLeft, Clock, Gauge, Pill, Heart, Brain, Zap, FileText, CheckSquare } from 'lucide-vue-next'
 import { nextStepIndex, prevStepIndex } from './stepNav'
@@ -208,6 +208,27 @@ useSwipe(modalBodyRef, {
 })
 
 watch(draft, (d) => { if (!props.editId) saveDraft(d) }, { deep: true })
+
+let _saveDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(
+  draft,
+  () => {
+    if (_saveDebounceTimer) clearTimeout(_saveDebounceTimer)
+    _saveDebounceTimer = setTimeout(() => {
+      saveIfPossible()
+      _saveDebounceTimer = null
+    }, 1500)
+  },
+  { deep: true },
+)
+
+onUnmounted(() => {
+  if (_saveDebounceTimer) {
+    clearTimeout(_saveDebounceTimer)
+    _saveDebounceTimer = null
+  }
+})
 
 watch(stepIndex, async (i) => {
   await nextTick()
