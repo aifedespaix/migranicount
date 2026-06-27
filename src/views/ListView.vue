@@ -12,24 +12,28 @@
 
     <template v-else>
       <div class="filters">
-        <input
-          v-model="keyword"
-          type="search"
-          class="filter-input"
-          placeholder="Rechercher (médoc, note, symptôme, déclencheur, zone)"
-        />
+        <div class="filter-field">
+          <label class="filter-label" for="filter-keyword">Rechercher</label>
+          <input
+            id="filter-keyword"
+            v-model="keyword"
+            type="search"
+            class="filter-input"
+            placeholder="Médoc, note, symptôme, déclencheur, zone"
+          />
+        </div>
         <div class="date-range">
           <div class="date-range-field">
-            <label class="date-range-label">Du</label>
+            <label class="date-range-label" @click="focusDu">Du</label>
             <div class="date-range-input-wrap">
-              <input type="date" v-model="dateFrom" class="filter-input filter-input--date" />
+              <DateField ref="duRef" v-model="dateFrom" />
               <button v-if="dateFrom" type="button" class="date-clear-btn" @click="dateFrom = ''">×</button>
             </div>
           </div>
           <div class="date-range-field">
-            <label class="date-range-label">Au</label>
+            <label class="date-range-label" @click="focusAu">Au</label>
             <div class="date-range-input-wrap">
-              <input type="date" v-model="dateTo" class="filter-input filter-input--date" />
+              <DateField ref="auRef" v-model="dateTo" />
               <button v-if="dateTo" type="button" class="date-clear-btn" @click="dateTo = ''">×</button>
             </div>
           </div>
@@ -57,6 +61,7 @@ import { useMigrainesStore } from '../stores/migraines'
 import { filterMigraines } from '../utils/migraineFilters'
 import MigraineListItem from '../components/MigraineListItem.vue'
 import MigraineFormModal from '../components/MigraineForm/MigraineFormModal.vue'
+import DateField from '../components/DateField.vue'
 import { useToastStore } from '../stores/toast'
 
 const migraines = useMigrainesStore()
@@ -66,6 +71,16 @@ const addFormOpen = ref(false)
 const keyword = ref('')
 const dateFrom = ref('')
 const dateTo = ref('')
+const duRef = ref<InstanceType<typeof DateField> | null>(null)
+const auRef = ref<InstanceType<typeof DateField> | null>(null)
+
+function focusDu() {
+  duRef.value?.$el?.querySelector('input')?.click()
+}
+
+function focusAu() {
+  auRef.value?.$el?.querySelector('input')?.click()
+}
 
 const sorted = computed(() =>
   [...migraines.migraines].sort((a, b) => (a.date + a.heureDebut < b.date + b.heureDebut ? 1 : -1))
@@ -127,15 +142,30 @@ function onAddSaved() {
   gap: 0.75rem;
   margin-bottom: 1rem;
 }
-.filter-input {
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
   flex: 1;
   min-width: 200px;
+}
+
+.filter-label {
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  font-weight: 500;
+  cursor: default;
+}
+
+.filter-input {
   padding: 0.5rem 0.75rem;
   border-radius: 0.5rem;
   border: 1px solid var(--color-muted);
   background: var(--color-surface);
   color: var(--color-text);
   font-size: 0.95rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 .date-range {
   display: flex;
@@ -156,11 +186,6 @@ function onAddSaved() {
   position: relative;
   display: flex;
   align-items: center;
-}
-.filter-input--date {
-  flex: none;
-  min-width: auto;
-  padding-right: 1.75rem;
 }
 .date-clear-btn {
   position: absolute;
