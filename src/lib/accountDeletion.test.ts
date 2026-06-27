@@ -53,6 +53,9 @@ describe('deleteAccount', () => {
     await deleteAccount()
 
     expect(mockCollection).toHaveBeenCalledWith('migraines')
+    expect(mockCollection).toHaveBeenCalledWith('medocs_favoris')
+    expect(mockCollection).toHaveBeenCalledWith('user_preferences')
+    expect(mockDeleteData).toHaveBeenCalledTimes(6) // 2 records × 3 collections
     expect(mockGetFullList).toHaveBeenCalledWith({ filter: 'userId="user-123"' })
     expect(mockDeleteUser).toHaveBeenCalledWith('user-123')
     expect(mockStopRealtimeSync).toHaveBeenCalledOnce()
