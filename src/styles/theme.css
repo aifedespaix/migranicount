@@ -10,6 +10,8 @@
   --color-success-contrast: #ffffff;
   --color-info: #3b82f6;
   --color-info-contrast: #ffffff;
+  --color-warning: #f59e0b;
+  --color-warning-contrast: #ffffff;
 }
 
 [data-theme="dark"] {
@@ -24,6 +26,8 @@
   --color-success-contrast: #1c1726;
   --color-info: #60a5fa;
   --color-info-contrast: #1c1726;
+  --color-warning: #fbbf24;
+  --color-warning-contrast: #1c1726;
 }
 
 [data-theme="migraine"] {
@@ -38,6 +42,8 @@
   --color-success-contrast: #1c2117;
   --color-info: #6f8fae;
   --color-info-contrast: #1c2117;
+  --color-warning: #d4a847;
+  --color-warning-contrast: #1c2117;
 }
 
 [data-theme="migraine"] *,
