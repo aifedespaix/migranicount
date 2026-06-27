@@ -257,7 +257,10 @@ watch(
   () => {
     if (_saveDebounceTimer) clearTimeout(_saveDebounceTimer)
     _saveDebounceTimer = setTimeout(() => {
-      saveIfPossible()
+      if (canSave.value) {
+        const saved = migraines.save(draft.value)
+        if (!draft.value.id) draft.value.id = saved.id
+      }
       _saveDebounceTimer = null
     }, 1500)
   },
