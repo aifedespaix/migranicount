@@ -170,6 +170,16 @@ function addNew() {
 function remove(index: number) {
   model.value.medocs.splice(index, 1)
 }
+
+function hasPendingEntry(): boolean {
+  return nomInput.value.trim() !== ''
+}
+
+function submitPending(): void {
+  addNew()
+}
+
+defineExpose({ hasPendingEntry, submitPending })
 </script>
 
 <style scoped>
