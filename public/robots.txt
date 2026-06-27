@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /settings
+Disallow: /profil
+
+Sitemap: https://migracount.aifedespaix.com/sitemap.xml
