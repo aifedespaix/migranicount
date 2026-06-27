@@ -12,21 +12,34 @@
         {{ tag }}
       </button>
     </div>
-    <form class="trigger-add-form" @submit.prevent="addCustomTag">
-      <input v-model="customTag" placeholder="Ajouter un déclencheur" />
-      <button type="submit" class="pill-btn">Ajouter</button>
+    <form class="add-form" @submit.prevent="addCustomTag">
+      <div class="add-input-group" :class="{ focused: isFocused }">
+        <input
+          v-model="customTag"
+          placeholder="Ajouter un déclencheur"
+          class="add-input"
+          @focus="isFocused = true"
+          @blur="isFocused = false"
+        />
+        <button type="submit" class="add-btn" :disabled="!customTag.trim()">
+          <Plus :size="13" />
+          Ajouter
+        </button>
+      </div>
     </form>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { Plus } from 'lucide-vue-next'
 import { useDeclencheursStore } from '../../stores/declencheurs'
 import type { MigraineDraft } from './draft'
 
 const model = defineModel<MigraineDraft>({ required: true })
 const declencheurs = useDeclencheursStore()
 const customTag = ref('')
+const isFocused = ref(false)
 
 function toggleTag(tag: string) {
   const i = model.value.declencheurs.indexOf(tag)
@@ -35,7 +48,7 @@ function toggleTag(tag: string) {
 }
 
 function addCustomTag() {
-  if (!customTag.value) return
+  if (!customTag.value.trim()) return
   declencheurs.register(customTag.value)
   model.value.declencheurs.push(customTag.value)
   customTag.value = ''
@@ -43,17 +56,70 @@ function addCustomTag() {
 </script>
 
 <style scoped>
-.trigger-add-form {
+.step {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+  flex-direction: column;
+  gap: 0;
 }
-.trigger-add-form input {
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
-  border: 1px solid var(--color-muted);
+
+.pill-group {
+  padding-bottom: 0.75rem;
+}
+
+.add-form {
+  position: sticky;
+  bottom: -1.25rem;
+  margin: 0 -1.5rem -1.25rem;
+  padding: 0.6rem 1.5rem 1rem;
   background: var(--color-surface);
-  color: var(--color-text);
+  border-top: 1px solid color-mix(in srgb, var(--color-muted) 20%, transparent);
+}
+
+.add-input-group {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--color-muted);
+  border-radius: 0.6rem;
+  background: var(--color-bg);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.add-input-group.focused {
+  border-color: var(--color-accent);
+}
+
+.add-input {
   flex: 1;
+  padding: 0.55rem 0.75rem;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  min-width: 0;
+}
+
+.add-input:focus {
+  outline: none;
+}
+
+.add-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.55rem 0.8rem;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.add-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 </style>

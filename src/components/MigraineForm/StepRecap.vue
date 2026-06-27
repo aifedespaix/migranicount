@@ -26,13 +26,19 @@
         <ul class="medoc-recap-list">
           <li v-for="m in model.medocs" :key="m.id">
             <button
+              v-if="m.description || m.posologieParJour || m.intervalleHeures"
               type="button"
-              class="medoc-recap-item"
-              :disabled="!m.description && !m.posologieParJour && !m.intervalleHeures"
+              class="medoc-recap-item medoc-recap-item--clickable"
               @click="activeMedoc = m"
             >
-              {{ m.nom }} ({{ m.heure }})
+              <span class="medoc-recap-name">{{ m.nom }}</span>
+              <span class="medoc-recap-time">{{ m.heure }}</span>
+              <ChevronRight :size="13" class="medoc-recap-chevron" />
             </button>
+            <div v-else class="medoc-recap-item medoc-recap-item--plain">
+              <span class="medoc-recap-name">{{ m.nom }}</span>
+              <span class="medoc-recap-time">{{ m.heure }}</span>
+            </div>
           </li>
         </ul>
       </div>
@@ -88,6 +94,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { ChevronRight } from 'lucide-vue-next'
 import { intensityColor, intensityLabel } from '../../utils/intensity'
 import { zoneLabel } from '../../utils/zone'
 import type { MigraineDraft } from './draft'
@@ -113,22 +120,50 @@ const activeMedoc = ref<MedocPris | null>(null)
 .medoc-recap-list {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.35rem;
   margin: 0;
   padding: 0;
+  list-style: none;
 }
 .medoc-recap-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  font: inherit;
+  text-align: left;
+}
+.medoc-recap-item--clickable {
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
+  border-radius: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+  color: var(--color-text);
+  transition: background 0.12s;
+}
+.medoc-recap-item--clickable:active {
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+.medoc-recap-item--plain {
+  padding: 0.1rem 0;
+  color: var(--color-text);
+  opacity: 0.85;
   background: none;
   border: none;
-  padding: 0;
-  font: inherit;
-  color: var(--color-text);
-  text-align: left;
-  cursor: pointer;
 }
-.medoc-recap-item:disabled {
-  cursor: default;
-  opacity: 0.7;
+.medoc-recap-name {
+  flex: 1;
+  font-size: 0.85rem;
+}
+.medoc-recap-time {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+.medoc-recap-chevron {
+  color: var(--color-accent);
+  flex-shrink: 0;
 }
 .intensity-badge {
   display: inline-flex;

@@ -42,15 +42,6 @@
         </div>
       </div>
       <div class="field-group">
-        <label class="field-label" for="medoc-desc">Description</label>
-        <input
-          id="medoc-desc"
-          v-model="descriptionInput"
-          placeholder="Dosage, forme... (optionnel)"
-          class="form-input"
-        />
-      </div>
-      <div class="field-group">
         <label class="field-label">Heure de prise</label>
         <TimeField v-model="heureInput" />
       </div>

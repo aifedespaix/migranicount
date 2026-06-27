@@ -308,19 +308,20 @@ function executeDelete() {
 }
 .step-warning-badge {
   position: absolute;
-  top: 0.1rem;
-  right: 0.1rem;
+  top: -0.2rem;
+  right: -0.2rem;
   background: var(--color-danger);
   color: white;
-  font-size: 0.5rem;
+  font-size: 0.4rem;
   font-weight: 700;
   border-radius: 50%;
-  width: 0.9rem;
-  height: 0.9rem;
+  width: 0.65rem;
+  height: 0.65rem;
   display: flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
+  pointer-events: none;
 }
 .stepper-btn.past {
   color: var(--color-accent);
