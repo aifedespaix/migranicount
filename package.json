@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "icons": "node scripts/generate-icons.mjs",
+    "generate-og": "node scripts/generate-og-image.mjs",
     "pb-init": "node scripts/pb-init.mjs"
   },
   "dependencies": {

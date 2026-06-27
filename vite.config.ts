@@ -11,7 +11,7 @@ export default defineConfig({
       manifest: {
         name: 'Migracount',
         short_name: 'Migracount',
-        description: "Suivi personnel des crises de migraine, 100% local",
+        description: "Suivi et analyse de vos crises de migraine, avec synchronisation cloud optionnelle.",
         theme_color: '#8b5cf6',
         background_color: '#faf8fc',
         display: 'standalone',
