@@ -2,6 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import StatsView from '../views/StatsView.vue'
 import ListView from '../views/ListView.vue'
 import SettingsView from '../views/SettingsView.vue'
+import ProfileView from '../views/ProfileView.vue'
+import { pb } from '../lib/pocketbase'
 import { applySeo } from '../composables/useHead'
 import type { SeoMeta } from '../composables/useHead'
 
@@ -51,7 +53,26 @@ export const router = createRouter({
         },
       },
     },
+    {
+      path: '/profil',
+      name: 'profil',
+      component: ProfileView,
+      meta: {
+        requiresAuth: true,
+        seo: {
+          title: 'Mon profil',
+          description: 'Gerez votre compte Migracount : informations personnelles, statistiques et suppression de compte.',
+          robots: 'noindex, nofollow',
+        }
+      }
+    },
   ],
+})
+
+router.beforeEach((to) => {
+  if (to.meta.requiresAuth && !pb.authStore.isValid) {
+    return { name: 'stats' }
+  }
 })
 
 router.afterEach((to) => {
