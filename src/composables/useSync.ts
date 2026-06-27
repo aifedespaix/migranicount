@@ -35,6 +35,7 @@ let diffAccumulator: {
   catalogueItems: string[]
 } = { migrainesAdded: [], migrainesModified: [], migrainesRemoved: [], catalogueItems: [] }
 let flushTimer: ReturnType<typeof setTimeout> | null = null
+let mergeInFlight = false
 
 function scheduleFlushToasts() {
   if (flushTimer) clearTimeout(flushTimer)
@@ -59,84 +60,55 @@ function scheduleFlushToasts() {
 }
 
 export function useSync() {
-  async function mergeOnLogin(): Promise<void> {
-    if (!pb.authStore.isValid) return
-    const userId = pb.authStore.record!.id
+  async function _mergeAndToast(userId: string): Promise<void> {
+    if (mergeInFlight) return
+    mergeInFlight = true
+    try {
+      const beforeMigraines = listMigraines()
+      const beforeMedocs = listMedocsFavoris()
+      const beforeDecl = listDeclencheursFavoris()
+      const beforeSympt = listSymptomesCustom()
 
-    const beforeMigraines = listMigraines()
-    const beforeMedocs = listMedocsFavoris()
-    const beforeDecl = listDeclencheursFavoris()
-    const beforeSympt = listSymptomesCustom()
+      await Promise.all([
+        _mergeMigraines(userId),
+        _mergeMedocs(userId),
+        _mergePreferences(userId),
+      ])
 
-    await Promise.all([
-      _mergeMigraines(userId),
-      _mergeMedocs(userId),
-      _mergePreferences(userId),
-    ])
+      useMigrainesStore().refresh()
+      useMedocsFavorisStore().refresh()
+      useDeclencheursStore().refresh()
+      useSymptomesStore().refresh()
 
-    useMigrainesStore().refresh()
-    useMedocsFavorisStore().refresh()
-    useDeclencheursStore().refresh()
-    useSymptomesStore().refresh()
+      const afterMigraines = listMigraines()
+      const afterMedocs = listMedocsFavoris()
+      const afterDecl = listDeclencheursFavoris()
+      const afterSympt = listSymptomesCustom()
 
-    const afterMigraines = listMigraines()
-    const afterMedocs = listMedocsFavoris()
-    const afterDecl = listDeclencheursFavoris()
-    const afterSympt = listSymptomesCustom()
-
-    const migrainesDiff = computeMigrainesDiff(beforeMigraines, afterMigraines)
-    const catalogueDiff = computeCatalogueDiff(
-      beforeMedocs, afterMedocs,
-      beforeDecl, afterDecl,
-      beforeSympt, afterSympt,
-    )
-    const msgs = buildSyncToasts(migrainesDiff, catalogueDiff)
-    if (msgs.length > 0) {
+      const migrainesDiff = computeMigrainesDiff(beforeMigraines, afterMigraines)
+      const catalogueDiff = computeCatalogueDiff(
+        beforeMedocs, afterMedocs,
+        beforeDecl, afterDecl,
+        beforeSympt, afterSympt,
+      )
+      const msgs = buildSyncToasts(migrainesDiff, catalogueDiff)
       const toastStore = useToastStore()
       for (const msg of msgs) {
         toastStore.add({ message: msg, type: 'success', persistent: false })
       }
+    } finally {
+      mergeInFlight = false
     }
+  }
+
+  async function mergeOnLogin(): Promise<void> {
+    if (!pb.authStore.isValid) return
+    await _mergeAndToast(pb.authStore.record!.id)
   }
 
   async function refreshFromRemote(): Promise<void> {
     if (!pb.authStore.isValid) return
-    const userId = pb.authStore.record!.id
-
-    const beforeMigraines = listMigraines()
-    const beforeMedocs = listMedocsFavoris()
-    const beforeDecl = listDeclencheursFavoris()
-    const beforeSympt = listSymptomesCustom()
-
-    await Promise.all([
-      _mergeMigraines(userId),
-      _mergeMedocs(userId),
-      _mergePreferences(userId),
-    ])
-
-    useMigrainesStore().refresh()
-    useMedocsFavorisStore().refresh()
-    useDeclencheursStore().refresh()
-    useSymptomesStore().refresh()
-
-    const afterMigraines = listMigraines()
-    const afterMedocs = listMedocsFavoris()
-    const afterDecl = listDeclencheursFavoris()
-    const afterSympt = listSymptomesCustom()
-
-    const migrainesDiff = computeMigrainesDiff(beforeMigraines, afterMigraines)
-    const catalogueDiff = computeCatalogueDiff(
-      beforeMedocs, afterMedocs,
-      beforeDecl, afterDecl,
-      beforeSympt, afterSympt,
-    )
-    const msgs = buildSyncToasts(migrainesDiff, catalogueDiff)
-    if (msgs.length > 0) {
-      const toastStore = useToastStore()
-      for (const msg of msgs) {
-        toastStore.add({ message: msg, type: 'success', persistent: false })
-      }
-    }
+    await _mergeAndToast(pb.authStore.record!.id)
   }
 
   async function _mergeMigraines(userId: string): Promise<void> {
