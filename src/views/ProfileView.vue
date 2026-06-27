@@ -97,15 +97,15 @@ const sync = useSync()
 const migrainesStore = useMigrainesStore()
 const medocsStore = useMedocsFavorisStore()
 
-const user = authStore.user
+const user = computed(() => authStore.user)
 
 const displayName = computed(() =>
-  (user?.['name'] as string) || (user?.['email'] as string) || 'Utilisateur'
+  (user.value?.['name'] as string) || (user.value?.['email'] as string) || 'Utilisateur'
 )
 const initial = computed(() => (displayName.value || '?').charAt(0).toUpperCase())
 const memberSince = computed(() => {
-  if (!user?.created) return '–'
-  return new Date(user.created as string).toLocaleDateString('fr-FR', {
+  if (!user.value?.created) return '–'
+  return new Date(user.value?.created as string).toLocaleDateString('fr-FR', {
     year: 'numeric', month: 'long', day: 'numeric'
   })
 })

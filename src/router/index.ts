@@ -77,6 +77,6 @@ router.beforeEach((to) => {
 
 router.afterEach((to) => {
   if (to.meta.seo) {
-    applySeo(to.meta.seo as SeoMeta, to.fullPath)
+    applySeo(to.meta.seo as SeoMeta, to.path)
   }
 })
