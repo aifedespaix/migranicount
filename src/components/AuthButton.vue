@@ -29,27 +29,44 @@
       </button>
       <div v-if="showMenu" class="auth-dropdown" role="menu">
         <span class="auth-dropdown-name">{{ displayName }}</span>
-        <button type="button" class="auth-dropdown-btn" role="menuitem" @click="handleLogout">
+        <button type="button" class="auth-dropdown-btn" role="menuitem" @click="navigateToProfil">
+          Mon profil
+        </button>
+        <button type="button" class="auth-dropdown-btn" role="menuitem" @click="openLogoutDialog">
           Se déconnecter
         </button>
       </div>
     </div>
   </div>
+  <ConfirmDialog
+    v-if="showLogoutDialog"
+    title="Se déconnecter"
+    message="Êtes-vous sûr de vouloir vous déconnecter ? Vous perdrez la synchronisation avec le serveur."
+    confirm-label="Se déconnecter"
+    cancel-label="Annuler"
+    @confirm="confirmLogout"
+    @cancel="showLogoutDialog = false"
+    @dismiss="showLogoutDialog = false"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { onClickOutside } from '@vueuse/core'
+import { useRouter } from 'vue-router'
 import { Cloud, CloudOff, Loader2 } from 'lucide-vue-next'
 import { useAuthStore } from '../stores/auth'
 import { useSync } from '../composables/useSync'
+import ConfirmDialog from './ConfirmDialog.vue'
 
 const authStore = useAuthStore()
 const sync = useSync()
+const router = useRouter()
 
 const loading = ref(false)
 const error = ref('')
 const showMenu = ref(false)
+const showLogoutDialog = ref(false)
 const wrapperRef = ref<HTMLElement | null>(null)
 
 onClickOutside(wrapperRef, () => {
@@ -83,10 +100,20 @@ async function handleLogin() {
   }
 }
 
-function handleLogout() {
+function openLogoutDialog() {
   showMenu.value = false
+  showLogoutDialog.value = true
+}
+
+function confirmLogout() {
+  showLogoutDialog.value = false
   sync.stopRealtimeSync()
   authStore.logout()
+}
+
+function navigateToProfil() {
+  showMenu.value = false
+  router.push({ name: 'profil' })
 }
 
 function toggleMenu() {
