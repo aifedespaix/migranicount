@@ -45,7 +45,7 @@
             @before-enter="onBeforeEnter"
             @after-leave="onAfterLeave"
           >
-            <component :is="steps[stepIndex]" v-model="draft" :key="stepIndex" :edit-id="props.editId" @delete="showDeleteConfirm = true" />
+            <component :is="steps[stepIndex]" ref="activeStepRef" v-model="draft" :key="stepIndex" :edit-id="props.editId" @delete="showDeleteConfirm = true" />
           </Transition>
         </div>
       </div>
@@ -73,6 +73,7 @@
           v-else
           type="button"
           class="action-btn action-btn-next"
+          :class="{ 'action-btn-next--warning': hasPendingMedoc }"
           @click="goNext"
         >
           Suiv.
@@ -89,6 +90,12 @@
       @confirm="executeDelete"
       @cancel="showDeleteConfirm = false"
       @dismiss="showDeleteConfirm = false"
+    />
+    <PendingMedocDialog
+      v-if="showPendingMedocDialog"
+      @stay="onPendingStay"
+      @skip="onPendingSkip"
+      @add-and-continue="onPendingAddAndContinue"
     />
   </div>
 </template>
@@ -111,6 +118,7 @@ import { useMigrainesStore } from '../../stores/migraines'
 import { formatMigraineTitleDate } from '../../utils/date'
 import { stepMissingCount } from '../../utils/stepValidation'
 import ConfirmDialog from '../ConfirmDialog.vue'
+import PendingMedocDialog from '../PendingMedocDialog.vue'
 
 const props = defineProps<{ editId?: string }>()
 const emit = defineEmits<{ close: []; saved: [] }>()
@@ -124,6 +132,16 @@ const stepIcons = [Clock, Gauge, Pill, Heart, Brain, Zap, FileText, CheckSquare]
 const stepIndex = ref(props.editId ? steps.length - 1 : loadDraftStep())
 const draft = ref(props.editId ? { ...migraines.getById(props.editId)! } : loadDraft())
 const showDeleteConfirm = ref(false)
+
+const activeStepRef = ref<{ hasPendingEntry?: () => boolean; submitPending?: () => void } | null>(null)
+const showPendingMedocDialog = ref(false)
+
+const MEDOCS_STEP_INDEX = 2
+
+const hasPendingMedoc = computed(() => {
+  if (stepIndex.value !== MEDOCS_STEP_INDEX) return false
+  return activeStepRef.value?.hasPendingEntry?.() ?? false
+})
 
 const progressPercent = computed(() => ((stepIndex.value + 1) / steps.length) * 100)
 const canSave = computed(() => canSaveDraft(draft.value))
@@ -167,13 +185,36 @@ function saveIfPossible() {
   if (!props.editId) clearDraft()
 }
 
-function goNext() {
+function _performGoNext() {
   saveIfPossible()
   const next = nextStepIndex(stepIndex.value, steps.length)
   if (next === stepIndex.value) return
   transitionName.value = 'slide-next'
   stepIndex.value = next
   if (!props.editId) saveDraftStep(stepIndex.value)
+}
+
+function goNext() {
+  if (hasPendingMedoc.value) {
+    showPendingMedocDialog.value = true
+    return
+  }
+  _performGoNext()
+}
+
+function onPendingStay() {
+  showPendingMedocDialog.value = false
+}
+
+function onPendingSkip() {
+  showPendingMedocDialog.value = false
+  _performGoNext()
+}
+
+function onPendingAddAndContinue() {
+  activeStepRef.value?.submitPending?.()
+  showPendingMedocDialog.value = false
+  _performGoNext()
 }
 
 function goPrev() {
@@ -458,6 +499,11 @@ function executeDelete() {
   background: var(--color-info);
   color: var(--color-info-contrast);
   border-color: var(--color-info);
+}
+.action-btn-next--warning {
+  background: var(--color-warning);
+  color: var(--color-warning-contrast);
+  border-color: var(--color-warning);
 }
 .action-btn-prev {
   background: transparent;
