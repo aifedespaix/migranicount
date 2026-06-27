@@ -128,11 +128,28 @@ export async function patchPreferences(patch: Record<string, unknown>): Promise<
   }
 
   try {
-    const existing = await pb.collection('user_preferences').getFirstListItem(`userId="${userId}"`)
+    const existing = await pb.collection('user_preferences').getFirstListItem(
+      `userId="${userId}"`,
+      { requestKey: null },
+    )
     prefsRecordId = existing['id'] as string
     await pb.collection('user_preferences').update(prefsRecordId, patch)
   } catch {
-    const created = await pb.collection('user_preferences').create({ userId, ...patch })
-    prefsRecordId = created['id'] as string
+    try {
+      const created = await pb.collection('user_preferences').create({ userId, ...patch })
+      prefsRecordId = created['id'] as string
+    } catch {
+      // concurrent create won the race — look up the record and update instead
+      try {
+        const existing = await pb.collection('user_preferences').getFirstListItem(
+          `userId="${userId}"`,
+          { requestKey: null },
+        )
+        prefsRecordId = existing['id'] as string
+        await pb.collection('user_preferences').update(prefsRecordId, patch)
+      } catch {
+        // best-effort
+      }
+    }
   }
 }

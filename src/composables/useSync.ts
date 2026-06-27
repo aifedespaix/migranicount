@@ -243,8 +243,10 @@ export function useSync() {
     for (const s of mergedSymptomes) addSymptomeCustom(s)
 
     const settings = useSettingsStore()
-    settings.setTheme(mergedTheme as Parameters<typeof settings.setTheme>[0])
-    settings.setDyslexicFont(mergedFont as Parameters<typeof settings.setDyslexicFont>[0])
+    settings.applyFromSync(
+      mergedTheme as Parameters<typeof settings.setTheme>[0],
+      mergedFont as Parameters<typeof settings.setDyslexicFont>[0],
+    )
 
     await patchPreferences({
       declencheursFavoris: mergedDeclencheurs,

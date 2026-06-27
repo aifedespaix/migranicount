@@ -71,5 +71,11 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  return { theme, dyslexicFont, resolvedTheme, setTheme, setDyslexicFont }
+  function applyFromSync(t: ThemeChoice, f: FontChoice): void {
+    theme.value = t
+    dyslexicFont.value = f
+    persist()
+  }
+
+  return { theme, dyslexicFont, resolvedTheme, setTheme, setDyslexicFont, applyFromSync }
 })
