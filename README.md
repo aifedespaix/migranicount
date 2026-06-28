@@ -1,6 +1,6 @@
 # Migracount
 
-Application PWA de suivi personnel des crises de migraine, 100% locale (aucune donnée transmise).
+Application PWA de suivi personnel des crises de migraine. Fonctionne entièrement en local, avec synchronisation serveur optionnelle via compte Google.
 
 ## Fonctionnalités
 
@@ -23,10 +23,18 @@ Application PWA de suivi personnel des crises de migraine, 100% locale (aucune d
 - Police : Normale, Lexend, OpenDyslexic.
 - Export / Import des données au format JSON.
 
+### Synchronisation (optionnelle)
+- Connexion via compte Google (OAuth2).
+- Les données sont synchronisées sur un serveur PocketBase hébergé (`api-migracount.aifedespaix.com`).
+- Fusion intelligente à la connexion : `localStorage` + données serveur, le plus récent gagne.
+- Synchronisation temps réel entre appareils tant que la session est active.
+- Déconnexion conserve les données locales.
+
 ### PWA & Offline
 - Installable sur mobile et desktop.
 - Fonctionne hors-ligne après le premier chargement.
-- Toutes les données sont stockées localement dans `localStorage`.
+- Les données sont stockées localement dans `localStorage` (fonctionnement garanti sans connexion).
+- Si connecté, les données sont aussi synchronisées côté serveur.
 
 ## Stack technique
 
@@ -40,6 +48,8 @@ Application PWA de suivi personnel des crises de migraine, 100% locale (aucune d
 | Icônes | lucide-vue-next |
 | Swipe | @vueuse/core (`useSwipe`) |
 | PWA | vite-plugin-pwa (Workbox) |
+| Backend sync | PocketBase (self-hosted) |
+| Auth | Google OAuth2 (via PocketBase) |
 | Tests | Vitest |
 
 ## Installation & lancement
@@ -85,6 +95,8 @@ src/
 
 ## Confidentialité des données
 
-Migracount ne collecte aucune donnée. Tout est stocké dans `localStorage` du navigateur, sur l'appareil uniquement.
+Par défaut, Migracount ne transmet aucune donnée. Tout est stocké dans `localStorage` du navigateur, sur l'appareil uniquement.
+
+**Synchronisation optionnelle :** si vous vous connectez avec votre compte Google, vos données sont chiffrées en transit et stockées sur un serveur PocketBase auto-hébergé (`api-migracount.aifedespaix.com`). La connexion est strictement personnelle — chaque utilisateur n'accède qu'à ses propres données. La déconnexion stoppe la sync ; le `localStorage` reste intact.
 
 L'export JSON (page Réglages) génère un fichier local téléchargé sur l'appareil. L'import remplace les données actuelles par le contenu du fichier importé.
