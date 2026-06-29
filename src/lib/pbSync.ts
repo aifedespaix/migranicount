@@ -81,6 +81,10 @@ export async function pushMedocFavori(f: MedocFavori): Promise<void> {
       usageCount: Math.max(f.usageCount, (existing['usageCount'] as number) ?? 0),
       posologieParJour: f.posologieParJour ?? null,
       intervalleHeures: f.intervalleHeures ?? null,
+      isLongTermTreatment: f.isLongTermTreatment ?? null,
+      treatmentPeriods: f.treatmentPeriods ?? null,
+      sideEffects: f.sideEffects ?? null,
+      expectedEffects: f.expectedEffects ?? null,
     })
   } catch {
     await pb.collection('medocs_favoris').create({
@@ -91,6 +95,10 @@ export async function pushMedocFavori(f: MedocFavori): Promise<void> {
       usageCount: f.usageCount,
       posologieParJour: f.posologieParJour ?? null,
       intervalleHeures: f.intervalleHeures ?? null,
+      isLongTermTreatment: f.isLongTermTreatment ?? null,
+      treatmentPeriods: f.treatmentPeriods ?? null,
+      sideEffects: f.sideEffects ?? null,
+      expectedEffects: f.expectedEffects ?? null,
     })
   }
 }

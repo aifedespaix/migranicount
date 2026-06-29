@@ -143,6 +143,30 @@ async function createUserPreferencesCollection() {
   console.log(`✓ Collection "${name}" créée`)
 }
 
+async function updateMedocsFavorisCollection() {
+  try {
+    const col = await pb.collections.getOne('medocs_favoris')
+    const existingNames = col.fields.map((f) => f.name)
+    const newFields = []
+    if (!existingNames.includes('isLongTermTreatment'))
+      newFields.push({ type: 'bool', name: 'isLongTermTreatment' })
+    if (!existingNames.includes('treatmentPeriods'))
+      newFields.push({ type: 'json', name: 'treatmentPeriods' })
+    if (!existingNames.includes('sideEffects'))
+      newFields.push({ type: 'text', name: 'sideEffects', max: 500 })
+    if (!existingNames.includes('expectedEffects'))
+      newFields.push({ type: 'text', name: 'expectedEffects', max: 500 })
+    if (!newFields.length) {
+      console.log('· Collection "medocs_favoris" déjà à jour — skip')
+      return
+    }
+    await pb.collections.update(col.id, { fields: [...col.fields, ...newFields] })
+    console.log(`✓ ${newFields.length} champ(s) ajouté(s) à "medocs_favoris"`)
+  } catch (e) {
+    console.error('✗ Impossible de mettre à jour "medocs_favoris" :', e.message)
+  }
+}
+
 async function configureUsersDeleteRule() {
   try {
     const usersCollection = await pb.collections.getOne('users')
@@ -167,6 +191,7 @@ async function main() {
   console.log('\nCréation des collections...\n')
   await createMigrainesCollection()
   await createMedocsFavorisCollection()
+  await updateMedocsFavorisCollection()
   await createUserPreferencesCollection()
 
   console.log('\nConfiguration des regles de suppression...\n')

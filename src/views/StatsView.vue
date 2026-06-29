@@ -38,7 +38,9 @@
 
       <button class="chart-card" @click="openDetail('frequency')">
         <h2>Fréquence des crises</h2>
-        <div class="chart-wrap"><FrequencyChart :migraines="migraines.migraines" :period="period" /></div>
+        <div class="chart-wrap">
+          <FrequencyChart :migraines="migraines.migraines" :period="period" :treatment-timeline="treatmentTimeline" />
+        </div>
       </button>
 
       <div class="stats-buttons">
@@ -46,6 +48,12 @@
         <StatsButton title="Distribution des intensités" :facts="distributionFacts" @click="openDetail('intensity-distribution')" />
         <StatsButton title="Efficacité médicaments" :facts="efficacyFacts" @click="openDetail('medoc-efficacy')" />
         <StatsButton title="Durée des crises" :facts="durationFacts" @click="openDetail('duration')" />
+        <StatsButton
+          v-if="hasTraitementData"
+          title="Traitement de fond"
+          :facts="traitementFacts"
+          @click="traitementEfficaciteOpen = true"
+        />
       </div>
     </template>
 
@@ -54,7 +62,15 @@
       :chart="activeDetail"
       :migraines="migraines.migraines"
       :initial-period="period"
+      :treatment-timeline="treatmentTimeline"
       @close="activeDetail = null"
+    />
+
+    <TraitementEfficaciteModal
+      v-if="traitementEfficaciteOpen"
+      :migraines="migraines.migraines"
+      :medocs="medocsFavoris.favoris"
+      @close="traitementEfficaciteOpen = false"
     />
 
     <MigraineFormModal
@@ -68,24 +84,29 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useMigrainesStore } from '../stores/migraines'
+import { useMedocsFavorisStore } from '../stores/medocsFavoris'
 import { formatRelative, formatDuration, todayISO } from '../utils/date'
 import {
   defaultPeriod, type Period,
   intensityStats, durationStats, efficacyRanking, intensityDistribution,
+  buildActivePeriodTimeline, treatmentEfficacyAnalysis,
 } from '../utils/stats'
 import FrequencyChart from '../components/charts/FrequencyChart.vue'
 import StatsButton from '../components/charts/StatsButton.vue'
 import ChartDetailModal from '../components/charts/ChartDetailModal.vue'
 import MigraineFormModal from '../components/MigraineForm/MigraineFormModal.vue'
+import TraitementEfficaciteModal from '../components/TraitementEfficaciteModal.vue'
 import { useToastStore } from '../stores/toast'
 
 type ChartType = 'frequency' | 'intensity' | 'intensity-distribution' | 'medoc-efficacy' | 'duration'
 
 const migraines = useMigrainesStore()
+const medocsFavoris = useMedocsFavorisStore()
 const toastStore = useToastStore()
 const period = ref<Period>(defaultPeriod(migraines.migraines))
 const activeDetail = ref<ChartType | null>(null)
 const emptyStateFormOpen = ref(false)
+const traitementEfficaciteOpen = ref(false)
 
 const periodLabels: Record<Period, string> = { day: 'Jour', week: 'Semaine', month: 'Mois' }
 
@@ -136,6 +157,27 @@ const durationFacts = computed(() => [
   { value: avgDur.value.avgMin > 0 ? formatDuration(avgDur.value.avgMin) : '—', label: 'durée moy.' },
   { value: avgDur.value.maxMin > 0 ? formatDuration(avgDur.value.maxMin) : '—', label: 'max' },
 ])
+
+const treatmentTimeline = computed(() =>
+  buildActivePeriodTimeline(medocsFavoris.favoris).map((t) => ({ start: t.start, end: t.end }))
+)
+
+const hasTraitementData = computed(() =>
+  medocsFavoris.longTermMeds.some((m) => m.treatmentPeriods?.length)
+)
+
+const traitementFacts = computed(() => {
+  const results = treatmentEfficacyAnalysis(migraines.migraines, medocsFavoris.favoris)
+  const withData = results.filter((r) => r.reductionPct.freq !== null)
+  if (!withData.length) {
+    return [{ value: String(medocsFavoris.longTermMeds.length), label: 'traitement(s) suivi(s)' }]
+  }
+  const best = [...withData].sort((a, b) => (a.reductionPct.freq ?? 0) - (b.reductionPct.freq ?? 0))[0]
+  return [
+    { value: best.medoc, label: 'meilleure efficacité' },
+    { value: `${Math.abs(best.reductionPct.freq!)}%`, label: best.reductionPct.freq! < 0 ? 'réduction fréquence' : 'augmentation' },
+  ]
+})
 </script>
 
 <style scoped>

@@ -1,4 +1,4 @@
-import type { Migraine } from '../types/migraine'
+import type { Migraine, MedocFavori, TreatmentPeriod } from '../types/migraine'
 
 function monthKey(d: Date): string {
   return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`
@@ -258,4 +258,119 @@ export function defaultPeriod(migraines: Migraine[]): Period {
   if (monthsDiff < 3) return 'day'
   if (monthsDiff < 6) return 'week'
   return 'month'
+}
+
+// ─── Analyse des traitements de fond ────────────────────────────────────────
+
+export function buildActivePeriodTimeline(
+  medocs: MedocFavori[],
+): { medoc: string; start: string; end: string }[] {
+  const today = new Date().toISOString().slice(0, 10)
+  const entries: { medoc: string; start: string; end: string }[] = []
+  for (const m of medocs) {
+    if (!m.isLongTermTreatment || !m.treatmentPeriods?.length) continue
+    for (const p of m.treatmentPeriods) {
+      entries.push({ medoc: m.nom, start: p.startDate, end: p.endDate ?? today })
+    }
+  }
+  return entries.sort((a, b) => a.start.localeCompare(b.start))
+}
+
+export function isDateInTreatmentPeriod(
+  date: string,
+  timeline: { start: string; end: string }[],
+): boolean {
+  return timeline.some((t) => date >= t.start && date <= t.end)
+}
+
+export function splitMigrainesByPeriod(
+  migraines: Migraine[],
+  timeline: { start: string; end: string }[],
+): { inPeriod: Migraine[]; outPeriod: Migraine[] } {
+  const inPeriod: Migraine[] = []
+  const outPeriod: Migraine[] = []
+  for (const m of migraines) {
+    if (isDateInTreatmentPeriod(m.date, timeline)) inPeriod.push(m)
+    else outPeriod.push(m)
+  }
+  return { inPeriod, outPeriod }
+}
+
+export interface PeriodStats {
+  avgFreqPerMonth: number
+  avgDurationMin: number
+  avgIntensity: number
+  count: number
+}
+
+export interface TreatmentEfficacyResult {
+  medoc: string
+  periods: TreatmentPeriod[]
+  inPeriod: PeriodStats
+  outPeriod: PeriodStats
+  reductionPct: { freq: number | null; duration: number | null; intensity: number | null }
+}
+
+export function treatmentEfficacyAnalysis(
+  migraines: Migraine[],
+  medocs: MedocFavori[],
+): TreatmentEfficacyResult[] {
+  if (!migraines.length) return []
+  const today = new Date().toISOString().slice(0, 10)
+  const sortedDates = [...migraines].map((m) => m.date).sort()
+  const firstDate = sortedDates[0]
+  const totalDays =
+    (new Date(today).getTime() - new Date(firstDate).getTime()) / 86400000 || 1
+  const totalMonths = totalDays / 30.44
+
+  const pctChange = (inV: number, outV: number): number | null =>
+    outV === 0 ? null : Math.round(((inV - outV) / outV) * 100)
+
+  return medocs
+    .filter((m) => m.isLongTermTreatment && m.treatmentPeriods?.length)
+    .map((med) => {
+      const medTimeline = med.treatmentPeriods!.map((p) => ({
+        start: p.startDate < firstDate ? firstDate : p.startDate,
+        end: (p.endDate ?? today) > today ? today : (p.endDate ?? today),
+      }))
+
+      const { inPeriod, outPeriod } = splitMigrainesByPeriod(migraines, medTimeline)
+
+      const treatDays = medTimeline.reduce((sum, t) => {
+        const d = (new Date(t.end).getTime() - new Date(t.start).getTime()) / 86400000
+        return sum + Math.max(0, d)
+      }, 0)
+
+      const treatMonths = Math.max(treatDays / 30.44, 0.001)
+      const outMonths = Math.max(totalMonths - treatMonths, 0.001)
+
+      const freqIn = inPeriod.length / treatMonths
+      const freqOut = outPeriod.length / outMonths
+      const avgDurIn = averageDurationMinutes(inPeriod)
+      const avgDurOut = averageDurationMinutes(outPeriod)
+      const avgIntIn = averageIntensity(inPeriod)
+      const avgIntOut = averageIntensity(outPeriod)
+
+      return {
+        medoc: med.nom,
+        periods: med.treatmentPeriods!,
+        inPeriod: {
+          avgFreqPerMonth: Math.round(freqIn * 10) / 10,
+          avgDurationMin: avgDurIn,
+          avgIntensity: avgIntIn,
+          count: inPeriod.length,
+        },
+        outPeriod: {
+          avgFreqPerMonth: Math.round(freqOut * 10) / 10,
+          avgDurationMin: avgDurOut,
+          avgIntensity: avgIntOut,
+          count: outPeriod.length,
+        },
+        reductionPct: {
+          freq: pctChange(freqIn, freqOut),
+          duration: pctChange(avgDurIn, avgDurOut),
+          intensity: pctChange(avgIntIn, avgIntOut),
+        },
+      }
+    })
 }

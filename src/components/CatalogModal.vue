@@ -36,13 +36,24 @@
           <div :key="stepIndex" class="step-content">
             <!-- Step 0: Médicaments -->
             <div v-if="stepIndex === 0">
+
+              <!-- Section : Médicaments de crise -->
+              <div class="catalog-section-label">
+                <Zap :size="11" />
+                Médicaments de crise
+                <span class="catalog-section-count">{{ medocs.crisisMeds.length }}</span>
+              </div>
               <ul class="catalog-list">
-                <li v-for="item in medocs.favoris" :key="item.nom" class="catalog-item">
+                <li v-for="item in medocs.crisisMeds" :key="item.nom" class="catalog-item">
                   <div v-if="editingMedoc?.nom === item.nom" class="catalog-edit-form">
                     <input v-model="editingMedoc.newNom" placeholder="Nom" class="catalog-input" @keyup.enter="saveMedocEdit" @keyup.escape="editingMedoc = null" />
                     <input v-model="editingMedoc.description" placeholder="Description (optionnel)" class="catalog-input" @keyup.enter="saveMedocEdit" @keyup.escape="editingMedoc = null" />
                     <input v-model.number="editingMedoc.posologieParJour" type="number" min="1" max="24" placeholder="Prises/jour (optionnel)" class="catalog-input" @keyup.enter="saveMedocEdit" @keyup.escape="editingMedoc = null" />
                     <input v-model.number="editingMedoc.intervalleHeures" type="number" min="0.5" max="48" step="0.5" placeholder="Intervalle (heures, optionnel)" class="catalog-input" @keyup.enter="saveMedocEdit" @keyup.escape="editingMedoc = null" />
+                    <label class="catalog-toggle-label">
+                      <input v-model="editingMedoc.isLongTermTreatment" type="checkbox" class="catalog-toggle" />
+                      Traitement de fond (préventif)
+                    </label>
                     <div class="catalog-edit-actions">
                       <button type="button" class="btn-secondary btn-sm" @click="editingMedoc = null">Annuler</button>
                       <button type="button" class="btn-primary btn-sm" @click="saveMedocEdit">Enregistrer</button>
@@ -64,14 +75,151 @@
                     </div>
                   </template>
                 </li>
+                <li v-if="medocs.crisisMeds.length === 0" class="catalog-empty">Aucun médicament de crise</li>
               </ul>
+
+              <!-- Section : Traitements de fond -->
+              <div class="catalog-section-label catalog-section-label--fond">
+                <Shield :size="11" />
+                Traitements de fond
+                <span class="catalog-section-count">{{ medocs.longTermMeds.length }}</span>
+              </div>
+              <ul class="catalog-list">
+                <li v-for="item in medocs.longTermMeds" :key="item.nom" class="catalog-item catalog-item--fond">
+                  <div v-if="editingMedoc?.nom === item.nom" class="catalog-edit-form">
+                    <input v-model="editingMedoc.newNom" placeholder="Nom" class="catalog-input" @keyup.enter="saveMedocEdit" @keyup.escape="editingMedoc = null" />
+                    <input v-model="editingMedoc.description" placeholder="Description (optionnel)" class="catalog-input" @keyup.enter="saveMedocEdit" @keyup.escape="editingMedoc = null" />
+                    <input v-model.number="editingMedoc.posologieParJour" type="number" min="1" max="24" placeholder="Prises/jour (optionnel)" class="catalog-input" @keyup.enter="saveMedocEdit" @keyup.escape="editingMedoc = null" />
+                    <input v-model.number="editingMedoc.intervalleHeures" type="number" min="0.5" max="48" step="0.5" placeholder="Intervalle (heures, optionnel)" class="catalog-input" @keyup.enter="saveMedocEdit" @keyup.escape="editingMedoc = null" />
+                    <textarea v-model="editingMedoc.expectedEffects" placeholder="Effets attendus (optionnel)" class="catalog-input catalog-textarea" rows="2" />
+                    <textarea v-model="editingMedoc.sideEffects" placeholder="Effets secondaires (optionnel)" class="catalog-input catalog-textarea" rows="2" />
+                    <label class="catalog-toggle-label">
+                      <input v-model="editingMedoc.isLongTermTreatment" type="checkbox" class="catalog-toggle" />
+                      Traitement de fond (préventif)
+                    </label>
+
+                    <!-- Périodes de traitement -->
+                    <div class="periods-section">
+                      <div class="periods-header">Périodes de prise</div>
+                      <div v-for="(period, idx) in item.treatmentPeriods ?? []" :key="idx" class="period-row">
+                        <div v-if="editingPeriod?.medocNom === item.nom && editingPeriod.index === idx" class="period-edit-form">
+                          <input v-model="editingPeriod.startDate" type="date" class="catalog-input" />
+                          <label class="catalog-toggle-label">
+                            <input v-model="editingPeriod.ongoing" type="checkbox" class="catalog-toggle" />
+                            En cours
+                          </label>
+                          <input v-if="!editingPeriod.ongoing" v-model="editingPeriod.endDate" type="date" class="catalog-input" />
+                          <div class="catalog-edit-actions">
+                            <button type="button" class="btn-secondary btn-sm" @click="cancelPeriod">Annuler</button>
+                            <button type="button" class="btn-primary btn-sm" @click="savePeriod">OK</button>
+                          </div>
+                        </div>
+                        <template v-else>
+                          <span class="period-chip" :class="{ 'period-chip--ongoing': !period.endDate }">
+                            {{ formatPeriodChip(period) }}
+                          </span>
+                          <div class="catalog-item-actions">
+                            <button type="button" class="icon-action-btn" title="Modifier" @click="openEditPeriod(item.nom, idx, period)">
+                              <Pencil :size="13" />
+                            </button>
+                            <button type="button" class="icon-action-btn icon-action-btn--danger" title="Supprimer" @click="medocs.removePeriod(item.nom, idx)">
+                              <Trash2 :size="13" />
+                            </button>
+                          </div>
+                        </template>
+                      </div>
+
+                      <!-- Formulaire ajout période -->
+                      <div v-if="editingPeriod?.medocNom === item.nom && editingPeriod.index === null" class="period-edit-form">
+                        <input v-model="editingPeriod.startDate" type="date" class="catalog-input" />
+                        <label class="catalog-toggle-label">
+                          <input v-model="editingPeriod.ongoing" type="checkbox" class="catalog-toggle" />
+                          En cours
+                        </label>
+                        <input v-if="!editingPeriod.ongoing" v-model="editingPeriod.endDate" type="date" class="catalog-input" />
+                        <div class="catalog-edit-actions">
+                          <button type="button" class="btn-secondary btn-sm" @click="cancelPeriod">Annuler</button>
+                          <button type="button" class="btn-primary btn-sm" @click="savePeriod">Ajouter</button>
+                        </div>
+                      </div>
+                      <button v-else type="button" class="btn-add-period" @click="openAddPeriod(item.nom)">
+                        <Plus :size="12" /> Ajouter une période
+                      </button>
+                    </div>
+
+                    <div class="catalog-edit-actions">
+                      <button type="button" class="btn-secondary btn-sm" @click="editingMedoc = null; editingPeriod = null">Annuler</button>
+                      <button type="button" class="btn-primary btn-sm" @click="saveMedocEdit">Enregistrer</button>
+                    </div>
+                  </div>
+                  <template v-else>
+                    <div class="catalog-item-info">
+                      <span class="catalog-item-nom">{{ item.nom }}</span>
+                      <span v-if="item.description" class="catalog-item-desc">{{ item.description }}</span>
+                      <div v-if="item.treatmentPeriods?.length" class="catalog-period-chips">
+                        <span
+                          v-for="(period, idx) in item.treatmentPeriods"
+                          :key="idx"
+                          class="period-chip"
+                          :class="{ 'period-chip--ongoing': !period.endDate }"
+                        >{{ formatPeriodChip(period) }}</span>
+                      </div>
+                      <span v-else class="catalog-item-desc catalog-item-desc--muted">Aucune période définie</span>
+                    </div>
+                    <div class="catalog-item-actions">
+                      <button type="button" class="icon-action-btn" title="Modifier" @click="startMedocEdit(item)">
+                        <Pencil :size="15" />
+                      </button>
+                      <button type="button" class="icon-action-btn icon-action-btn--danger" title="Supprimer" @click="confirmDelete('medoc', item.nom)">
+                        <Trash2 :size="15" />
+                      </button>
+                    </div>
+                  </template>
+                </li>
+                <li v-if="medocs.longTermMeds.length === 0" class="catalog-empty">Aucun traitement de fond</li>
+              </ul>
+
+              <!-- Formulaire ajout manuel -->
               <form class="catalog-add-form" @submit.prevent="addMedoc">
                 <input v-model="newMedocNom" placeholder="Ajouter un médicament" class="catalog-input" />
+                <label class="catalog-toggle-label catalog-toggle-label--inline">
+                  <input v-model="newMedocIsFond" type="checkbox" class="catalog-toggle" />
+                  Fond
+                </label>
                 <button type="submit" class="btn-primary btn-sm">
                   <Plus :size="14" />
                   Ajouter
                 </button>
               </form>
+
+              <!-- Catalogue par défaut (collapsible) -->
+              <details class="default-catalog-section">
+                <summary class="default-catalog-summary">
+                  <BookOpen :size="12" />
+                  Catalogue par défaut ({{ defaultMedications.length }})
+                </summary>
+                <ul class="catalog-list catalog-list--default">
+                  <li v-for="med in defaultMedications" :key="med.nom" class="catalog-item catalog-item--default">
+                    <div class="catalog-item-info">
+                      <div class="catalog-item-nom-row">
+                        <span class="catalog-item-nom">{{ med.nom }}</span>
+                        <span class="catalog-item-badge" :class="{ 'badge--fond': med.isLongTermTreatment }">
+                          {{ med.isLongTermTreatment ? 'fond' : 'crise' }}
+                        </span>
+                      </div>
+                      <span class="catalog-item-desc">{{ med.description }}</span>
+                    </div>
+                    <button
+                      type="button"
+                      class="btn-primary btn-sm btn-add-default"
+                      :disabled="alreadyInFavoris.has(med.nom)"
+                      @click="medocs.addFromDefault(med)"
+                    >
+                      {{ alreadyInFavoris.has(med.nom) ? '✓' : 'Ajouter' }}
+                    </button>
+                  </li>
+                </ul>
+              </details>
             </div>
 
             <!-- Step 1: Symptômes -->
@@ -178,14 +326,16 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { ArrowLeft, ArrowRight, Pencil, Trash2, Plus, Pill, Heart, Zap } from 'lucide-vue-next'
+import { ArrowLeft, ArrowRight, Pencil, Trash2, Plus, Pill, Heart, Zap, Shield, BookOpen } from 'lucide-vue-next'
 import ConfirmDialog from './ConfirmDialog.vue'
 import BadgeCount from './BadgeCount.vue'
 import { useMedocsFavorisStore } from '../stores/medocsFavoris'
 import { useSymptomesStore } from '../stores/symptomes'
 import { useDeclencheursStore } from '../stores/declencheurs'
 import { capitalizeFirstLetter } from '../utils/text'
-import type { MedocFavori } from '../types/migraine'
+import { todayISO } from '../utils/date'
+import { defaultMedications } from '../data/defaultMedications'
+import type { MedocFavori, TreatmentPeriod } from '../types/migraine'
 
 defineEmits<{ close: [] }>()
 
@@ -226,21 +376,35 @@ function goToStep(i: number) {
   stepIndex.value = i
 }
 
-// Médicaments
+// ─── Médicaments ──────────────────────────────────────────────────────────
+
 const newMedocNom = ref('')
+const newMedocIsFond = ref(false)
 const editingMedoc = ref<{
   nom: string
   newNom: string
   description: string
   posologieParJour: number | undefined
   intervalleHeures: number | undefined
+  isLongTermTreatment: boolean
+  sideEffects: string
+  expectedEffects: string
 } | null>(null)
+
+const alreadyInFavoris = computed(() => new Set(medocs.favoris.map((f) => f.nom)))
 
 function addMedoc() {
   if (!newMedocNom.value.trim()) return
-  medocs.addMedoc(capitalizeFirstLetter(newMedocNom.value.trim()))
+  const nom = capitalizeFirstLetter(newMedocNom.value.trim())
+  if (newMedocIsFond.value) {
+    medocs.addFromDefault({ nom, description: '', sideEffects: '', expectedEffects: '', isLongTermTreatment: true })
+  } else {
+    medocs.addMedoc(nom)
+  }
   newMedocNom.value = ''
+  newMedocIsFond.value = false
 }
+
 function startMedocEdit(item: MedocFavori) {
   editingMedoc.value = {
     nom: item.nom,
@@ -248,11 +412,15 @@ function startMedocEdit(item: MedocFavori) {
     description: item.description ?? '',
     posologieParJour: item.posologieParJour,
     intervalleHeures: item.intervalleHeures,
+    isLongTermTreatment: item.isLongTermTreatment ?? false,
+    sideEffects: item.sideEffects ?? '',
+    expectedEffects: item.expectedEffects ?? '',
   }
 }
+
 function saveMedocEdit() {
   if (!editingMedoc.value) return
-  const { nom, newNom, description, posologieParJour, intervalleHeures } = editingMedoc.value
+  const { nom, newNom, description, posologieParJour, intervalleHeures, isLongTermTreatment, sideEffects, expectedEffects } = editingMedoc.value
   const capitalized = capitalizeFirstLetter(newNom.trim())
   if (capitalized && capitalized !== nom) medocs.renameMedoc(nom, capitalized)
   const finalNom = capitalized || nom
@@ -262,10 +430,66 @@ function saveMedocEdit() {
     posologieParJour && !isNaN(posologieParJour) ? posologieParJour : undefined,
     intervalleHeures && !isNaN(intervalleHeures) ? intervalleHeures : undefined,
   )
+  medocs.updateDetails(finalNom, {
+    isLongTermTreatment,
+    sideEffects: sideEffects || undefined,
+    expectedEffects: expectedEffects || undefined,
+  })
   editingMedoc.value = null
+  editingPeriod.value = null
 }
 
-// Symptômes
+// ─── Périodes de traitement ───────────────────────────────────────────────
+
+const editingPeriod = ref<{
+  medocNom: string
+  index: number | null
+  startDate: string
+  endDate: string
+  ongoing: boolean
+} | null>(null)
+
+function openAddPeriod(nom: string) {
+  editingPeriod.value = { medocNom: nom, index: null, startDate: todayISO(), endDate: '', ongoing: true }
+}
+
+function openEditPeriod(nom: string, index: number, period: TreatmentPeriod) {
+  editingPeriod.value = {
+    medocNom: nom,
+    index,
+    startDate: period.startDate,
+    endDate: period.endDate ?? '',
+    ongoing: period.endDate === null,
+  }
+}
+
+function savePeriod() {
+  if (!editingPeriod.value) return
+  const { medocNom, index, startDate, endDate, ongoing } = editingPeriod.value
+  if (!startDate) return
+  const period: TreatmentPeriod = { startDate, endDate: ongoing ? null : (endDate || null) }
+  if (index === null) medocs.addPeriod(medocNom, period)
+  else medocs.updatePeriod(medocNom, index, period)
+  editingPeriod.value = null
+}
+
+function cancelPeriod() {
+  editingPeriod.value = null
+}
+
+function formatPeriodChip(period: TreatmentPeriod): string {
+  const start = formatShortDate(period.startDate)
+  return period.endDate ? `${start} → ${formatShortDate(period.endDate)}` : `${start} → en cours`
+}
+
+function formatShortDate(iso: string): string {
+  const [year, month] = iso.split('-')
+  const months = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'août', 'sep', 'oct', 'nov', 'déc']
+  return `${months[parseInt(month) - 1]} ${year}`
+}
+
+// ─── Symptômes ────────────────────────────────────────────────────────────
+
 const newSymptomeNom = ref('')
 const editingSymptome = ref<{ nom: string; newNom: string } | null>(null)
 
@@ -285,7 +509,8 @@ function saveSymptomeEdit() {
   editingSymptome.value = null
 }
 
-// Déclencheurs
+// ─── Déclencheurs ─────────────────────────────────────────────────────────
+
 const newDeclencheurTag = ref('')
 function addDeclencheur() {
   if (!newDeclencheurTag.value.trim()) return
@@ -293,7 +518,8 @@ function addDeclencheur() {
   newDeclencheurTag.value = ''
 }
 
-// Delete confirmation
+// ─── Suppression ──────────────────────────────────────────────────────────
+
 type DeleteTarget = { type: 'medoc' | 'symptome' | 'declencheur'; nom: string }
 const pendingDelete = ref<DeleteTarget | null>(null)
 const deleteMessage = computed(() => {
@@ -445,17 +671,50 @@ function executeDelete() {
 .slide-next-leave-to { transform: translateX(-100%); opacity: 0; }
 .slide-prev-enter-from { transform: translateX(-100%); opacity: 0; }
 .slide-prev-leave-to { transform: translateX(100%); opacity: 0; }
+
+/* ─── Sections ─────────────────────────────────────────────────────────── */
+.catalog-section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.75rem 0 0.3rem;
+  margin-top: 0.25rem;
+}
+.catalog-section-label--fond {
+  color: var(--color-info, #0ea5e9);
+}
+.catalog-section-count {
+  margin-left: auto;
+  font-size: 0.62rem;
+  background: var(--color-bg);
+  border-radius: 0.75rem;
+  padding: 0.1rem 0.45rem;
+}
+.catalog-empty {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  padding: 0.5rem 0.75rem;
+  font-style: italic;
+  list-style: none;
+}
+
+/* ─── Listes ────────────────────────────────────────────────────────────── */
 .catalog-list {
   list-style: none;
   padding: 0;
-  margin: 0 0 1rem;
+  margin: 0 0 0.75rem;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
 }
 .catalog-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
@@ -463,12 +722,21 @@ function executeDelete() {
   background: var(--color-bg);
   min-height: 2.5rem;
 }
+.catalog-item--fond {
+  border-left: 2px solid var(--color-info, #0ea5e9);
+}
 .catalog-item-info {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
   flex: 1;
   min-width: 0;
+}
+.catalog-item-nom-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
 }
 .catalog-item-nom {
   font-size: 0.9rem;
@@ -484,13 +752,20 @@ function executeDelete() {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.catalog-item-desc--muted {
+  font-style: italic;
+}
 .catalog-item-badge {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   color: var(--color-muted);
   border: 1px solid var(--color-muted);
   border-radius: 0.25rem;
   padding: 0 0.3rem;
-  align-self: flex-start;
+  flex-shrink: 0;
+}
+.badge--fond {
+  color: var(--color-info, #0ea5e9);
+  border-color: var(--color-info, #0ea5e9);
 }
 .catalog-item-actions {
   display: flex;
@@ -516,6 +791,70 @@ function executeDelete() {
 .icon-action-btn--danger:hover {
   background: color-mix(in srgb, var(--color-danger) 12%, transparent);
 }
+
+/* ─── Chips de période ──────────────────────────────────────────────────── */
+.catalog-period-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.2rem;
+}
+.period-chip {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--color-muted) 12%, transparent);
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+.period-chip--ongoing {
+  background: color-mix(in srgb, var(--color-info, #0ea5e9) 15%, transparent);
+  color: var(--color-info, #0ea5e9);
+}
+
+/* ─── Section périodes (dans l'édition) ─────────────────────────────────── */
+.periods-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.5rem 0.6rem;
+  background: color-mix(in srgb, var(--color-info, #0ea5e9) 6%, transparent);
+  border-radius: 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--color-info, #0ea5e9) 25%, transparent);
+}
+.periods-header {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--color-info, #0ea5e9);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.period-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.period-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+.btn-add-period {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--color-info, #0ea5e9);
+  background: none;
+  border: 1px dashed color-mix(in srgb, var(--color-info, #0ea5e9) 40%, transparent);
+  border-radius: 0.4rem;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+/* ─── Formulaires ───────────────────────────────────────────────────────── */
 .catalog-edit-form {
   display: flex;
   flex-direction: column;
@@ -531,6 +870,7 @@ function executeDelete() {
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  margin-bottom: 0.5rem;
 }
 .catalog-input {
   padding: 0.5rem 0.75rem;
@@ -540,7 +880,69 @@ function executeDelete() {
   color: var(--color-text);
   flex: 1;
   font-size: 0.9rem;
+  font-family: inherit;
 }
+.catalog-textarea {
+  resize: vertical;
+  min-height: 3.5rem;
+}
+.catalog-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.catalog-toggle-label--inline {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.catalog-toggle {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+  accent-color: var(--color-accent);
+}
+
+/* ─── Catalogue par défaut ──────────────────────────────────────────────── */
+.default-catalog-section {
+  margin-top: 1.25rem;
+  border-top: 1px solid var(--color-bg);
+  padding-top: 0.75rem;
+}
+.default-catalog-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  cursor: pointer;
+  user-select: none;
+  padding: 0.25rem 0;
+  list-style: none;
+}
+.default-catalog-summary::-webkit-details-marker { display: none; }
+.catalog-list--default {
+  margin-top: 0.5rem;
+}
+.catalog-item--default {
+  opacity: 0.85;
+}
+.catalog-item--default:hover {
+  opacity: 1;
+}
+.btn-add-default {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.btn-add-default:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ─── Boutons ───────────────────────────────────────────────────────────── */
 .btn-primary {
   background: var(--color-accent);
   color: white;

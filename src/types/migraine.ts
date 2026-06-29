@@ -29,10 +29,19 @@ export interface Migraine {
   updatedAt: string
 }
 
+export interface TreatmentPeriod {
+  startDate: string
+  endDate: string | null
+}
+
 export interface MedocFavori {
   nom: string
   description?: string
   usageCount: number
   posologieParJour?: number
   intervalleHeures?: number
+  isLongTermTreatment?: boolean
+  treatmentPeriods?: TreatmentPeriod[]
+  sideEffects?: string
+  expectedEffects?: string
 }

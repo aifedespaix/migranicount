@@ -1,6 +1,6 @@
 import { getJSON, setJSON } from './storage'
 import { newId } from '../utils/uuid'
-import type { Migraine, MedocFavori } from '../types/migraine'
+import type { Migraine, MedocFavori, TreatmentPeriod } from '../types/migraine'
 
 const MIGRAINES_KEY = 'migraines'
 const MEDOCS_KEY = 'medocsFavoris'
@@ -140,6 +140,49 @@ export function deleteSymptomeCustom(nom: string): void {
 
 export function renameSymptomeCustom(oldNom: string, newNom: string): void {
   setJSON(SYMPTOMES_KEY, listSymptomesCustom().map((s) => (s === oldNom ? newNom : s)))
+}
+
+export function addMedocFavoriWithDetails(med: Omit<MedocFavori, 'usageCount'>): void {
+  const favoris = listMedocsFavoris()
+  if (!favoris.find((f) => f.nom === med.nom)) {
+    favoris.push({ ...med, usageCount: 0 })
+    setJSON(MEDOCS_KEY, favoris)
+  }
+}
+
+export function updateMedocFavoriDetails(
+  nom: string,
+  updates: Partial<Pick<MedocFavori, 'isLongTermTreatment' | 'sideEffects' | 'expectedEffects'>>,
+): void {
+  const favoris = listMedocsFavoris()
+  const existing = favoris.find((f) => f.nom === nom)
+  if (!existing) return
+  Object.assign(existing, updates)
+  setJSON(MEDOCS_KEY, favoris)
+}
+
+export function addTreatmentPeriod(nom: string, period: TreatmentPeriod): void {
+  const favoris = listMedocsFavoris()
+  const existing = favoris.find((f) => f.nom === nom)
+  if (!existing) return
+  existing.treatmentPeriods = [...(existing.treatmentPeriods ?? []), period]
+  setJSON(MEDOCS_KEY, favoris)
+}
+
+export function updateTreatmentPeriod(nom: string, index: number, period: TreatmentPeriod): void {
+  const favoris = listMedocsFavoris()
+  const existing = favoris.find((f) => f.nom === nom)
+  if (!existing?.treatmentPeriods?.[index] === undefined) return
+  existing.treatmentPeriods = existing.treatmentPeriods!.map((p, i) => (i === index ? period : p))
+  setJSON(MEDOCS_KEY, favoris)
+}
+
+export function removeTreatmentPeriod(nom: string, index: number): void {
+  const favoris = listMedocsFavoris()
+  const existing = favoris.find((f) => f.nom === nom)
+  if (!existing?.treatmentPeriods) return
+  existing.treatmentPeriods = existing.treatmentPeriods.filter((_, i) => i !== index)
+  setJSON(MEDOCS_KEY, favoris)
 }
 
 export function exportAll(): string {

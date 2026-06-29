@@ -18,6 +18,7 @@ import {
   listSymptomesCustom,
   registerMedocUsage,
   addMedocFavori,
+  addMedocFavoriWithDetails,
   registerDeclencheur,
   addSymptomeCustom,
 } from '../storage/migraineRepository'
@@ -182,7 +183,16 @@ export function useSync() {
       } else if (local && !remote) {
         toUpload.push(local)
       } else if (!local && remote) {
-        addMedocFavori(remote['nom'] as string, (remote['description'] as string) ?? undefined)
+        addMedocFavoriWithDetails({
+          nom: remote['nom'] as string,
+          description: (remote['description'] as string) ?? undefined,
+          posologieParJour: (remote['posologieParJour'] as number) ?? undefined,
+          intervalleHeures: (remote['intervalleHeures'] as number) ?? undefined,
+          isLongTermTreatment: (remote['isLongTermTreatment'] as boolean) ?? undefined,
+          treatmentPeriods: (remote['treatmentPeriods'] as any) ?? undefined,
+          sideEffects: (remote['sideEffects'] as string) ?? undefined,
+          expectedEffects: (remote['expectedEffects'] as string) ?? undefined,
+        })
       }
     }
 
@@ -195,6 +205,12 @@ export function useSync() {
           nom: f.nom,
           description: f.description ?? null,
           usageCount: f.usageCount,
+          posologieParJour: f.posologieParJour ?? null,
+          intervalleHeures: f.intervalleHeures ?? null,
+          isLongTermTreatment: f.isLongTermTreatment ?? null,
+          treatmentPeriods: f.treatmentPeriods ?? null,
+          sideEffects: f.sideEffects ?? null,
+          expectedEffects: f.expectedEffects ?? null,
         }
         if (remote) {
           await pb.collection('medocs_favoris').update(remote['id'] as string, payload)
@@ -300,10 +316,18 @@ export function useSync() {
       if ((e.record['userId'] as string) !== userId) return
       if (e.action === 'create' || e.action === 'update') {
         const nom = e.record['nom'] as string
-        const description = (e.record['description'] as string) ?? undefined
         const existing = listMedocsFavoris().find((f) => f.nom === nom)
         if (!existing) {
-          addMedocFavori(nom, description)
+          addMedocFavoriWithDetails({
+            nom,
+            description: (e.record['description'] as string) ?? undefined,
+            posologieParJour: (e.record['posologieParJour'] as number) ?? undefined,
+            intervalleHeures: (e.record['intervalleHeures'] as number) ?? undefined,
+            isLongTermTreatment: (e.record['isLongTermTreatment'] as boolean) ?? undefined,
+            treatmentPeriods: (e.record['treatmentPeriods'] as any) ?? undefined,
+            sideEffects: (e.record['sideEffects'] as string) ?? undefined,
+            expectedEffects: (e.record['expectedEffects'] as string) ?? undefined,
+          })
           diffAccumulator.catalogueItems.push(`${nom} ajouté au catalogue`)
           medocsStore.refresh()
           scheduleFlushToasts()

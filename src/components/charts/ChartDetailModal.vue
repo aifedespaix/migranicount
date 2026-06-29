@@ -18,7 +18,7 @@
 
       <div class="chart-detail-body">
         <div class="chart-detail-chart">
-          <FrequencyChart v-if="chart === 'frequency'" :migraines="migraines" :period="localPeriod" />
+          <FrequencyChart v-if="chart === 'frequency'" :migraines="migraines" :period="localPeriod" :treatment-timeline="treatmentTimeline" />
           <IntensityChart v-else-if="chart === 'intensity'" :migraines="migraines" :period="localPeriod" />
           <IntensityDistributionChart v-else-if="chart === 'intensity-distribution'" :migraines="migraines" />
           <MedocEfficacyChart v-else-if="chart === 'medoc-efficacy'" :migraines="migraines" />
@@ -71,7 +71,12 @@ import type { Migraine } from '../../types/migraine'
 
 type ChartType = 'frequency' | 'intensity' | 'intensity-distribution' | 'medoc-efficacy' | 'duration'
 
-const props = defineProps<{ chart: ChartType; migraines: Migraine[]; initialPeriod?: Period }>()
+const props = defineProps<{
+  chart: ChartType
+  migraines: Migraine[]
+  initialPeriod?: Period
+  treatmentTimeline?: { start: string; end: string | null }[]
+}>()
 const emit = defineEmits<{ close: [] }>()
 
 const localPeriod = ref<Period>(props.initialPeriod ?? 'month')
