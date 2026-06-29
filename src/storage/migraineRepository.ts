@@ -7,7 +7,7 @@ const MEDOCS_KEY = 'medocsFavoris'
 const DECLENCHEURS_KEY = 'declencheursFavoris'
 const SYMPTOMES_KEY = 'symptomesCustom'
 const SCHEMA_VERSION_KEY = 'schemaVersion'
-const SCHEMA_VERSION = 2
+const SCHEMA_VERSION = 3
 
 function migrateMigraine(m: any): Migraine {
   if (!Array.isArray(m.symptomes)) {
