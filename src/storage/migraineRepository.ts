@@ -172,8 +172,8 @@ export function addTreatmentPeriod(nom: string, period: TreatmentPeriod): void {
 export function updateTreatmentPeriod(nom: string, index: number, period: TreatmentPeriod): void {
   const favoris = listMedocsFavoris()
   const existing = favoris.find((f) => f.nom === nom)
-  if (!existing?.treatmentPeriods?.[index] === undefined) return
-  existing.treatmentPeriods = existing.treatmentPeriods!.map((p, i) => (i === index ? period : p))
+  if (!existing || !existing.treatmentPeriods || index >= existing.treatmentPeriods.length) return
+  existing.treatmentPeriods = existing.treatmentPeriods.map((p, i) => (i === index ? period : p))
   setJSON(MEDOCS_KEY, favoris)
 }
 

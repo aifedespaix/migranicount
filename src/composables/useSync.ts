@@ -17,7 +17,6 @@ import {
   listDeclencheursFavoris,
   listSymptomesCustom,
   registerMedocUsage,
-  addMedocFavori,
   addMedocFavoriWithDetails,
   registerDeclencheur,
   addSymptomeCustom,
