@@ -179,47 +179,130 @@
                 <li v-if="medocs.longTermMeds.length === 0" class="catalog-empty">Aucun traitement de fond</li>
               </ul>
 
-              <!-- Formulaire ajout manuel -->
-              <form class="catalog-add-form" @submit.prevent="addMedoc">
-                <input v-model="newMedocNom" placeholder="Ajouter un médicament" class="catalog-input" />
-                <label class="catalog-toggle-label catalog-toggle-label--inline">
-                  <input v-model="newMedocIsFond" type="checkbox" class="catalog-toggle" />
-                  Fond
-                </label>
-                <button type="submit" class="btn-primary btn-sm">
-                  <Plus :size="14" />
-                  Ajouter
-                </button>
-              </form>
+              <!-- Section : Ajouter un médicament -->
+              <div class="add-section-divider">
+                <span>Ajouter</span>
+              </div>
+              <div class="add-section">
+                <div class="add-section-header">
+                  <span class="add-section-title">
+                    <Plus :size="13" />
+                    Ajouter un médicament
+                  </span>
+                  <button type="button" class="btn-browse-catalog" @click="showCatalogBrowser = true">
+                    <BookOpen :size="12" />
+                    Catalogue
+                  </button>
+                </div>
 
-              <!-- Catalogue par défaut (collapsible) -->
-              <details class="default-catalog-section">
-                <summary class="default-catalog-summary">
-                  <BookOpen :size="12" />
-                  Catalogue par défaut ({{ defaultMedications.length }})
-                </summary>
-                <ul class="catalog-list catalog-list--default">
-                  <li v-for="med in defaultMedications" :key="med.nom" class="catalog-item catalog-item--default">
-                    <div class="catalog-item-info">
-                      <div class="catalog-item-nom-row">
-                        <span class="catalog-item-nom">{{ med.nom }}</span>
-                        <span class="catalog-item-badge" :class="{ 'badge--fond': med.isLongTermTreatment }">
-                          {{ med.isLongTermTreatment ? 'fond' : 'crise' }}
-                        </span>
-                      </div>
-                      <span class="catalog-item-desc">{{ med.description }}</span>
-                    </div>
+                <!-- Combobox (visible quand formulaire fermé) -->
+                <template v-if="!addPendingForm">
+                  <div class="combobox-wrapper">
+                    <input
+                      ref="addComboInputRef"
+                      v-model="addComboInput"
+                      placeholder="Rechercher dans le catalogue…"
+                      class="catalog-input combobox-input"
+                      autocomplete="off"
+                      :inputmode="isMobile && !addComboSearchMode ? 'none' : undefined"
+                      @focus="onAddComboFocus"
+                      @blur="scheduleCloseAddDropdown"
+                      @keyup.enter="openAddFormFreeText"
+                    />
+                    <button
+                      v-if="isMobile"
+                      type="button"
+                      class="combobox-search-toggle"
+                      :class="{ active: addComboSearchMode }"
+                      tabindex="-1"
+                      @mousedown.prevent="toggleAddComboSearchMode"
+                    >
+                      <Search :size="14" />
+                    </button>
+                    <ul v-if="addComboDropdown" class="combobox-dropdown">
+                      <li
+                        v-for="med in filteredAddDropdown"
+                        :key="med.nom"
+                        class="combobox-item"
+                        @mousedown.prevent="selectDefaultMed(med)"
+                        @touchend.prevent="selectDefaultMed(med)"
+                      >
+                        <div class="combobox-item-row">
+                          <span class="combobox-item-nom">{{ med.nom }}</span>
+                          <span class="catalog-item-badge" :class="{ 'badge--fond': med.isLongTermTreatment }">
+                            {{ med.isLongTermTreatment ? 'fond' : 'crise' }}
+                          </span>
+                        </div>
+                        <span class="combobox-item-desc">{{ med.description }}</span>
+                      </li>
+                      <li
+                        v-if="addComboInput.trim()"
+                        class="combobox-item combobox-item--free"
+                        @mousedown.prevent="openAddFormFreeText"
+                        @touchend.prevent="openAddFormFreeText"
+                      >
+                        <span class="combobox-item-nom">Ajouter "{{ addComboInput }}" manuellement</span>
+                      </li>
+                      <li v-if="!filteredAddDropdown.length && !addComboInput.trim()" class="combobox-empty">
+                        Tous les médicaments du catalogue sont déjà dans votre répertoire
+                      </li>
+                    </ul>
+                  </div>
+                </template>
+
+                <!-- Formulaire inline (visible après sélection ou saisie libre) -->
+                <div v-if="addPendingForm" class="add-pending-form">
+                  <input v-model="addPendingForm.nom" placeholder="Nom" class="catalog-input" />
+                  <input v-model="addPendingForm.description" placeholder="Description (optionnel)" class="catalog-input" />
+                  <div class="add-form-row">
+                    <input
+                      v-model.number="addPendingForm.posologieParJour"
+                      type="number"
+                      min="1"
+                      max="24"
+                      placeholder="Prises/jour"
+                      class="catalog-input"
+                    />
+                    <input
+                      v-model.number="addPendingForm.intervalleHeures"
+                      type="number"
+                      min="0.5"
+                      max="48"
+                      step="0.5"
+                      placeholder="Intervalle (h)"
+                      class="catalog-input"
+                    />
+                  </div>
+                  <label class="catalog-toggle-label">
+                    <input v-model="addPendingForm.isLongTermTreatment" type="checkbox" class="catalog-toggle" />
+                    Traitement de fond (préventif)
+                  </label>
+                  <textarea
+                    v-model="addPendingForm.expectedEffects"
+                    placeholder="Effets attendus (optionnel)"
+                    class="catalog-input catalog-textarea"
+                    rows="2"
+                  />
+                  <textarea
+                    v-model="addPendingForm.sideEffects"
+                    placeholder="Effets indésirables (optionnel)"
+                    class="catalog-input catalog-textarea"
+                    rows="2"
+                  />
+                  <div class="catalog-edit-actions">
+                    <button type="button" class="btn-secondary btn-sm" @click="cancelAddForm">Annuler</button>
                     <button
                       type="button"
-                      class="btn-primary btn-sm btn-add-default"
-                      :disabled="alreadyInFavoris.has(med.nom)"
-                      @click="medocs.addFromDefault(med)"
+                      class="btn-primary btn-sm"
+                      :disabled="!addPendingForm.nom.trim()"
+                      @click="saveAddForm"
                     >
-                      {{ alreadyInFavoris.has(med.nom) ? '✓' : 'Ajouter' }}
+                      <Plus :size="13" />
+                      Ajouter au répertoire
                     </button>
-                  </li>
-                </ul>
-              </details>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Step 1: Symptômes -->
@@ -325,10 +408,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { ArrowLeft, ArrowRight, Pencil, Trash2, Plus, Pill, Heart, Zap, Shield, BookOpen } from 'lucide-vue-next'
+import { ref, computed, nextTick } from 'vue'
+import { ArrowLeft, ArrowRight, Pencil, Trash2, Plus, X, Search, Pill, Heart, Zap, Shield, BookOpen } from 'lucide-vue-next'
+import { useMediaQuery } from '@vueuse/core'
 import ConfirmDialog from './ConfirmDialog.vue'
 import BadgeCount from './BadgeCount.vue'
+import DefaultCatalogBrowserModal from './DefaultCatalogBrowserModal.vue'
 import { useMedocsFavorisStore } from '../stores/medocsFavoris'
 import { useSymptomesStore } from '../stores/symptomes'
 import { useDeclencheursStore } from '../stores/declencheurs'
@@ -336,6 +421,7 @@ import { capitalizeFirstLetter } from '../utils/text'
 import { todayISO } from '../utils/date'
 import { defaultMedications } from '../data/defaultMedications'
 import type { MedocFavori, TreatmentPeriod } from '../types/migraine'
+import type { DefaultMedication } from '../data/defaultMedications'
 
 defineEmits<{ close: [] }>()
 

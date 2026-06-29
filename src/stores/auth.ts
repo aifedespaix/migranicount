@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import { pb } from '../lib/pocketbase'
-import { clearPrefsCache } from '../lib/pbSync'
 import type { RecordModel } from 'pocketbase'
+import { computed, ref } from 'vue'
+import { clearPrefsCache } from '../lib/pbSync'
+import { pb } from '../lib/pocketbase'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<RecordModel | null>(pb.authStore.record)
@@ -13,7 +13,14 @@ export const useAuthStore = defineStore('auth', () => {
   })
 
   async function login(): Promise<void> {
-    await pb.collection('users').authWithOAuth2({ provider: 'google' })
+    try {
+      await pb.collection('users').authWithOAuth2({ provider: 'google' });
+    } catch (err) {
+      console.error("Détails complets de l'erreur :", err);
+      if (err.data && err.data.data) {
+          console.error("Erreurs de validation de champs :", err.data.data);
+      }
+    }
   }
 
   function logout(): void {
