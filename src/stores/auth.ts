@@ -17,8 +17,8 @@ export const useAuthStore = defineStore('auth', () => {
       await pb.collection('users').authWithOAuth2({ provider: 'google' });
     } catch (err) {
       console.error("Détails complets de l'erreur :", err);
-      if (err.data && err.data.data) {
-          console.error("Erreurs de validation de champs :", err.data.data);
+      if ((err as any).data && (err as any).data.data) {
+          console.error("Erreurs de validation de champs :", (err as any).data.data);
       }
     }
   }
