@@ -45,7 +45,7 @@
             @before-enter="onBeforeEnter"
             @after-leave="onAfterLeave"
           >
-            <component :is="steps[stepIndex]" ref="activeStepRef" v-model="draft" :key="stepIndex" :edit-id="props.editId" @delete="showDeleteConfirm = true" />
+            <component :is="steps[stepIndex]" ref="activeStepRef" v-model="draft" :key="stepIndex" :edit-id="props.editId" @delete="executeDelete" />
           </Transition>
         </div>
       </div>
@@ -81,16 +81,6 @@
         </button>
       </div>
     </div>
-    <ConfirmDialog
-      v-if="showDeleteConfirm"
-      title="Supprimer cette migraine ?"
-      message="Cette action est irréversible."
-      confirm-label="Supprimer"
-      cancel-label="Annuler"
-      @confirm="executeDelete"
-      @cancel="showDeleteConfirm = false"
-      @dismiss="showDeleteConfirm = false"
-    />
     <PendingMedocDialog
       v-if="showPendingMedocDialog"
       @stay="onPendingStay"
@@ -115,14 +105,15 @@ import StepNotes from './StepNotes.vue'
 import StepRecap from './StepRecap.vue'
 import { loadDraft, saveDraft, clearDraft, canSaveDraft, loadDraftStep, saveDraftStep } from './draft'
 import { useMigrainesStore } from '../../stores/migraines'
+import { useToastStore } from '../../stores/toast'
 import { formatMigraineTitleDate } from '../../utils/date'
 import { stepMissingCount } from '../../utils/stepValidation'
-import ConfirmDialog from '../ConfirmDialog.vue'
 import PendingMedocDialog from '../PendingMedocDialog.vue'
 
 const props = defineProps<{ editId?: string }>()
-const emit = defineEmits<{ close: []; saved: [] }>()
+const emit = defineEmits<{ close: []; saved: []; deleted: [] }>()
 const migraines = useMigrainesStore()
+const toastStore = useToastStore()
 
 const steps = [StepWhen, StepIntensity, StepMedocs, StepSymptoms, StepLocation, StepTriggers, StepNotes, StepRecap]
 const stepTitles = ['Quand ?', 'Intensité', 'Médicaments', 'Symptômes', 'Zone', 'Déclencheurs', 'Notes', 'Récapitulatif']
@@ -131,7 +122,6 @@ const stepIcons = [Clock, Gauge, Pill, Heart, Brain, Zap, FileText, CheckSquare]
 
 const stepIndex = ref(props.editId ? steps.length - 1 : loadDraftStep())
 const draft = ref(props.editId ? { ...migraines.getById(props.editId)! } : loadDraft())
-const showDeleteConfirm = ref(false)
 
 const activeStepRef = ref<{ hasPendingEntry?: () => boolean; submitPending?: () => void } | null>(null)
 const showPendingMedocDialog = ref(false)
@@ -290,9 +280,18 @@ function requestClose() {
 
 function executeDelete() {
   if (!props.editId) return
+  const snapshot = migraines.getById(props.editId)
+  if (!snapshot) return
   migraines.remove(props.editId)
-  showDeleteConfirm.value = false
-  emit('saved')
+  toastStore.add({
+    type: 'danger',
+    message: `Migraine du ${formatMigraineTitleDate(snapshot.date)} supprimée`,
+    action: {
+      label: 'Annuler',
+      handler: () => migraines.restore(snapshot),
+    },
+  })
+  emit('deleted')
 }
 </script>
 

@@ -163,7 +163,7 @@
                           type="button"
                           class="icon-action-btn icon-action-btn--danger"
                           title="Supprimer"
-                          @click="confirmDelete('medoc', item.nom)"
+                          @click="deleteMedoc(item.nom)"
                         >
                           <Trash2 :size="15" />
                         </button>
@@ -325,7 +325,7 @@
                                 type="button"
                                 class="icon-action-btn icon-action-btn--danger"
                                 title="Supprimer"
-                                @click="medocs.removePeriod(item.nom, idx)"
+                                @click="deletePeriod(item.nom, idx)"
                               >
                                 <Trash2 :size="13" />
                               </button>
@@ -446,7 +446,7 @@
                           type="button"
                           class="icon-action-btn icon-action-btn--danger"
                           title="Supprimer"
-                          @click="confirmDelete('medoc', item.nom)"
+                          @click="deleteMedoc(item.nom)"
                         >
                           <Trash2 :size="15" />
                         </button>
@@ -522,7 +522,7 @@
                           type="button"
                           class="icon-action-btn icon-action-btn--danger"
                           title="Supprimer"
-                          @click="confirmDelete('symptome', nom)"
+                          @click="deleteSymptome(nom)"
                         >
                           <Trash2 :size="15" />
                         </button>
@@ -554,7 +554,7 @@
                         type="button"
                         class="icon-action-btn icon-action-btn--danger"
                         title="Supprimer"
-                        @click="confirmDelete('declencheur', tag)"
+                        @click="deleteDeclencheur(tag)"
                       >
                         <Trash2 :size="15" />
                       </button>
@@ -641,16 +641,6 @@
     </div>
 
     <AddMedocModal v-if="showAddMedoc" @close="showAddMedoc = false" />
-    <ConfirmDialog
-      v-if="pendingDelete"
-      title="Supprimer ?"
-      :message="deleteMessage"
-      confirm-label="Supprimer"
-      cancel-label="Annuler"
-      @confirm="executeDelete"
-      @cancel="pendingDelete = null"
-      @dismiss="pendingDelete = null"
-    />
   </div>
 </template>
 
@@ -670,17 +660,18 @@ import { computed, ref } from "vue";
 import { useDeclencheursStore } from "../stores/declencheurs";
 import { useMedocsFavorisStore } from "../stores/medocsFavoris";
 import { useSymptomesStore } from "../stores/symptomes";
+import { useToastStore } from "../stores/toast";
 import type { MedocFavori, TreatmentPeriod } from "../types/migraine";
 import { todayISO } from "../utils/date";
 import { capitalizeFirstLetter } from "../utils/text";
 import AddMedocModal from "./AddMedocModal.vue";
-import ConfirmDialog from "./ConfirmDialog.vue";
 
 defineEmits<{ close: [] }>();
 
 const medocs = useMedocsFavorisStore();
 const symptomes = useSymptomesStore();
 const declencheurs = useDeclencheursStore();
+const toastStore = useToastStore();
 
 const stepTitles = ["Médicaments", "Symptômes", "Déclencheurs"];
 const stepShortTitles = ["Médocs", "Symptômes", "Déclencheurs"];
@@ -882,23 +873,38 @@ function addDeclencheur() {
 
 // ─── Suppression ──────────────────────────────────────────────────────────
 
-type DeleteTarget = { type: "medoc" | "symptome" | "declencheur"; nom: string };
-const pendingDelete = ref<DeleteTarget | null>(null);
-const deleteMessage = computed(() => {
-  if (!pendingDelete.value) return "";
-  return `Supprimer "${pendingDelete.value.nom}" du répertoire ?`;
-});
-
-function confirmDelete(type: DeleteTarget["type"], nom: string) {
-  pendingDelete.value = { type, nom };
+function deleteMedoc(nom: string) {
+  const snapshot = medocs.favoris.find((m) => m.nom === nom);
+  if (!snapshot) return;
+  medocs.deleteMedoc(nom);
+  toastStore.add({
+    type: "danger",
+    message: `Médicament "${nom}" supprimé`,
+    action: { label: "Annuler", handler: () => medocs.restore({ ...snapshot }) },
+  });
 }
-function executeDelete() {
-  if (!pendingDelete.value) return;
-  const { type, nom } = pendingDelete.value;
-  if (type === "medoc") medocs.deleteMedoc(nom);
-  else if (type === "symptome") symptomes.remove(nom);
-  else if (type === "declencheur") declencheurs.deleteCustom(nom);
-  pendingDelete.value = null;
+
+function deleteSymptome(nom: string) {
+  symptomes.remove(nom);
+  toastStore.add({
+    type: "danger",
+    message: `Symptôme "${nom}" supprimé`,
+    action: { label: "Annuler", handler: () => symptomes.add(nom) },
+  });
+}
+
+function deleteDeclencheur(tag: string) {
+  declencheurs.deleteCustom(tag);
+  toastStore.add({
+    type: "danger",
+    message: `Déclencheur "${tag}" supprimé`,
+    action: { label: "Annuler", handler: () => declencheurs.register(tag) },
+  });
+}
+
+function deletePeriod(medocNom: string, idx: number) {
+  medocs.removePeriod(medocNom, idx);
+  toastStore.add({ type: "danger", message: "Période supprimée" });
 }
 </script>
 

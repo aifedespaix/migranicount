@@ -49,6 +49,13 @@ export const useMedocsFavorisStore = defineStore('medocsFavoris', () => {
     if (pb.authStore.isValid) deleteMedocFavoriRemote(nom).catch(console.error)
   }
 
+  function restore(medoc: MedocFavori): void {
+    addMedocFavoriWithDetails(medoc)
+    favoris.value = listMedocsFavoris()
+    const added = favoris.value.find((f) => f.nom === medoc.nom)
+    if (added && pb.authStore.isValid) pushMedocFavori(added).catch(console.error)
+  }
+
   function updatePosologie(nom: string, posologieParJour?: number, intervalleHeures?: number): void {
     updateMedocFavoriPosologie(nom, posologieParJour, intervalleHeures)
     favoris.value = listMedocsFavoris()
@@ -128,6 +135,7 @@ export const useMedocsFavorisStore = defineStore('medocsFavoris', () => {
     updatePosologie,
     addMedoc,
     deleteMedoc,
+    restore,
     renameMedoc,
     refresh,
     addFromDefault,

@@ -78,6 +78,7 @@
       :edit-id="editId"
       @close="editId = null"
       @saved="onEditSaved"
+      @deleted="onMigraineDeleted"
     />
     <MigraineFormModal
       v-if="addFormOpen"
@@ -135,19 +136,13 @@ function resetFilters() {
 }
 
 function onEditSaved() {
-  const wasDeleted = editId.value && !migraines.getById(editId.value);
   editId.value = null;
-  if (wasDeleted) {
-    toastStore.add({
-      message: "Migraine supprimée.",
-      type: "success",
-    });
-  } else {
-    toastStore.add({
-      message: "Migraine mise à jour !",
-      type: "info",
-    });
-  }
+  toastStore.add({ message: "Migraine mise à jour !", type: "info" });
+}
+
+function onMigraineDeleted() {
+  editId.value = null;
+  // undo toast was already shown by MigraineFormModal
 }
 
 function onAddSaved() {
