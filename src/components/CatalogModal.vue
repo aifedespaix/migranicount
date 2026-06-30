@@ -394,6 +394,7 @@
       </div>
     </div>
 
+    <DefaultCatalogBrowserModal v-if="showCatalogBrowser" @close="showCatalogBrowser = false" />
     <ConfirmDialog
       v-if="pendingDelete"
       title="Supprimer ?"
@@ -409,7 +410,7 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
-import { ArrowLeft, ArrowRight, Pencil, Trash2, Plus, X, Search, Pill, Heart, Zap, Shield, BookOpen } from 'lucide-vue-next'
+import { ArrowLeft, ArrowRight, Pencil, Trash2, Plus, Search, Pill, Heart, Zap, Shield, BookOpen } from 'lucide-vue-next'
 import { useMediaQuery } from '@vueuse/core'
 import ConfirmDialog from './ConfirmDialog.vue'
 import BadgeCount from './BadgeCount.vue'
@@ -464,8 +465,109 @@ function goToStep(i: number) {
 
 // ─── Médicaments ──────────────────────────────────────────────────────────
 
-const newMedocNom = ref('')
-const newMedocIsFond = ref(false)
+const isMobile = useMediaQuery('(pointer: coarse)')
+const showCatalogBrowser = ref(false)
+
+// ─── Combobox "Ajouter un médicament" ─────────────────────────────────────
+
+const addComboInputRef = ref<HTMLInputElement | null>(null)
+const addComboInput = ref('')
+const addComboDropdown = ref(false)
+const addComboSearchMode = ref(false)
+
+const addPendingForm = ref<{
+  nom: string
+  description: string
+  posologieParJour: number | undefined
+  intervalleHeures: number | undefined
+  isLongTermTreatment: boolean
+  sideEffects: string
+  expectedEffects: string
+} | null>(null)
+
+function normalizeStr(s: string) {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+}
+
+const availableDefaults = computed(() =>
+  defaultMedications.filter((m) => !alreadyInFavoris.value.has(m.nom)),
+)
+
+const filteredAddDropdown = computed(() => {
+  if (isMobile.value && !addComboSearchMode.value) return availableDefaults.value
+  const q = normalizeStr(addComboInput.value.trim())
+  if (!q) return availableDefaults.value
+  return availableDefaults.value.filter(
+    (m) => normalizeStr(m.nom).includes(q) || normalizeStr(m.description).includes(q),
+  )
+})
+
+function onAddComboFocus() {
+  if (!addPendingForm.value) addComboDropdown.value = true
+}
+
+function scheduleCloseAddDropdown() {
+  setTimeout(() => { addComboDropdown.value = false }, 150)
+}
+
+function selectDefaultMed(med: DefaultMedication) {
+  addComboInput.value = med.nom
+  addComboDropdown.value = false
+  addComboSearchMode.value = false
+  addPendingForm.value = {
+    nom: med.nom,
+    description: med.description,
+    posologieParJour: med.posologieParJour,
+    intervalleHeures: med.intervalleHeures,
+    isLongTermTreatment: med.isLongTermTreatment,
+    sideEffects: med.sideEffects,
+    expectedEffects: med.expectedEffects,
+  }
+}
+
+function openAddFormFreeText() {
+  const nom = capitalizeFirstLetter(addComboInput.value.trim())
+  if (!nom) return
+  addComboDropdown.value = false
+  addPendingForm.value = {
+    nom,
+    description: '',
+    posologieParJour: undefined,
+    intervalleHeures: undefined,
+    isLongTermTreatment: false,
+    sideEffects: '',
+    expectedEffects: '',
+  }
+}
+
+function cancelAddForm() {
+  addPendingForm.value = null
+  addComboInput.value = ''
+  addComboSearchMode.value = false
+}
+
+function saveAddForm() {
+  if (!addPendingForm.value?.nom.trim()) return
+  const f = addPendingForm.value
+  medocs.addFromDefault({
+    nom: capitalizeFirstLetter(f.nom.trim()),
+    description: f.description,
+    posologieParJour: f.posologieParJour && !isNaN(f.posologieParJour) ? f.posologieParJour : undefined,
+    intervalleHeures: f.intervalleHeures && !isNaN(f.intervalleHeures) ? f.intervalleHeures : undefined,
+    isLongTermTreatment: f.isLongTermTreatment,
+    sideEffects: f.sideEffects,
+    expectedEffects: f.expectedEffects,
+  })
+  cancelAddForm()
+}
+
+function toggleAddComboSearchMode() {
+  addComboSearchMode.value = !addComboSearchMode.value
+  if (addComboSearchMode.value) nextTick(() => addComboInputRef.value?.focus())
+}
+
+// ─── Édition médicaments ───────────────────────────────────────────────────
+
 const editingMedoc = ref<{
   nom: string
   newNom: string
@@ -479,17 +581,6 @@ const editingMedoc = ref<{
 
 const alreadyInFavoris = computed(() => new Set(medocs.favoris.map((f) => f.nom)))
 
-function addMedoc() {
-  if (!newMedocNom.value.trim()) return
-  const nom = capitalizeFirstLetter(newMedocNom.value.trim())
-  if (newMedocIsFond.value) {
-    medocs.addFromDefault({ nom, description: '', sideEffects: '', expectedEffects: '', isLongTermTreatment: true })
-  } else {
-    medocs.addMedoc(nom)
-  }
-  newMedocNom.value = ''
-  newMedocIsFond.value = false
-}
 
 function startMedocEdit(item: MedocFavori) {
   editingMedoc.value = {
@@ -991,41 +1082,144 @@ function executeDelete() {
   accent-color: var(--color-accent);
 }
 
-/* ─── Catalogue par défaut ──────────────────────────────────────────────── */
-.default-catalog-section {
-  margin-top: 1.25rem;
-  border-top: 1px solid var(--color-bg);
-  padding-top: 0.75rem;
+/* ─── Section Ajouter ───────────────────────────────────────────────────── */
+.add-section-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1.25rem 0 0.6rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.6;
 }
-.default-catalog-summary {
+.add-section-divider::before,
+.add-section-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-bg);
+}
+.add-section {
+  background: color-mix(in srgb, var(--color-accent) 4%, var(--color-bg));
+  border: 1px dashed color-mix(in srgb, var(--color-accent) 28%, transparent);
+  border-radius: 0.6rem;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.add-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.add-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-accent);
+}
+.btn-browse-catalog {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-family: inherit;
+  color: var(--color-muted);
+  background: none;
+  border: 1px solid color-mix(in srgb, var(--color-muted) 50%, transparent);
+  border-radius: 0.4rem;
+  padding: 0.22rem 0.55rem;
+  cursor: pointer;
+}
+.btn-browse-catalog:hover {
+  color: var(--color-text);
+  border-color: var(--color-muted);
+}
+
+/* Combobox */
+.combobox-wrapper {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.8rem;
-  font-weight: 600;
+}
+.combobox-input { flex: 1; }
+.combobox-search-toggle {
+  background: none;
+  border: 1px solid var(--color-muted);
+  border-radius: 0.4rem;
   color: var(--color-muted);
   cursor: pointer;
-  user-select: none;
-  padding: 0.25rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem;
+  flex-shrink: 0;
+}
+.combobox-search-toggle.active {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+.combobox-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-muted);
+  border-radius: 0.5rem;
+  z-index: 20;
+  max-height: 220px;
+  overflow-y: auto;
+  margin-top: 0.2rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  list-style: none;
+  padding: 0;
+}
+.combobox-item {
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-muted) 10%, transparent);
+}
+.combobox-item:last-child { border-bottom: none; }
+.combobox-item:hover { background: var(--color-bg); }
+.combobox-item-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.combobox-item-nom { font-size: 0.9rem; font-weight: 500; }
+.combobox-item-desc { font-size: 0.72rem; color: var(--color-muted); }
+.combobox-item--free { opacity: 0.7; }
+.combobox-item--free .combobox-item-nom { font-weight: 400; font-size: 0.82rem; font-style: italic; }
+.combobox-empty {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.78rem;
+  color: var(--color-muted);
+  font-style: italic;
   list-style: none;
 }
-.default-catalog-summary::-webkit-details-marker { display: none; }
-.catalog-list--default {
-  margin-top: 0.5rem;
+
+/* Formulaire pending */
+.add-pending-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
-.catalog-item--default {
-  opacity: 0.85;
-}
-.catalog-item--default:hover {
-  opacity: 1;
-}
-.btn-add-default {
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-.btn-add-default:disabled {
-  opacity: 0.5;
-  cursor: default;
+.add-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
 }
 
 /* ─── Boutons ───────────────────────────────────────────────────────────── */
