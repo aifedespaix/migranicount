@@ -11,7 +11,7 @@
             <BookOpen :size="12" />
             Catalogue
           </button>
-          <button type="button" class="add-medoc-close" aria-label="Fermer" @click="$emit('close')">×</button>
+          <AppModalCloseBtn @click="$emit('close')" />
         </div>
       </header>
 
@@ -133,6 +133,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
 import { Plus, Search, BookOpen } from 'lucide-vue-next'
+import AppModalCloseBtn from './AppModalCloseBtn.vue'
 import { useMediaQuery } from '@vueuse/core'
 import DefaultCatalogBrowserModal from './DefaultCatalogBrowserModal.vue'
 import { useMedocsFavorisStore } from '../stores/medocsFavoris'
@@ -286,15 +287,6 @@ function toggleAddComboSearchMode() {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-}
-.add-medoc-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  line-height: 1;
-  cursor: pointer;
-  color: var(--color-muted);
-  padding: 0.25rem;
 }
 .add-medoc-body {
   flex: 1;

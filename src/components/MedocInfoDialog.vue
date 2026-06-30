@@ -1,5 +1,5 @@
 <template>
-  <div class="dialog-backdrop" @click.self="$emit('close')">
+  <div class="dialog-backdrop">
     <div class="dialog-card">
       <div class="dialog-header">
         <div class="dialog-icon-wrap">
@@ -9,7 +9,7 @@
           <h3 class="dialog-title">{{ medoc.nom }}</h3>
           <span v-if="medoc.heure" class="dialog-subtitle">Pris à {{ medoc.heure }}</span>
         </div>
-        <button type="button" class="dialog-x" @click="$emit('close')" aria-label="Fermer">×</button>
+        <AppModalCloseBtn @click="$emit('close')" />
       </div>
 
       <div v-if="medoc.description" class="dialog-section">
@@ -42,6 +42,7 @@
 
 <script setup lang="ts">
 import { Pill, Clock, RefreshCw } from 'lucide-vue-next'
+import AppModalCloseBtn from './AppModalCloseBtn.vue'
 import type { MedocPris } from '../types/migraine'
 
 defineProps<{ medoc: MedocPris }>()
@@ -106,19 +107,6 @@ defineEmits<{ close: [] }>()
   font-size: 0.75rem;
   color: var(--color-muted);
 }
-.dialog-x {
-  background: none;
-  border: none;
-  font-size: 1.4rem;
-  line-height: 1;
-  cursor: pointer;
-  color: var(--color-danger);
-  padding: 0;
-  flex-shrink: 0;
-  transition: opacity 0.15s ease;
-}
-.dialog-x:hover { opacity: 0.7; }
-
 /* Description */
 .dialog-section {
   padding: 0 1.1rem 0.75rem;

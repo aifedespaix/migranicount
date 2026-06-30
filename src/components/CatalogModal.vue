@@ -21,14 +21,10 @@
             <span class="stepper-label">{{ stepShortTitles[i] }}</span>
           </button>
         </div>
-        <button
-          type="button"
+        <AppModalCloseBtn
           class="modal-close-btn"
-          aria-label="Fermer"
           @click="$emit('close')"
-        >
-          ×
-        </button>
+        />
       </header>
       <div class="progress-bar">
         <div
@@ -656,6 +652,7 @@ import {
   Trash2,
   Zap,
 } from "lucide-vue-next";
+import AppModalCloseBtn from "./AppModalCloseBtn.vue";
 import { computed, ref } from "vue";
 import { useDeclencheursStore } from "../stores/declencheurs";
 import { useMedocsFavorisStore } from "../stores/medocsFavoris";
@@ -950,17 +947,6 @@ function deletePeriod(medocNom: string, idx: number) {
   position: absolute;
   top: 0.5rem;
   right: 0.75rem;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  line-height: 1;
-  cursor: pointer;
-  color: var(--color-danger);
-  padding: 0.25rem;
-  transition: opacity 0.15s ease;
-}
-.modal-close-btn:hover {
-  opacity: 0.7;
 }
 .stepper-nav {
   display: flex;

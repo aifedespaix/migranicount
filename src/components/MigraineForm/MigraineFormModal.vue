@@ -1,5 +1,5 @@
 <template>
-  <div class="modal-backdrop" @click.self="requestClose" @pointerdown.stop @touchstart.stop>
+  <div class="modal-backdrop" @pointerdown.stop @touchstart.stop>
     <div class="modal-sheet">
       <header class="modal-header">
         <div class="modal-title-row">
@@ -24,15 +24,11 @@
             </span>
           </button>
         </div>
-        <button
-          type="button"
+        <AppModalCloseBtn
           class="modal-close-btn"
           :title="props.editId ? 'Fermer' : 'Fermer (brouillon conservé)'"
-          aria-label="Fermer"
           @click="requestClose"
-        >
-          ×
-        </button>
+        />
       </header>
       <div class="progress-bar">
         <div class="progress-bar-fill" :style="{ width: progressPercent + '%' }"></div>
@@ -92,6 +88,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
+import AppModalCloseBtn from '../AppModalCloseBtn.vue'
 import { useSwipe } from '@vueuse/core'
 import { ArrowRight, ArrowLeft, Clock, Gauge, Pill, Heart, Brain, Zap, FileText, CheckSquare } from 'lucide-vue-next'
 import { nextStepIndex, prevStepIndex } from './stepNav'
@@ -340,16 +337,7 @@ function executeDelete() {
   position: absolute;
   top: 0.5rem;
   right: 0.75rem;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  line-height: 1;
-  cursor: pointer;
-  color: var(--color-danger);
-  padding: 0.25rem;
-  transition: opacity 0.15s ease;
 }
-.modal-close-btn:hover { opacity: 0.7; }
 .stepper-nav {
   display: flex;
   gap: 0.2rem;

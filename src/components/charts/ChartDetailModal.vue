@@ -1,9 +1,8 @@
 <template>
-  <div class="chart-detail-overlay" @click.self="$emit('close')" @pointerdown.stop @touchstart.stop>
+  <BaseModal :z-index="50" @close="$emit('close')">
     <div class="chart-detail-panel" role="dialog" aria-modal="true">
       <header class="chart-detail-header">
         <h2>{{ title }}</h2>
-        <button class="close-btn" @click="$emit('close')" aria-label="Fermer">×</button>
       </header>
 
       <div v-if="hasPeriodSelector" class="period-selector">
@@ -59,11 +58,12 @@
         </div>
       </div>
     </div>
-  </div>
+  </BaseModal>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import BaseModal from '../BaseModal.vue'
 import FrequencyChart from './FrequencyChart.vue'
 import IntensityChart from './IntensityChart.vue'
 import IntensityDistributionChart from './IntensityDistributionChart.vue'
@@ -113,15 +113,6 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeydown))
 </script>
 
 <style scoped>
-.chart-detail-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
 .chart-detail-panel {
   background: var(--color-surface);
   color: var(--color-text);
@@ -140,15 +131,6 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeydown))
   border-bottom: 1px solid var(--color-muted);
   flex-shrink: 0;
 }
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--color-danger);
-  transition: opacity 0.15s ease;
-}
-.close-btn:hover { opacity: 0.7; }
 .period-selector {
   display: flex;
   gap: 0.5rem;

@@ -1,5 +1,5 @@
 <template>
-  <div class="browser-backdrop" @click.self="$emit('close')">
+  <div class="browser-backdrop">
     <div class="browser-panel">
       <header class="browser-header">
         <div class="browser-header-top">
@@ -8,7 +8,7 @@
             Catalogue par défaut
             <span class="browser-total">{{ defaultMedications.length }}</span>
           </span>
-          <button type="button" class="browser-close" @click="$emit('close')">×</button>
+          <AppModalCloseBtn @click="$emit('close')" />
         </div>
         <div class="browser-search-wrap">
           <Search :size="13" class="browser-search-icon" />
@@ -177,6 +177,7 @@ import {
   BookOpen, Search, X, Zap, Shield, Plus, Check,
   Clock, CheckCircle, AlertTriangle,
 } from 'lucide-vue-next'
+import AppModalCloseBtn from './AppModalCloseBtn.vue'
 import { defaultMedications } from '../data/defaultMedications'
 import { useMedocsFavorisStore } from '../stores/medocsFavoris'
 import type { DefaultMedication } from '../data/defaultMedications'
@@ -266,15 +267,6 @@ onMounted(() => searchRef.value?.focus())
   background: var(--color-bg);
   padding: 0.1rem 0.4rem;
   border-radius: 0.75rem;
-}
-.browser-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  line-height: 1;
-  color: var(--color-muted);
-  cursor: pointer;
-  padding: 0.2rem 0.4rem;
 }
 .browser-search-wrap {
   position: relative;

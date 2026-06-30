@@ -1,9 +1,8 @@
 <template>
-  <div class="overlay" @click.self="$emit('close')" @keydown.escape="$emit('close')" @pointerdown.stop @touchstart.stop>
+  <BaseModal :z-index="50" @close="$emit('close')">
     <div class="panel" role="dialog" aria-modal="true">
       <header class="panel-header">
         <h2 class="panel-title">Efficacité des traitements de fond</h2>
-        <button type="button" class="panel-close" aria-label="Fermer" @click="$emit('close')">×</button>
       </header>
 
       <div class="panel-body">
@@ -70,11 +69,12 @@
         </div>
       </div>
     </div>
-  </div>
+  </BaseModal>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
+import BaseModal from './BaseModal.vue'
 import { treatmentEfficacyAnalysis } from '../utils/stats'
 import type { Migraine, MedocFavori } from '../types/migraine'
 
@@ -103,16 +103,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <style scoped>
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-}
 .panel {
   background: var(--color-surface);
   border-radius: 1rem;
@@ -135,17 +125,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   font-weight: 600;
   margin: 0;
 }
-.panel-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  line-height: 1;
-  color: var(--color-danger);
-  cursor: pointer;
-  padding: 0.25rem;
-  transition: opacity 0.15s ease;
-}
-.panel-close:hover { opacity: 0.7; }
 .panel-body {
   flex: 1;
   overflow-y: auto;
