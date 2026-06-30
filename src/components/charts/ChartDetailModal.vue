@@ -1,5 +1,5 @@
 <template>
-  <div class="chart-detail-overlay" @click.self="$emit('close')">
+  <div class="chart-detail-overlay" @click.self="$emit('close')" @pointerdown.stop @touchstart.stop>
     <div class="chart-detail-panel" role="dialog" aria-modal="true">
       <header class="chart-detail-header">
         <h2>{{ title }}</h2>
@@ -25,6 +25,10 @@
           <DurationChart v-else-if="chart === 'duration'" :migraines="migraines" />
         </div>
         <div class="chart-detail-stats">
+          <div v-if="treatmentTimeline?.length" class="treatment-legend">
+            <span class="treatment-swatch"></span>
+            <span>Traitement de fond actif</span>
+          </div>
           <template v-if="chart === 'frequency'">
             <p><strong>Total crises (12 mois) :</strong> {{ frequencyStats.total }}</p>
             <p v-if="frequencyStats.busiestMonth">
@@ -141,8 +145,10 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeydown))
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: var(--color-text);
+  color: var(--color-danger);
+  transition: opacity 0.15s ease;
 }
+.close-btn:hover { opacity: 0.7; }
 .period-selector {
   display: flex;
   gap: 0.5rem;
@@ -176,5 +182,22 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeydown))
 .chart-detail-chart {
   flex: 1;
   min-height: 240px;
+}
+.treatment-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--color-muted);
+  padding: 0.25rem 0;
+}
+.treatment-swatch {
+  display: inline-block;
+  width: 1rem;
+  height: 0.65rem;
+  border-radius: 0.2rem;
+  background: rgba(16, 185, 129, 0.5);
+  border: 1px solid rgba(16, 185, 129, 0.8);
+  flex-shrink: 0;
 }
 </style>

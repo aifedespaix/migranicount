@@ -1,5 +1,5 @@
 <template>
-  <HeaderNav @add="openForm" :has-draft="hasDraft" @catalog="catalogOpen = true" />
+  <HeaderNav @add="openForm" :has-draft="hasDraft" :is-catalog-open="catalogOpen" @catalog="toggleCatalog" />
   <main class="app-main" ref="mainRef">
     <RouterView v-slot="{ Component }">
       <Transition :name="pageTransition">
@@ -92,6 +92,10 @@ function onFormSaved() {
   toastStore.add({ message: 'Migraine enregistrée !', type: 'success', persistent: false })
   formOpen.value = false
   hasDraft.value = false
+}
+
+function toggleCatalog() {
+  catalogOpen.value = !catalogOpen.value
 }
 
 function onFormClose() {

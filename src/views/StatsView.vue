@@ -41,6 +41,10 @@
         <div class="chart-wrap">
           <FrequencyChart :migraines="migraines.migraines" :period="period" :treatment-timeline="treatmentTimeline" />
         </div>
+        <div v-if="treatmentTimeline.length" class="treatment-legend">
+          <span class="treatment-swatch"></span>
+          <span class="treatment-label">Traitement de fond actif</span>
+        </div>
       </button>
 
       <div class="stats-buttons">
@@ -284,6 +288,23 @@ const traitementFacts = computed(() => {
 .chart-wrap {
   height: 180px;
   position: relative;
+}
+.treatment-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--color-muted);
+}
+.treatment-swatch {
+  display: inline-block;
+  width: 1rem;
+  height: 0.65rem;
+  border-radius: 0.2rem;
+  background: rgba(16, 185, 129, 0.5);
+  border: 1px solid rgba(16, 185, 129, 0.8);
+  flex-shrink: 0;
 }
 .stats-buttons {
   display: flex;

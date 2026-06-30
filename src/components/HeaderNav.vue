@@ -20,8 +20,9 @@
       <AppTooltip content="Modifier le répertoire" placement="bottom">
         <button
           type="button"
-          class="icon-btn"
+          :class="['icon-btn', { 'icon-btn--active': props.isCatalogOpen }]"
           aria-label="Modifier le répertoire"
+          :aria-expanded="props.isCatalogOpen"
           @click="$emit('catalog')"
         >
           <BookOpen :size="18" />
@@ -63,7 +64,7 @@ import AuthButton from './AuthButton.vue'
 import AppTooltip from './AppTooltip.vue'
 import { usePwaInstall } from '../composables/usePwaInstall'
 
-const props = defineProps<{ hasDraft?: boolean }>()
+const props = defineProps<{ hasDraft?: boolean; isCatalogOpen?: boolean }>()
 defineEmits<{ add: []; catalog: [] }>()
 
 const router = useRouter()

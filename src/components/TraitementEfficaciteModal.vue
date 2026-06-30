@@ -1,5 +1,5 @@
 <template>
-  <div class="overlay" @click.self="$emit('close')" @keydown.escape="$emit('close')">
+  <div class="overlay" @click.self="$emit('close')" @keydown.escape="$emit('close')" @pointerdown.stop @touchstart.stop>
     <div class="panel" role="dialog" aria-modal="true">
       <header class="panel-header">
         <h2 class="panel-title">Efficacité des traitements de fond</h2>
@@ -140,10 +140,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   border: none;
   font-size: 1.5rem;
   line-height: 1;
-  color: var(--color-muted);
+  color: var(--color-danger);
   cursor: pointer;
   padding: 0.25rem;
+  transition: opacity 0.15s ease;
 }
+.panel-close:hover { opacity: 0.7; }
 .panel-body {
   flex: 1;
   overflow-y: auto;

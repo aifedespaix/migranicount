@@ -1,5 +1,5 @@
 <template>
-  <div class="modal-backdrop" @click.self="requestClose" @pointerdown.stop>
+  <div class="modal-backdrop" @click.self="requestClose" @pointerdown.stop @touchstart.stop>
     <div class="modal-sheet">
       <header class="modal-header">
         <div class="modal-title-row">
@@ -240,9 +240,13 @@ function closeForm() {
   else emit('close')
 }
 
+let rangeSwipeBlocked = false
 useSwipe(modalBodyRef, {
-  onSwipeEnd(event, direction) {
-    if ((event.target as HTMLElement)?.closest('input[type="range"]')) return
+  onSwipeStart(e) {
+    rangeSwipeBlocked = !!(e.target as HTMLElement)?.closest('input[type="range"]')
+  },
+  onSwipeEnd(_event, direction) {
+    if (rangeSwipeBlocked) return
     if (direction === 'left') goNext()
     else if (direction === 'right') goPrev()
   },
@@ -342,9 +346,11 @@ function executeDelete() {
   font-size: 1.5rem;
   line-height: 1;
   cursor: pointer;
-  color: var(--color-muted);
+  color: var(--color-danger);
   padding: 0.25rem;
+  transition: opacity 0.15s ease;
 }
+.modal-close-btn:hover { opacity: 0.7; }
 .stepper-nav {
   display: flex;
   gap: 0.2rem;
@@ -353,6 +359,7 @@ function executeDelete() {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   padding-right: 2rem;
+  padding-top: 0.4rem;
 }
 .stepper-nav::-webkit-scrollbar { display: none; }
 .stepper-btn {
@@ -495,8 +502,13 @@ function executeDelete() {
 }
 .action-btn-close-form {
   background: transparent;
-  color: var(--color-muted);
-  border-color: var(--color-muted);
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.action-btn-close-form:hover {
+  background: var(--color-danger);
+  color: white;
 }
 .action-btn-next {
   background: var(--color-info);
