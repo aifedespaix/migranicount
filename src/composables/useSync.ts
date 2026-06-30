@@ -52,7 +52,7 @@ function scheduleFlushToasts() {
     }
     const msgs = buildSyncToasts(migrainesDiff, catalogueDiff)
     for (const msg of msgs) {
-      toastStore.add({ message: msg, type: 'success', persistent: false })
+      toastStore.add({ message: msg, type: 'success' })
     }
     diffAccumulator = { migrainesAdded: [], migrainesModified: [], migrainesRemoved: [], catalogueItems: [] }
     flushTimer = null
@@ -94,7 +94,7 @@ export function useSync() {
       const msgs = buildSyncToasts(migrainesDiff, catalogueDiff)
       const toastStore = useToastStore()
       for (const msg of msgs) {
-        toastStore.add({ message: msg, type: 'success', persistent: false })
+        toastStore.add({ message: msg, type: 'success' })
       }
     } finally {
       mergeInFlight = false

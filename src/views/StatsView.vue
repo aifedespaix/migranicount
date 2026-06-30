@@ -120,7 +120,7 @@ function openDetail(chart: ChartType) {
 
 function onEmptyStateSaved() {
   emptyStateFormOpen.value = false
-  toastStore.add({ message: 'Migraine enregistrée !', type: 'success', persistent: false })
+  toastStore.add({ message: 'Migraine enregistrée !', type: 'success' })
 }
 
 const lastMigraine = computed(() =>

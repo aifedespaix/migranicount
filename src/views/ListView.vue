@@ -141,13 +141,11 @@ function onEditSaved() {
     toastStore.add({
       message: "Migraine supprimée.",
       type: "success",
-      persistent: false,
     });
   } else {
     toastStore.add({
       message: "Migraine mise à jour !",
-      type: "success",
-      persistent: false,
+      type: "info",
     });
   }
 }
@@ -157,7 +155,6 @@ function onAddSaved() {
   toastStore.add({
     message: "Migraine enregistrée !",
     type: "success",
-    persistent: false,
   });
 }
 </script>

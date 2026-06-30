@@ -89,7 +89,7 @@ function startFresh() {
 }
 
 function onFormSaved() {
-  toastStore.add({ message: 'Migraine enregistrée !', type: 'success', persistent: false })
+  toastStore.add({ message: 'Migraine enregistrée !', type: 'success' })
   formOpen.value = false
   hasDraft.value = false
 }
