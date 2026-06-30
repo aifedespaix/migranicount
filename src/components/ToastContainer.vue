@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { onUnmounted, reactive } from 'vue'
+import { onUnmounted, reactive, watch } from 'vue'
 import { useToastStore, type ToastType } from '../stores/toast'
 
 const toast = useToastStore()
@@ -55,7 +55,6 @@ function typeIcon(type: ToastType): string {
 }
 
 // Called when a toast is added (watched via the store)
-import { watch } from 'vue'
 watch(
   () => toast.toasts.map((t) => t.id),
   (newIds, oldIds) => {
