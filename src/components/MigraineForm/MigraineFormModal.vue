@@ -47,34 +47,37 @@
       </div>
 
       <div class="modal-actions">
-        <button
-          type="button"
-          class="action-btn action-btn-prev"
+        <AppButton
+          variant="info"
+          ghost
+          size="lg"
+          style="flex:1"
           :style="prevVisible ? {} : { visibility: 'hidden' }"
           @click="goPrev"
         >
           <ArrowLeft :size="16" />
           Préc.
-        </button>
-        <div class="modal-actions-spacer" />
-        <button
+        </AppButton>
+        <AppButton
           v-if="isLastStep"
-          type="button"
-          class="action-btn action-btn-close-form"
+          variant="danger"
+          ghost
+          size="lg"
+          style="flex:1"
           @click="closeForm"
         >
           Fermer
-        </button>
-        <button
+        </AppButton>
+        <AppButton
           v-else
-          type="button"
-          class="action-btn action-btn-next"
-          :class="{ 'action-btn-next--warning': hasPendingMedoc }"
+          :variant="hasPendingMedoc ? 'warning' : 'info'"
+          size="lg"
+          style="flex:1"
           @click="goNext"
         >
           Suiv.
           <ArrowRight :size="16" />
-        </button>
+        </AppButton>
       </div>
     </div>
     <PendingMedocDialog
@@ -89,6 +92,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import AppModalCloseBtn from '../AppModalCloseBtn.vue'
+import AppButton from '../AppButton.vue'
 import { useSwipe } from '@vueuse/core'
 import { ArrowRight, ArrowLeft, Clock, Gauge, Pill, Heart, Brain, Zap, FileText, CheckSquare } from 'lucide-vue-next'
 import { nextStepIndex, prevStepIndex } from './stepNav'
@@ -461,56 +465,6 @@ function executeDelete() {
   padding: 0.75rem 1rem;
   border-top: 1px solid var(--color-bg);
   flex-shrink: 0;
-}
-.action-btn {
-  flex: 1;
-  min-width: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-  padding: 0.6rem 0.5rem;
-  border-radius: 0.5rem;
-  border: 1px solid var(--color-muted);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-size: 0.85rem;
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.action-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.modal-actions-spacer {
-  flex: 1;
-}
-.action-btn-close-form {
-  background: transparent;
-  color: var(--color-danger);
-  border-color: var(--color-danger);
-  transition: background 0.15s ease, color 0.15s ease;
-}
-.action-btn-close-form:hover {
-  background: var(--color-danger);
-  color: white;
-}
-.action-btn-next {
-  background: var(--color-info);
-  color: var(--color-info-contrast);
-  border-color: var(--color-info);
-}
-.action-btn-next--warning {
-  background: var(--color-warning);
-  color: var(--color-warning-contrast);
-  border-color: var(--color-warning);
-}
-.action-btn-prev {
-  background: transparent;
-  color: var(--color-info);
-  border-color: var(--color-info);
 }
 @media (min-width: 1024px) {
   .modal-backdrop {

@@ -105,20 +105,21 @@
                         Traitement de fond (préventif)
                       </label>
                       <div class="catalog-edit-actions">
-                        <button
-                          type="button"
-                          class="btn-secondary btn-sm"
+                        <AppButton
+                          variant="muted"
+                          ghost
+                          size="sm"
                           @click="editingMedoc = null"
                         >
                           Annuler
-                        </button>
-                        <button
-                          type="button"
-                          class="btn-primary btn-sm"
+                        </AppButton>
+                        <AppButton
+                          variant="primary"
+                          size="sm"
                           @click="saveMedocEdit"
                         >
                           Enregistrer
-                        </button>
+                        </AppButton>
                       </div>
                     </div>
                     <template v-else>
@@ -283,20 +284,21 @@
                               class="catalog-input"
                             />
                             <div class="catalog-edit-actions">
-                              <button
-                                type="button"
-                                class="btn-secondary btn-sm"
+                              <AppButton
+                                variant="muted"
+                                ghost
+                                size="sm"
                                 @click="cancelPeriod"
                               >
                                 Annuler
-                              </button>
-                              <button
-                                type="button"
-                                class="btn-primary btn-sm"
+                              </AppButton>
+                              <AppButton
+                                variant="primary"
+                                size="sm"
                                 @click="savePeriod"
                               >
                                 OK
-                              </button>
+                              </AppButton>
                             </div>
                           </div>
                           <template v-else>
@@ -357,20 +359,21 @@
                             class="catalog-input"
                           />
                           <div class="catalog-edit-actions">
-                            <button
-                              type="button"
-                              class="btn-secondary btn-sm"
+                            <AppButton
+                              variant="muted"
+                              ghost
+                              size="sm"
                               @click="cancelPeriod"
                             >
                               Annuler
-                            </button>
-                            <button
-                              type="button"
-                              class="btn-primary btn-sm"
+                            </AppButton>
+                            <AppButton
+                              variant="primary"
+                              size="sm"
                               @click="savePeriod"
                             >
                               Ajouter
-                            </button>
+                            </AppButton>
                           </div>
                         </div>
                         <button
@@ -384,23 +387,24 @@
                       </div>
 
                       <div class="catalog-edit-actions">
-                        <button
-                          type="button"
-                          class="btn-secondary btn-sm"
+                        <AppButton
+                          variant="muted"
+                          ghost
+                          size="sm"
                           @click="
                             editingMedoc = null;
                             editingPeriod = null;
                           "
                         >
                           Annuler
-                        </button>
-                        <button
-                          type="button"
-                          class="btn-primary btn-sm"
+                        </AppButton>
+                        <AppButton
+                          variant="primary"
+                          size="sm"
                           @click="saveMedocEdit"
                         >
                           Enregistrer
-                        </button>
+                        </AppButton>
                       </div>
                     </div>
                     <template v-else>
@@ -478,20 +482,21 @@
                         @keyup.escape="editingSymptome = null"
                       />
                       <div class="catalog-edit-actions">
-                        <button
-                          type="button"
-                          class="btn-secondary btn-sm"
+                        <AppButton
+                          variant="muted"
+                          ghost
+                          size="sm"
                           @click="editingSymptome = null"
                         >
                           Annuler
-                        </button>
-                        <button
-                          type="button"
-                          class="btn-primary btn-sm"
+                        </AppButton>
+                        <AppButton
+                          variant="primary"
+                          size="sm"
                           @click="saveSymptomeEdit"
                         >
                           Enregistrer
-                        </button>
+                        </AppButton>
                       </div>
                     </div>
                     <template v-else>
@@ -585,10 +590,10 @@
             placeholder="Ajouter un symptôme…"
             class="catalog-input"
           />
-          <button type="submit" class="btn-primary btn-sm">
+          <AppButton type="submit" variant="primary" size="sm">
             <Plus :size="14" />
             Ajouter
-          </button>
+          </AppButton>
         </form>
         <form
           v-else-if="stepIndex === 2"
@@ -600,39 +605,44 @@
             placeholder="Ajouter un déclencheur…"
             class="catalog-input"
           />
-          <button type="submit" class="btn-primary btn-sm">
+          <AppButton type="submit" variant="primary" size="sm">
             <Plus :size="14" />
             Ajouter
-          </button>
+          </AppButton>
         </form>
       </div>
 
       <div class="modal-actions">
-        <button
-          type="button"
-          class="action-btn action-btn-prev"
+        <AppButton
+          variant="info"
+          ghost
+          size="lg"
+          style="flex:1"
           :style="prevVisible ? {} : { visibility: 'hidden' }"
           @click="goPrev"
         >
           <ArrowLeft :size="16" />
           Préc.
-        </button>
-        <button
-          type="button"
-          class="action-btn action-btn-close"
+        </AppButton>
+        <AppButton
+          variant="danger"
+          ghost
+          size="lg"
+          style="flex:1"
           @click="$emit('close')"
         >
           Fermer
-        </button>
-        <button
-          type="button"
-          class="action-btn action-btn-next"
+        </AppButton>
+        <AppButton
+          variant="info"
+          size="lg"
+          style="flex:1"
           :style="nextVisible ? {} : { visibility: 'hidden' }"
           @click="goNext"
         >
           Suiv.
           <ArrowRight :size="16" />
-        </button>
+        </AppButton>
       </div>
     </div>
 
@@ -653,6 +663,7 @@ import {
   Zap,
 } from "lucide-vue-next";
 import AppModalCloseBtn from "./AppModalCloseBtn.vue";
+import AppButton from "./AppButton.vue";
 import { computed, ref } from "vue";
 import { useDeclencheursStore } from "../stores/declencheurs";
 import { useMedocsFavorisStore } from "../stores/medocsFavoris";
@@ -1322,34 +1333,7 @@ function deletePeriod(medocNom: string, idx: number) {
   align-items: center;
 }
 
-/* ─── Boutons ───────────────────────────────────────────────────────────── */
-.btn-primary {
-  background: var(--color-accent);
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.85rem;
-  cursor: pointer;
-  white-space: nowrap;
-  font-size: 0.85rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-.btn-secondary {
-  background: none;
-  border: 1px solid var(--color-muted);
-  color: var(--color-text);
-  border-radius: 0.5rem;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  white-space: nowrap;
-  font-size: 0.9rem;
-}
-.btn-sm {
-  padding: 0.4rem 0.75rem;
-  font-size: 0.85rem;
-}
+/* ─── Pied de modale ────────────────────────────────────────────────────── */
 .modal-actions {
   display: flex;
   align-items: center;
@@ -1358,38 +1342,6 @@ function deletePeriod(medocNom: string, idx: number) {
   padding: 0.75rem 1rem;
   border-top: 1px solid var(--color-bg);
   flex-shrink: 0;
-}
-.action-btn {
-  flex: 1;
-  min-width: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-  padding: 0.6rem 0.5rem;
-  border-radius: 0.5rem;
-  border: 1px solid var(--color-muted);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-size: 0.85rem;
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-}
-.action-btn-close {
-  background: transparent;
-  color: var(--color-danger);
-  border-color: var(--color-danger);
-}
-.action-btn-next {
-  background: var(--color-info);
-  color: var(--color-info-contrast);
-  border-color: var(--color-info);
-}
-.action-btn-prev {
-  background: transparent;
-  color: var(--color-info);
-  border-color: var(--color-info);
 }
 @media (min-width: 1024px) {
   .modal-backdrop {

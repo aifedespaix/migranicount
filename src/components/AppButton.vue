@@ -14,7 +14,7 @@
 
 <script setup lang="ts">
 withDefaults(defineProps<{
-  variant?: 'primary' | 'danger' | 'muted' | 'info'
+  variant?: 'primary' | 'danger' | 'muted' | 'info' | 'warning'
   ghost?: boolean
   size?: 'sm' | 'md' | 'lg'
 }>(), {
@@ -37,6 +37,11 @@ withDefaults(defineProps<{
   padding: 0.5rem 1rem;
   white-space: nowrap;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  outline: none;
+}
+.app-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 .app-btn:active { transform: scale(0.95); }
 .app-btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
@@ -72,6 +77,15 @@ withDefaults(defineProps<{
   background: color-mix(in srgb, var(--color-accent) 82%, black);
 }
 
+.app-btn--warning:not(.app-btn--ghost) {
+  background: var(--color-warning);
+  color: var(--color-warning-contrast);
+  border-color: var(--color-warning);
+}
+.app-btn--warning:not(.app-btn--ghost):hover {
+  background: color-mix(in srgb, var(--color-warning) 82%, black);
+}
+
 .app-btn--muted:not(.app-btn--ghost) {
   background: color-mix(in srgb, var(--color-muted) 12%, transparent);
   color: var(--color-text);
@@ -79,6 +93,14 @@ withDefaults(defineProps<{
 }
 .app-btn--muted:not(.app-btn--ghost):hover {
   background: color-mix(in srgb, var(--color-muted) 22%, transparent);
+}
+
+/* ── Hover shadow for filled variants ──────────────────────── */
+.app-btn--primary:not(.app-btn--ghost):hover,
+.app-btn--danger:not(.app-btn--ghost):hover,
+.app-btn--info:not(.app-btn--ghost):hover,
+.app-btn--warning:not(.app-btn--ghost):hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* ── Ghost ──────────────────────────────────────────────────── */
@@ -121,5 +143,15 @@ withDefaults(defineProps<{
 .app-btn--ghost.app-btn--primary:hover {
   background: var(--color-accent);
   color: var(--color-accent-contrast);
+}
+
+.app-btn--ghost.app-btn--warning {
+  background: transparent;
+  color: var(--color-warning);
+  border-color: var(--color-warning);
+}
+.app-btn--ghost.app-btn--warning:hover {
+  background: var(--color-warning);
+  color: var(--color-warning-contrast);
 }
 </style>
