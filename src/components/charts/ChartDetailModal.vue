@@ -17,17 +17,19 @@
 
       <div class="chart-detail-body">
         <div class="chart-detail-chart">
-          <FrequencyChart v-if="chart === 'frequency'" :migraines="migraines" :period="localPeriod" :treatment-timeline="treatmentTimeline" />
-          <IntensityChart v-else-if="chart === 'intensity'" :migraines="migraines" :period="localPeriod" />
+          <FrequencyChart v-if="chart === 'frequency'" :migraines="migraines" :period="localPeriod" :treatments="activeTreatments" />
+          <IntensityChart v-else-if="chart === 'intensity'" :migraines="migraines" :period="localPeriod" :treatments="activeTreatments" />
           <IntensityDistributionChart v-else-if="chart === 'intensity-distribution'" :migraines="migraines" />
           <MedocEfficacyChart v-else-if="chart === 'medoc-efficacy'" :migraines="migraines" />
           <DurationChart v-else-if="chart === 'duration'" :migraines="migraines" />
         </div>
         <div class="chart-detail-stats">
-          <div v-if="treatmentTimeline?.length" class="treatment-legend">
-            <span class="treatment-swatch"></span>
-            <span>Traitement de fond actif</span>
-          </div>
+          <TreatmentLegend
+            v-if="treatments?.length"
+            :entries="treatments"
+            :selected="localSelected"
+            @update:selected="onSelectedChange"
+          />
           <template v-if="chart === 'frequency'">
             <p><strong>Total crises (12 mois) :</strong> {{ frequencyStats.total }}</p>
             <p v-if="frequencyStats.busiestMonth">
@@ -62,8 +64,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import BaseModal from '../BaseModal.vue'
+import TreatmentLegend from './TreatmentLegend.vue'
 import FrequencyChart from './FrequencyChart.vue'
 import IntensityChart from './IntensityChart.vue'
 import IntensityDistributionChart from './IntensityDistributionChart.vue'
@@ -72,6 +75,7 @@ import DurationChart from './DurationChart.vue'
 import { frequencyTrendStats, intensityStats, durationStats, efficacyRanking, type Period } from '../../utils/stats'
 import { formatDuration } from '../../utils/date'
 import type { Migraine } from '../../types/migraine'
+import type { TreatmentEntry } from '../../utils/treatmentColors'
 
 type ChartType = 'frequency' | 'intensity' | 'intensity-distribution' | 'medoc-efficacy' | 'duration'
 
@@ -79,11 +83,21 @@ const props = defineProps<{
   chart: ChartType
   migraines: Migraine[]
   initialPeriod?: Period
-  treatmentTimeline?: { start: string; end: string | null }[]
+  treatments?: TreatmentEntry[]
+  selectedTreatments?: string[]
 }>()
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: []; 'update:selectedTreatments': [string[]] }>()
 
 const localPeriod = ref<Period>(props.initialPeriod ?? 'month')
+const localSelected = ref<string[]>(props.selectedTreatments ?? props.treatments?.map((t) => t.name) ?? [])
+watch(() => props.selectedTreatments, (v) => { if (v) localSelected.value = v })
+function onSelectedChange(v: string[]) {
+  localSelected.value = v
+  emit('update:selectedTreatments', v)
+}
+const activeTreatments = computed(() =>
+  props.treatments?.filter((t) => localSelected.value.includes(t.name)) ?? []
+)
 const hasPeriodSelector = computed(() => props.chart === 'frequency' || props.chart === 'intensity')
 
 const periodLabels: Record<Period, string> = { day: 'Jour', week: 'Semaine', month: 'Mois' }
@@ -164,22 +178,5 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeydown))
 .chart-detail-chart {
   flex: 1;
   min-height: 240px;
-}
-.treatment-legend {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.78rem;
-  color: var(--color-muted);
-  padding: 0.25rem 0;
-}
-.treatment-swatch {
-  display: inline-block;
-  width: 1rem;
-  height: 0.65rem;
-  border-radius: 0.2rem;
-  background: rgba(16, 185, 129, 0.5);
-  border: 1px solid rgba(16, 185, 129, 0.8);
-  flex-shrink: 0;
 }
 </style>

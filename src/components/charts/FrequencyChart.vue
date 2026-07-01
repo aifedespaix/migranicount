@@ -9,31 +9,32 @@ import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, type
 import { monthlyFrequency, dailyFrequency, weeklyFrequency, type Period } from '../../utils/stats'
 import { useChartThemeColors, withAlpha } from '../../utils/chartTheme'
 import type { Migraine } from '../../types/migraine'
-
-const TREATMENT_COLOR = 'rgba(16, 185, 129, 0.14)'
+import type { TreatmentEntry } from '../../utils/treatmentColors'
 
 const treatmentBandPlugin: Plugin<'bar'> = {
   id: 'treatmentBands',
   beforeDraw(chart) {
     const cfg = (chart.options as any).plugins?.treatmentBands as
-      | { bands: { startIdx: number; endIdx: number }[]; color: string }
+      | { treatments: { bands: { startIdx: number; endIdx: number }[]; color: string }[] }
       | undefined
-    if (!cfg?.bands?.length) return
+    if (!cfg?.treatments?.length) return
     const { ctx, chartArea } = chart
     if (!chartArea) return
     const { top, bottom } = chartArea
     const meta = chart.getDatasetMeta(0)
     if (!meta?.data?.length) return
     ctx.save()
-    ctx.fillStyle = cfg.color
-    for (const { startIdx, endIdx } of cfg.bands) {
-      const startBar = meta.data[startIdx] as any
-      const endBar = meta.data[endIdx] as any
-      if (!startBar || !endBar) continue
-      const hw = (startBar.width ?? 0) / 2
-      const x = startBar.x - hw
-      const w = endBar.x + hw - x
-      ctx.fillRect(x, top, w, bottom - top)
+    for (const treatment of cfg.treatments) {
+      ctx.fillStyle = treatment.color
+      for (const { startIdx, endIdx } of treatment.bands) {
+        const startBar = meta.data[startIdx] as any
+        const endBar = meta.data[endIdx] as any
+        if (!startBar || !endBar) continue
+        const hw = (startBar.width ?? 0) / 2
+        const x = startBar.x - hw
+        const w = endBar.x + hw - x
+        ctx.fillRect(x, top, w, bottom - top)
+      }
     }
     ctx.restore()
   },
@@ -44,7 +45,7 @@ ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, treatmentBandP
 const props = defineProps<{
   migraines: Migraine[]
   period?: Period
-  treatmentTimeline?: { start: string; end: string | null }[]
+  treatments?: TreatmentEntry[]
 }>()
 
 const themeColors = useChartThemeColors()
@@ -72,39 +73,36 @@ const barItems = computed(() => {
   }
 })
 
-const treatmentBandIndices = computed<{ startIdx: number; endIdx: number }[]>(() => {
-  const timeline = props.treatmentTimeline
-  if (!timeline?.length) return []
-  const today = new Date().toISOString().slice(0, 10)
+const treatmentBandData = computed(() => {
+  const treatments = props.treatments
+  if (!treatments?.length) return []
   const p = props.period ?? 'month'
-  const bands: { startIdx: number; endIdx: number }[] = []
-  let current: { startIdx: number; endIdx: number } | null = null
-
-  barItems.value.forEach((item, i) => {
-    let barStart = item.fullDate
-    let barEnd: string
-    if (p === 'month') {
-      const d = new Date(item.fullDate + 'T00:00:00')
-      barEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10)
-    } else if (p === 'week') {
-      const d = new Date(item.fullDate + 'T00:00:00')
-      barEnd = new Date(d.getTime() + 6 * 86400000).toISOString().slice(0, 10)
-    } else {
-      barEnd = barStart
-    }
-    const inTreatment = timeline.some((t) => {
-      const tEnd = t.end ?? today
-      return t.start <= barEnd && tEnd >= barStart
+  return treatments.map((t) => {
+    const bands: { startIdx: number; endIdx: number }[] = []
+    let current: { startIdx: number; endIdx: number } | null = null
+    barItems.value.forEach((item, i) => {
+      const barStart = item.fullDate
+      let barEnd: string
+      if (p === 'month') {
+        const d = new Date(item.fullDate + 'T00:00:00')
+        barEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10)
+      } else if (p === 'week') {
+        const d = new Date(item.fullDate + 'T00:00:00')
+        barEnd = new Date(d.getTime() + 6 * 86400000).toISOString().slice(0, 10)
+      } else {
+        barEnd = barStart
+      }
+      const inTreatment = t.periods.some((per) => per.start <= barEnd && per.end >= barStart)
+      if (inTreatment) {
+        if (!current) current = { startIdx: i, endIdx: i }
+        else current.endIdx = i
+      } else {
+        if (current) { bands.push(current); current = null }
+      }
     })
-    if (inTreatment) {
-      if (!current) current = { startIdx: i, endIdx: i }
-      else current.endIdx = i
-    } else {
-      if (current) { bands.push(current); current = null }
-    }
+    if (current) bands.push(current)
+    return { bands, color: t.color.bg }
   })
-  if (current) bands.push(current)
-  return bands
 })
 
 const chartData = computed(() => ({
@@ -117,10 +115,7 @@ const options = computed(() => ({
   maintainAspectRatio: false,
   plugins: {
     legend: { display: false },
-    treatmentBands: {
-      bands: treatmentBandIndices.value,
-      color: TREATMENT_COLOR,
-    },
+    treatmentBands: { treatments: treatmentBandData.value },
   },
   scales: {
     x: {

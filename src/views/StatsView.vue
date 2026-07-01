@@ -39,12 +39,14 @@
       <button class="chart-card" @click="openDetail('frequency')">
         <h2>Fréquence des crises</h2>
         <div class="chart-wrap">
-          <FrequencyChart :migraines="migraines.migraines" :period="period" :treatment-timeline="treatmentTimeline" />
+          <FrequencyChart :migraines="migraines.migraines" :period="period" :treatments="activeTreatments" />
         </div>
-        <div v-if="treatmentTimeline.length" class="treatment-legend">
-          <span class="treatment-swatch"></span>
-          <span class="treatment-label">Traitement de fond actif</span>
-        </div>
+        <TreatmentLegend
+          v-if="allTreatments.length"
+          :entries="allTreatments"
+          :selected="selectedTreatments"
+          @update:selected="selectedTreatments = $event"
+        />
       </button>
 
       <div class="stats-buttons">
@@ -66,8 +68,10 @@
       :chart="activeDetail"
       :migraines="migraines.migraines"
       :initial-period="period"
-      :treatment-timeline="treatmentTimeline"
+      :treatments="allTreatments"
+      :selected-treatments="selectedTreatments"
       @close="activeDetail = null"
+      @update:selected-treatments="selectedTreatments = $event"
     />
 
     <TraitementEfficaciteModal
@@ -86,16 +90,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useMigrainesStore } from '../stores/migraines'
 import { useMedocsFavorisStore } from '../stores/medocsFavoris'
 import { formatRelative, formatDuration, todayISO } from '../utils/date'
 import {
   defaultPeriod, type Period,
   intensityStats, durationStats, efficacyRanking, intensityDistribution,
-  buildActivePeriodTimeline, treatmentEfficacyAnalysis,
+  buildPerTreatmentTimelines, treatmentEfficacyAnalysis,
 } from '../utils/stats'
+import { colorForIndex, type TreatmentEntry } from '../utils/treatmentColors'
 import FrequencyChart from '../components/charts/FrequencyChart.vue'
+import TreatmentLegend from '../components/charts/TreatmentLegend.vue'
 import StatsButton from '../components/charts/StatsButton.vue'
 import ChartDetailModal from '../components/charts/ChartDetailModal.vue'
 import MigraineFormModal from '../components/MigraineForm/MigraineFormModal.vue'
@@ -162,8 +168,21 @@ const durationFacts = computed(() => [
   { value: avgDur.value.maxMin > 0 ? formatDuration(avgDur.value.maxMin) : '—', label: 'max' },
 ])
 
-const treatmentTimeline = computed(() =>
-  buildActivePeriodTimeline(medocsFavoris.favoris).map((t) => ({ start: t.start, end: t.end }))
+const allTreatments = computed<TreatmentEntry[]>(() =>
+  buildPerTreatmentTimelines(medocsFavoris.favoris).map((t, i) => ({
+    name: t.name,
+    color: colorForIndex(i),
+    periods: t.periods,
+  }))
+)
+const selectedTreatments = ref<string[]>([])
+
+watch(allTreatments, (entries) => {
+  selectedTreatments.value = entries.map((e) => e.name)
+}, { immediate: true })
+
+const activeTreatments = computed(() =>
+  allTreatments.value.filter((e) => selectedTreatments.value.includes(e.name))
 )
 
 const hasTraitementData = computed(() =>
@@ -288,23 +307,6 @@ const traitementFacts = computed(() => {
 .chart-wrap {
   height: 180px;
   position: relative;
-}
-.treatment-legend {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-top: 0.5rem;
-  font-size: 0.72rem;
-  color: var(--color-muted);
-}
-.treatment-swatch {
-  display: inline-block;
-  width: 1rem;
-  height: 0.65rem;
-  border-radius: 0.2rem;
-  background: rgba(16, 185, 129, 0.5);
-  border: 1px solid rgba(16, 185, 129, 0.8);
-  flex-shrink: 0;
 }
 .stats-buttons {
   display: flex;

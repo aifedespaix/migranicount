@@ -276,6 +276,21 @@ export function buildActivePeriodTimeline(
   return entries.sort((a, b) => a.start.localeCompare(b.start))
 }
 
+export function buildPerTreatmentTimelines(
+  medocs: MedocFavori[],
+): { name: string; periods: { start: string; end: string }[] }[] {
+  const today = new Date().toISOString().slice(0, 10)
+  return medocs
+    .filter((m) => m.isLongTermTreatment && m.treatmentPeriods?.length)
+    .map((m) => ({
+      name: m.nom,
+      periods: m.treatmentPeriods!.map((p) => ({
+        start: p.startDate,
+        end: p.endDate ?? today,
+      })),
+    }))
+}
+
 export function isDateInTreatmentPeriod(
   date: string,
   timeline: { start: string; end: string }[],
