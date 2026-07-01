@@ -1,4 +1,4 @@
-# Design — Save debounce & UX médocs pending entry
+# Design - Save debounce & UX médocs pending entry
 
 **Date :** 2026-06-27  
 **Scope :** `MigraineFormModal.vue`, `StepMedocs.vue`, nouveau composant `PendingMedocDialog.vue`
@@ -15,7 +15,7 @@ Deux problèmes indépendants résolus dans ce spec :
 
 ---
 
-## Feature 1 — Save debounce
+## Feature 1 - Save debounce
 
 ### Comportement cible
 
@@ -34,11 +34,11 @@ Après 1500ms sans changement du draft, `saveIfPossible()` est appelé automatiq
 
 ### Condition de save
 
-`saveIfPossible()` vérifie déjà `canSaveDraft(draft.value)` (date + heureDebut requis) avant de sauvegarder — aucun changement nécessaire là.
+`saveIfPossible()` vérifie déjà `canSaveDraft(draft.value)` (date + heureDebut requis) avant de sauvegarder - aucun changement nécessaire là.
 
 ---
 
-## Feature 2 — UX médocs pending entry
+## Feature 2 - UX médocs pending entry
 
 ### Comportement cible
 
@@ -53,11 +53,13 @@ Quand `nomInput.trim() !== ''` dans `StepMedocs` (médicament en cours de saisie
 ### Architecture
 
 **`StepMedocs.vue`**
+
 - Expose via `defineExpose` :
-  - `hasPendingEntry: ComputedRef<boolean>` — `nomInput.value.trim() !== ''`
-  - `submitPending(): void` — appelle `addNew()` en interne
+  - `hasPendingEntry: ComputedRef<boolean>` - `nomInput.value.trim() !== ''`
+  - `submitPending(): void` - appelle `addNew()` en interne
 
 **`MigraineFormModal.vue`**
+
 - Ajouter `ref="activeStepRef"` sur `<component :is="steps[stepIndex]">`
 - Computed `hasPendingMedoc`: `stepIndex.value === 2 && activeStepRef.value?.hasPendingEntry`
 - Bouton "Suiv." : classe conditionnelle `action-btn-next--warning` quand `hasPendingMedoc`
@@ -68,6 +70,7 @@ Quand `nomInput.trim() !== ''` dans `StepMedocs` (médicament en cours de saisie
   - `onAddAndContinue()` → `activeStepRef.value.submitPending()`, puis navigue
 
 **`PendingMedocDialog.vue`** (nouveau composant léger)
+
 - Même style que `ConfirmDialog` existant
 - Props : `title`, `message`
 - Emits : `stay`, `skip`, `add-and-continue`

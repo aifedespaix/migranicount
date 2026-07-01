@@ -1,4 +1,4 @@
-# Layout Global — Header, AppBar & Navigation
+# Layout Global - Header, AppBar & Navigation
 
 Domaine 4 sur 6 du lot d'améliorations UI/UX.
 
@@ -17,6 +17,7 @@ Domaine 4 sur 6 du lot d'améliorations UI/UX.
 ### HeaderNav.vue
 
 **Structure :**
+
 ```
 [logo-icon img 24px] [logo-text "Migracount"] | nav(desktop only) | [edit-medocs-btn] [settings-btn] [add-btn(desktop only)]
 ```
@@ -31,12 +32,13 @@ Domaine 4 sur 6 du lot d'améliorations UI/UX.
 ### BottomNav.vue
 
 **Structure :** 3 items flex sur toute la largeur.
+
 ```
 [Stats icon+label] | [+ bouton central surélevé] | [Liste icon+label]
 ```
 
 - Stats : `<RouterLink>` avec `BarChart2` icône + label "Stats".
-- + central : `<button class="fab-center">` qui émet `add`. Visuellement : fond `--color-accent`, texte `--color-accent-contrast`, taille légèrement plus grande (2rem), border-radius pill, légèrement surélevé (`box-shadow`). PAS un RouterLink.
+- - central : `<button class="fab-center">` qui émet `add`. Visuellement : fond `--color-accent`, texte `--color-accent-contrast`, taille légèrement plus grande (2rem), border-radius pill, légèrement surélevé (`box-shadow`). PAS un RouterLink.
 - Liste : `<RouterLink>` avec `List` icône + label "Liste".
 - `defineEmits<{ add: [] }>()`.
 
@@ -55,11 +57,24 @@ Supprimé. App.vue l'importait via `<FabButton @click="formOpen = true" />` → 
 - `.app-main` doit avoir `position: relative` pour contenir la transition absolue des pages.
 
 **CSS de transition de pages** (dans `App.vue` `<style>` non-scoped ou scoped avec `:deep`) :
+
 ```css
-.slide-next-enter-from { transform: translateX(100%); opacity: 0; }
-.slide-next-leave-to   { transform: translateX(-100%); opacity: 0; }
-.slide-prev-enter-from { transform: translateX(-100%); opacity: 0; }
-.slide-prev-leave-to   { transform: translateX(100%); opacity: 0; }
+.slide-next-enter-from {
+  transform: translateX(100%);
+  opacity: 0;
+}
+.slide-next-leave-to {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+.slide-prev-enter-from {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+.slide-prev-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
+}
 /* enter-active / leave-active : transition 0.28s ease, position: absolute, width/height: 100% */
 ```
 

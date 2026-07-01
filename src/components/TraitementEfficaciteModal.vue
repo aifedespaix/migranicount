@@ -15,8 +15,15 @@
           <div class="result-card-header">
             <h3 class="result-medoc">{{ r.medoc }}</h3>
             <span class="result-periods-badge">
-              {{ r.periods.length }} période{{ r.periods.length > 1 ? 's' : '' }}
-              <span v-if="r.periods.some(p => !p.endDate)" class="ongoing-dot" title="En cours">●</span>
+              {{ r.periods.length }} période{{
+                r.periods.length > 1 ? "s" : ""
+              }}
+              <span
+                v-if="r.periods.some((p) => !p.endDate)"
+                class="ongoing-dot"
+                title="En cours"
+                >●</span
+              >
             </span>
           </div>
 
@@ -28,18 +35,34 @@
             </div>
             <div class="comparison-col">
               <span class="comparison-label">Fréquence/mois</span>
-              <span class="comparison-value comparison-value--in">{{ r.inPeriod.avgFreqPerMonth }}</span>
-              <span class="comparison-value comparison-value--out">{{ r.outPeriod.avgFreqPerMonth }}</span>
+              <span class="comparison-value comparison-value--in">{{
+                r.inPeriod.avgFreqPerMonth
+              }}</span>
+              <span class="comparison-value comparison-value--out">{{
+                r.outPeriod.avgFreqPerMonth
+              }}</span>
             </div>
             <div class="comparison-col">
               <span class="comparison-label">Durée moyenne</span>
-              <span class="comparison-value comparison-value--in">{{ formatDur(r.inPeriod.avgDurationMin) }}</span>
-              <span class="comparison-value comparison-value--out">{{ formatDur(r.outPeriod.avgDurationMin) }}</span>
+              <span class="comparison-value comparison-value--in">{{
+                formatDur(r.inPeriod.avgDurationMin)
+              }}</span>
+              <span class="comparison-value comparison-value--out">{{
+                formatDur(r.outPeriod.avgDurationMin)
+              }}</span>
             </div>
             <div class="comparison-col">
               <span class="comparison-label">Intensité moy.</span>
-              <span class="comparison-value comparison-value--in">{{ r.inPeriod.avgIntensity > 0 ? r.inPeriod.avgIntensity + '/10' : '—' }}</span>
-              <span class="comparison-value comparison-value--out">{{ r.outPeriod.avgIntensity > 0 ? r.outPeriod.avgIntensity + '/10' : '—' }}</span>
+              <span class="comparison-value comparison-value--in">{{
+                r.inPeriod.avgIntensity > 0
+                  ? r.inPeriod.avgIntensity + "/10"
+                  : "-"
+              }}</span>
+              <span class="comparison-value comparison-value--out">{{
+                r.outPeriod.avgIntensity > 0
+                  ? r.outPeriod.avgIntensity + "/10"
+                  : "-"
+              }}</span>
             </div>
             <div class="comparison-col comparison-col--count">
               <span class="comparison-label">Crises comptées</span>
@@ -49,22 +72,44 @@
           </div>
 
           <p v-if="r.reductionPct.freq !== null" class="result-summary">
-            <span :class="r.reductionPct.freq < 0 ? 'result-positive' : 'result-negative'">
+            <span
+              :class="
+                r.reductionPct.freq < 0 ? 'result-positive' : 'result-negative'
+              "
+            >
               {{ Math.abs(r.reductionPct.freq) }}%
-              {{ r.reductionPct.freq < 0 ? 'de réduction' : 'd\'augmentation' }}
+              {{ r.reductionPct.freq < 0 ? "de réduction" : "d'augmentation" }}
             </span>
             de fréquence en traitement
-            <template v-if="r.reductionPct.duration !== null && r.inPeriod.avgDurationMin > 0">
+            <template
+              v-if="
+                r.reductionPct.duration !== null &&
+                r.inPeriod.avgDurationMin > 0
+              "
+            >
               &nbsp;·&nbsp;
-              <span :class="r.reductionPct.duration < 0 ? 'result-positive' : 'result-negative'">
+              <span
+                :class="
+                  r.reductionPct.duration < 0
+                    ? 'result-positive'
+                    : 'result-negative'
+                "
+              >
                 {{ Math.abs(r.reductionPct.duration) }}%
-                {{ r.reductionPct.duration < 0 ? 'de réduction' : 'd\'augmentation' }}
+                {{
+                  r.reductionPct.duration < 0
+                    ? "de réduction"
+                    : "d'augmentation"
+                }}
               </span>
               de durée
             </template>
           </p>
           <p v-else class="result-insufficient">
-            Données insuffisantes pour comparer ({{ r.inPeriod.count }} crise{{ r.inPeriod.count > 1 ? 's' : '' }} en traitement, {{ r.outPeriod.count }} hors traitement).
+            Données insuffisantes pour comparer ({{ r.inPeriod.count }} crise{{
+              r.inPeriod.count > 1 ? "s" : ""
+            }}
+            en traitement, {{ r.outPeriod.count }} hors traitement).
           </p>
         </div>
       </div>
@@ -73,33 +118,35 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
-import BaseModal from './BaseModal.vue'
-import { treatmentEfficacyAnalysis } from '../utils/stats'
-import type { Migraine, MedocFavori } from '../types/migraine'
+import { computed, onMounted, onUnmounted } from "vue";
+import type { MedocFavori, Migraine } from "../types/migraine";
+import { treatmentEfficacyAnalysis } from "../utils/stats";
+import BaseModal from "./BaseModal.vue";
 
 const props = defineProps<{
-  migraines: Migraine[]
-  medocs: MedocFavori[]
-}>()
+  migraines: Migraine[];
+  medocs: MedocFavori[];
+}>();
 
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: [] }>();
 
-const results = computed(() => treatmentEfficacyAnalysis(props.migraines, props.medocs))
+const results = computed(() =>
+  treatmentEfficacyAnalysis(props.migraines, props.medocs),
+);
 
 function formatDur(min: number): string {
-  if (min <= 0) return '—'
-  if (min < 60) return `${min} min`
-  const h = Math.floor(min / 60)
-  const m = min % 60
-  return m > 0 ? `${h}h${m.toString().padStart(2, '0')}` : `${h}h`
+  if (min <= 0) return "-";
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m > 0 ? `${h}h${m.toString().padStart(2, "0")}` : `${h}h`;
 }
 
 function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') emit('close')
+  if (e.key === "Escape") emit("close");
 }
-onMounted(() => window.addEventListener('keydown', onKeydown))
-onUnmounted(() => window.removeEventListener('keydown', onKeydown))
+onMounted(() => window.addEventListener("keydown", onKeydown));
+onUnmounted(() => window.removeEventListener("keydown", onKeydown));
 </script>
 
 <style scoped>

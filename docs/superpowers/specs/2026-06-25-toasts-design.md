@@ -1,4 +1,4 @@
-# Feedbacks Utilisateur — Toasts
+# Feedbacks Utilisateur - Toasts
 
 Domaine 3 sur 6 du lot d'améliorations UI/UX (Formulaire/Modale → Médicaments → **Toasts** → Layout Global → Graphiques → Correctif PWA).
 
@@ -9,25 +9,25 @@ Domaine 3 sur 6 du lot d'améliorations UI/UX (Formulaire/Modale → Médicament
 
 ## Architecture
 
-### Toast store — `src/stores/toast.ts`
+### Toast store - `src/stores/toast.ts`
 
 Pinia store suivant la convention existante (`defineStore`, `ref`, pas de `state` objet).
 
 ```ts
 interface Toast {
-  id: string
-  message: string
-  type: 'success' | 'pending'
-  persistent: boolean
-  action?: { label: string; handler: () => void }
+  id: string;
+  message: string;
+  type: "success" | "pending";
+  persistent: boolean;
+  action?: { label: string; handler: () => void };
 }
 ```
 
-- `toasts: Ref<Toast[]>` — liste réactive.
-- `add(opts: Omit<Toast, 'id'>): string` — ajoute un toast, retourne l'id. Si `persistent === false`, programme un `setTimeout(3000)` pour appeler `remove(id)`.
-- `remove(id: string): void` — retire le toast correspondant.
+- `toasts: Ref<Toast[]>` - liste réactive.
+- `add(opts: Omit<Toast, 'id'>): string` - ajoute un toast, retourne l'id. Si `persistent === false`, programme un `setTimeout(3000)` pour appeler `remove(id)`.
+- `remove(id: string): void` - retire le toast correspondant.
 
-### ToastContainer.vue — `src/components/ToastContainer.vue`
+### ToastContainer.vue - `src/components/ToastContainer.vue`
 
 Composant présentationnel rendu dans `App.vue` au-dessus de tout (z-index: 100, supérieur aux modales à z-60).
 
@@ -38,7 +38,7 @@ Composant présentationnel rendu dans `App.vue` au-dessus de tout (z-index: 100,
 
 ### Wiring dans App.vue
 
-Seule la modale de saisie créée depuis `App.vue` (sans `editId`) est concernée par le toast "Brouillon en attente" — les modales d'édition de `ListView`/`StatsView` n'ont pas de draft.
+Seule la modale de saisie créée depuis `App.vue` (sans `editId`) est concernée par le toast "Brouillon en attente" - les modales d'édition de `ListView`/`StatsView` n'ont pas de draft.
 
 ```
 openForm()         → retire le toast pending existant → formOpen = true
@@ -53,7 +53,7 @@ Les modales d'édition (`ListView`, `StatsView`) émettent aussi `@saved` → ch
 ## Tests
 
 - `src/stores/toast.test.ts` (TDD) : add/remove, auto-dismiss (vi.useFakeTimers), persistent ne se retire pas automatiquement.
-- `ToastContainer.vue` : pas de test unitaire (convention existante — zéro tests sur les .vue).
+- `ToastContainer.vue` : pas de test unitaire (convention existante - zéro tests sur les .vue).
 
 ## Out of scope
 

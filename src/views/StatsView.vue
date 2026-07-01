@@ -3,18 +3,23 @@
     <div v-if="migraines.migraines.length === 0" class="empty-state">
       <h1>Migracount</h1>
       <p>
-        Migracount t'aide à suivre tes crises de migraine au fil du temps : intensité, durée,
-        traitements pris et leur efficacité. Plus tu enregistres de crises, plus les statistiques
-        deviennent utiles pour repérer des tendances.
+        Migracount t'aide à suivre tes crises de migraine au fil du temps :
+        intensité, durée, traitements pris et leur efficacité. Plus tu
+        enregistres de crises, plus les statistiques deviennent utiles pour
+        repérer des tendances.
       </p>
-      <button class="cta-btn" @click="emptyStateFormOpen = true">Répertorier une migraine</button>
+      <button class="cta-btn" @click="emptyStateFormOpen = true">
+        Répertorier une migraine
+      </button>
     </div>
 
     <template v-else>
       <div class="summary-cards">
         <div class="card">
           <strong>Dernière crise</strong>
-          <span>{{ lastMigraine ? formatRelative(lastMigraine.date) : 'aucune' }}</span>
+          <span>{{
+            lastMigraine ? formatRelative(lastMigraine.date) : "aucune"
+          }}</span>
         </div>
         <div class="card">
           <strong>Durée moyenne</strong>
@@ -28,18 +33,24 @@
 
       <div class="period-selector">
         <button
-          v-for="p in (['day', 'week', 'month'] as const)"
+          v-for="p in ['day', 'week', 'month'] as const"
           :key="p"
           type="button"
           :class="['period-btn', { active: period === p }]"
           @click="period = p"
-        >{{ periodLabels[p] }}</button>
+        >
+          {{ periodLabels[p] }}
+        </button>
       </div>
 
       <button class="chart-card" @click="openDetail('frequency')">
         <h2>Fréquence des crises</h2>
         <div class="chart-wrap">
-          <FrequencyChart :migraines="migraines.migraines" :period="period" :treatments="activeTreatments" />
+          <FrequencyChart
+            :migraines="migraines.migraines"
+            :period="period"
+            :treatments="activeTreatments"
+          />
         </div>
       </button>
       <TreatmentLegend
@@ -50,10 +61,26 @@
       />
 
       <div class="stats-buttons">
-        <StatsButton title="Intensité" :facts="intensityFacts" @click="openDetail('intensity')" />
-        <StatsButton title="Distribution des intensités" :facts="distributionFacts" @click="openDetail('intensity-distribution')" />
-        <StatsButton title="Efficacité médicaments" :facts="efficacyFacts" @click="openDetail('medoc-efficacy')" />
-        <StatsButton title="Durée des crises" :facts="durationFacts" @click="openDetail('duration')" />
+        <StatsButton
+          title="Intensité"
+          :facts="intensityFacts"
+          @click="openDetail('intensity')"
+        />
+        <StatsButton
+          title="Distribution des intensités"
+          :facts="distributionFacts"
+          @click="openDetail('intensity-distribution')"
+        />
+        <StatsButton
+          title="Efficacité médicaments"
+          :facts="efficacyFacts"
+          @click="openDetail('medoc-efficacy')"
+        />
+        <StatsButton
+          title="Durée des crises"
+          :facts="durationFacts"
+          @click="openDetail('duration')"
+        />
         <StatsButton
           v-if="hasTraitementData"
           title="Traitement de fond"
@@ -90,117 +117,164 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useMigrainesStore } from '../stores/migraines'
-import { useMedocsFavorisStore } from '../stores/medocsFavoris'
-import { formatRelative, formatDuration, todayISO } from '../utils/date'
+import { computed, ref, watch } from "vue";
+import ChartDetailModal from "../components/charts/ChartDetailModal.vue";
+import FrequencyChart from "../components/charts/FrequencyChart.vue";
+import StatsButton from "../components/charts/StatsButton.vue";
+import TreatmentLegend from "../components/charts/TreatmentLegend.vue";
+import MigraineFormModal from "../components/MigraineForm/MigraineFormModal.vue";
+import TraitementEfficaciteModal from "../components/TraitementEfficaciteModal.vue";
+import { useMedocsFavorisStore } from "../stores/medocsFavoris";
+import { useMigrainesStore } from "../stores/migraines";
+import { useToastStore } from "../stores/toast";
+import { formatDuration, formatRelative, todayISO } from "../utils/date";
 import {
-  defaultPeriod, type Period,
-  intensityStats, durationStats, efficacyRanking, intensityDistribution,
-  buildPerTreatmentTimelines, treatmentEfficacyAnalysis,
-} from '../utils/stats'
-import { colorForIndex, type TreatmentEntry } from '../utils/treatmentColors'
-import FrequencyChart from '../components/charts/FrequencyChart.vue'
-import TreatmentLegend from '../components/charts/TreatmentLegend.vue'
-import StatsButton from '../components/charts/StatsButton.vue'
-import ChartDetailModal from '../components/charts/ChartDetailModal.vue'
-import MigraineFormModal from '../components/MigraineForm/MigraineFormModal.vue'
-import TraitementEfficaciteModal from '../components/TraitementEfficaciteModal.vue'
-import { useToastStore } from '../stores/toast'
+  buildPerTreatmentTimelines,
+  defaultPeriod,
+  durationStats,
+  efficacyRanking,
+  intensityDistribution,
+  intensityStats,
+  treatmentEfficacyAnalysis,
+  type Period,
+} from "../utils/stats";
+import { colorForIndex, type TreatmentEntry } from "../utils/treatmentColors";
 
-type ChartType = 'frequency' | 'intensity' | 'intensity-distribution' | 'medoc-efficacy' | 'duration'
+type ChartType =
+  | "frequency"
+  | "intensity"
+  | "intensity-distribution"
+  | "medoc-efficacy"
+  | "duration";
 
-const migraines = useMigrainesStore()
-const medocsFavoris = useMedocsFavorisStore()
-const toastStore = useToastStore()
-const period = ref<Period>(defaultPeriod(migraines.migraines))
-const activeDetail = ref<ChartType | null>(null)
-const emptyStateFormOpen = ref(false)
-const traitementEfficaciteOpen = ref(false)
+const migraines = useMigrainesStore();
+const medocsFavoris = useMedocsFavorisStore();
+const toastStore = useToastStore();
+const period = ref<Period>(defaultPeriod(migraines.migraines));
+const activeDetail = ref<ChartType | null>(null);
+const emptyStateFormOpen = ref(false);
+const traitementEfficaciteOpen = ref(false);
 
-const periodLabels: Record<Period, string> = { day: 'Jour', week: 'Semaine', month: 'Mois' }
+const periodLabels: Record<Period, string> = {
+  day: "Jour",
+  week: "Semaine",
+  month: "Mois",
+};
 
 function openDetail(chart: ChartType) {
-  activeDetail.value = chart
+  activeDetail.value = chart;
 }
 
 function onEmptyStateSaved() {
-  emptyStateFormOpen.value = false
-  toastStore.add({ message: 'Migraine enregistrée !', type: 'success' })
+  emptyStateFormOpen.value = false;
+  toastStore.add({ message: "Migraine enregistrée !", type: "success" });
 }
 
-const lastMigraine = computed(() =>
-  [...migraines.migraines].sort((a, b) => (a.date < b.date ? 1 : -1))[0]
-)
+const lastMigraine = computed(
+  () => [...migraines.migraines].sort((a, b) => (a.date < b.date ? 1 : -1))[0],
+);
 
-const thisMonthCount = computed(() =>
-  migraines.migraines.filter((m) => m.date.slice(0, 7) === todayISO().slice(0, 7)).length
-)
+const thisMonthCount = computed(
+  () =>
+    migraines.migraines.filter(
+      (m) => m.date.slice(0, 7) === todayISO().slice(0, 7),
+    ).length,
+);
 
-const iStats = computed(() => intensityStats(migraines.migraines))
-const avgDur = computed(() => durationStats(migraines.migraines))
+const iStats = computed(() => intensityStats(migraines.migraines));
+const avgDur = computed(() => durationStats(migraines.migraines));
 
 const intensityFacts = computed(() => [
-  { value: `${iStats.value.avg}/10`, label: 'intensité moy.' },
-  { value: `${iStats.value.max}/10`, label: 'max' },
-  { value: String(iStats.value.severeCount), label: 'crises sévères (≥7)' },
-])
+  { value: `${iStats.value.avg}/10`, label: "intensité moy." },
+  { value: `${iStats.value.max}/10`, label: "max" },
+  { value: String(iStats.value.severeCount), label: "crises sévères (≥7)" },
+]);
 
 const distributionFacts = computed(() => {
-  const dist = intensityDistribution(migraines.migraines)
-  const dominant = dist.reduce((max, d) => d.count > max.count ? d : max, { level: 0, count: 0 })
+  const dist = intensityDistribution(migraines.migraines);
+  const dominant = dist.reduce((max, d) => (d.count > max.count ? d : max), {
+    level: 0,
+    count: 0,
+  });
   return [
-    { value: dominant.level ? `${dominant.level}/10` : '—', label: 'intensité dominante' },
-    { value: String(iStats.value.severeCount), label: 'crises sévères (≥7)' },
-  ]
-})
+    {
+      value: dominant.level ? `${dominant.level}/10` : "-",
+      label: "intensité dominante",
+    },
+    { value: String(iStats.value.severeCount), label: "crises sévères (≥7)" },
+  ];
+});
 
 const efficacyFacts = computed(() => {
-  const best = efficacyRanking(migraines.migraines)[0]
+  const best = efficacyRanking(migraines.migraines)[0];
   return [
-    { value: best ? best.nom : '—', label: 'plus efficace' },
-    { value: best ? `${best.pctAvortee}%` : '—', label: 'taux d\'avortivité' },
-  ]
-})
+    { value: best ? best.nom : "-", label: "plus efficace" },
+    { value: best ? `${best.pctAvortee}%` : "-", label: "taux d'avortivité" },
+  ];
+});
 
 const durationFacts = computed(() => [
-  { value: avgDur.value.avgMin > 0 ? formatDuration(avgDur.value.avgMin) : '—', label: 'durée moy.' },
-  { value: avgDur.value.maxMin > 0 ? formatDuration(avgDur.value.maxMin) : '—', label: 'max' },
-])
+  {
+    value: avgDur.value.avgMin > 0 ? formatDuration(avgDur.value.avgMin) : "-",
+    label: "durée moy.",
+  },
+  {
+    value: avgDur.value.maxMin > 0 ? formatDuration(avgDur.value.maxMin) : "-",
+    label: "max",
+  },
+]);
 
 const allTreatments = computed<TreatmentEntry[]>(() =>
   buildPerTreatmentTimelines(medocsFavoris.favoris).map((t, i) => ({
     name: t.name,
     color: colorForIndex(i),
     periods: t.periods,
-  }))
-)
-const selectedTreatments = ref<string[]>([])
+  })),
+);
+const selectedTreatments = ref<string[]>([]);
 
-watch(allTreatments, (entries) => {
-  selectedTreatments.value = entries.map((e) => e.name)
-}, { immediate: true })
+watch(
+  allTreatments,
+  (entries) => {
+    selectedTreatments.value = entries.map((e) => e.name);
+  },
+  { immediate: true },
+);
 
 const activeTreatments = computed(() =>
-  allTreatments.value.filter((e) => selectedTreatments.value.includes(e.name))
-)
+  allTreatments.value.filter((e) => selectedTreatments.value.includes(e.name)),
+);
 
 const hasTraitementData = computed(() =>
-  medocsFavoris.longTermMeds.some((m) => m.treatmentPeriods?.length)
-)
+  medocsFavoris.longTermMeds.some((m) => m.treatmentPeriods?.length),
+);
 
 const traitementFacts = computed(() => {
-  const results = treatmentEfficacyAnalysis(migraines.migraines, medocsFavoris.favoris)
-  const withData = results.filter((r) => r.reductionPct.freq !== null)
+  const results = treatmentEfficacyAnalysis(
+    migraines.migraines,
+    medocsFavoris.favoris,
+  );
+  const withData = results.filter((r) => r.reductionPct.freq !== null);
   if (!withData.length) {
-    return [{ value: String(medocsFavoris.longTermMeds.length), label: 'traitement(s) suivi(s)' }]
+    return [
+      {
+        value: String(medocsFavoris.longTermMeds.length),
+        label: "traitement(s) suivi(s)",
+      },
+    ];
   }
-  const best = [...withData].sort((a, b) => (a.reductionPct.freq ?? 0) - (b.reductionPct.freq ?? 0))[0]
+  const best = [...withData].sort(
+    (a, b) => (a.reductionPct.freq ?? 0) - (b.reductionPct.freq ?? 0),
+  )[0];
   return [
-    { value: best.medoc, label: 'meilleure efficacité' },
-    { value: `${Math.abs(best.reductionPct.freq!)}%`, label: best.reductionPct.freq! < 0 ? 'réduction fréquence' : 'augmentation' },
-  ]
-})
+    { value: best.medoc, label: "meilleure efficacité" },
+    {
+      value: `${Math.abs(best.reductionPct.freq!)}%`,
+      label:
+        best.reductionPct.freq! < 0 ? "réduction fréquence" : "augmentation",
+    },
+  ];
+});
 </script>
 
 <style scoped>
@@ -293,7 +367,9 @@ const traitementFacts = computed(() => {
   text-align: left;
   font: inherit;
   color: inherit;
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
   flex-shrink: 0;
 }
 .chart-card:hover {

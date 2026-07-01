@@ -8,9 +8,10 @@
 
 ---
 
-### Task 1: Toast store — `useToastStore`
+### Task 1: Toast store - `useToastStore`
 
 **Files:**
+
 - Create: `src/stores/toast.ts`
 - Create: `src/stores/toast.test.ts`
 
@@ -19,111 +20,111 @@
 Create `src/stores/toast.test.ts`:
 
 ```ts
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
-import { useToastStore } from './toast'
+import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
+import { setActivePinia, createPinia } from "pinia";
+import { useToastStore } from "./toast";
 
 beforeEach(() => {
-  vi.useFakeTimers()
-  setActivePinia(createPinia())
-})
+  vi.useFakeTimers();
+  setActivePinia(createPinia());
+});
 
 afterEach(() => {
-  vi.useRealTimers()
-})
+  vi.useRealTimers();
+});
 
-describe('useToastStore', () => {
-  it('starts empty', () => {
-    const store = useToastStore()
-    expect(store.toasts).toEqual([])
-  })
+describe("useToastStore", () => {
+  it("starts empty", () => {
+    const store = useToastStore();
+    expect(store.toasts).toEqual([]);
+  });
 
-  it('add returns an id and the toast is visible', () => {
-    const store = useToastStore()
-    const id = store.add({ message: 'OK', type: 'success', persistent: false })
-    expect(typeof id).toBe('string')
-    expect(store.toasts).toHaveLength(1)
-    expect(store.toasts[0].message).toBe('OK')
-  })
+  it("add returns an id and the toast is visible", () => {
+    const store = useToastStore();
+    const id = store.add({ message: "OK", type: "success", persistent: false });
+    expect(typeof id).toBe("string");
+    expect(store.toasts).toHaveLength(1);
+    expect(store.toasts[0].message).toBe("OK");
+  });
 
-  it('non-persistent toast is removed after 3000ms', () => {
-    const store = useToastStore()
-    store.add({ message: 'OK', type: 'success', persistent: false })
-    expect(store.toasts).toHaveLength(1)
-    vi.advanceTimersByTime(3000)
-    expect(store.toasts).toHaveLength(0)
-  })
+  it("non-persistent toast is removed after 3000ms", () => {
+    const store = useToastStore();
+    store.add({ message: "OK", type: "success", persistent: false });
+    expect(store.toasts).toHaveLength(1);
+    vi.advanceTimersByTime(3000);
+    expect(store.toasts).toHaveLength(0);
+  });
 
-  it('persistent toast is not removed automatically', () => {
-    const store = useToastStore()
-    store.add({ message: 'Brouillon', type: 'pending', persistent: true })
-    vi.advanceTimersByTime(10000)
-    expect(store.toasts).toHaveLength(1)
-  })
+  it("persistent toast is not removed automatically", () => {
+    const store = useToastStore();
+    store.add({ message: "Brouillon", type: "pending", persistent: true });
+    vi.advanceTimersByTime(10000);
+    expect(store.toasts).toHaveLength(1);
+  });
 
-  it('remove deletes the toast by id', () => {
-    const store = useToastStore()
-    const id = store.add({ message: 'OK', type: 'success', persistent: true })
-    store.remove(id)
-    expect(store.toasts).toHaveLength(0)
-  })
+  it("remove deletes the toast by id", () => {
+    const store = useToastStore();
+    const id = store.add({ message: "OK", type: "success", persistent: true });
+    store.remove(id);
+    expect(store.toasts).toHaveLength(0);
+  });
 
-  it('remove a non-existent id is a no-op', () => {
-    const store = useToastStore()
-    expect(() => store.remove('unknown-id')).not.toThrow()
-  })
-})
+  it("remove a non-existent id is a no-op", () => {
+    const store = useToastStore();
+    expect(() => store.remove("unknown-id")).not.toThrow();
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm test -- toast.test.ts`
-Expected: FAIL — `toast.ts` does not exist.
+Expected: FAIL - `toast.ts` does not exist.
 
 - [ ] **Step 3: Implement `src/stores/toast.ts`**
 
 ```ts
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import { newId } from '../utils/uuid'
+import { defineStore } from "pinia";
+import { ref } from "vue";
+import { newId } from "../utils/uuid";
 
 export interface Toast {
-  id: string
-  message: string
-  type: 'success' | 'pending'
-  persistent: boolean
-  action?: { label: string; handler: () => void }
+  id: string;
+  message: string;
+  type: "success" | "pending";
+  persistent: boolean;
+  action?: { label: string; handler: () => void };
 }
 
-export const useToastStore = defineStore('toast', () => {
-  const toasts = ref<Toast[]>([])
+export const useToastStore = defineStore("toast", () => {
+  const toasts = ref<Toast[]>([]);
 
-  function add(opts: Omit<Toast, 'id'>): string {
-    const id = newId()
-    toasts.value.push({ ...opts, id })
+  function add(opts: Omit<Toast, "id">): string {
+    const id = newId();
+    toasts.value.push({ ...opts, id });
     if (!opts.persistent) {
-      setTimeout(() => remove(id), 3000)
+      setTimeout(() => remove(id), 3000);
     }
-    return id
+    return id;
   }
 
   function remove(id: string): void {
-    toasts.value = toasts.value.filter((t) => t.id !== id)
+    toasts.value = toasts.value.filter((t) => t.id !== id);
   }
 
-  return { toasts, add, remove }
-})
+  return { toasts, add, remove };
+});
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npm test -- toast.test.ts`
-Expected: PASS — 6 tests.
+Expected: PASS - 6 tests.
 
 - [ ] **Step 5: Run full suite**
 
 Run: `npm test`
-Expected: PASS — all tests green.
+Expected: PASS - all tests green.
 
 - [ ] **Step 6: Commit**
 
@@ -137,6 +138,7 @@ git commit -m "feat: add toast store with auto-dismiss and persistent toasts"
 ### Task 2: ToastContainer.vue
 
 **Files:**
+
 - Create: `src/components/ToastContainer.vue`
 
 - [ ] **Step 1: Create `src/components/ToastContainer.vue`**
@@ -146,21 +148,31 @@ git commit -m "feat: add toast store with auto-dismiss and persistent toasts"
   <Teleport to="body">
     <div class="toast-container" aria-live="polite" aria-atomic="false">
       <TransitionGroup name="toast" tag="ul" class="toast-list">
-        <li v-for="t in toast.toasts" :key="t.id" :class="['toast-item', `toast-${t.type}`]">
-          <span class="toast-icon">{{ t.type === 'success' ? '✓' : '⏳' }}</span>
+        <li
+          v-for="t in toast.toasts"
+          :key="t.id"
+          :class="['toast-item', `toast-${t.type}`]"
+        >
+          <span class="toast-icon">{{
+            t.type === "success" ? "✓" : "⏳"
+          }}</span>
           <span class="toast-message">{{ t.message }}</span>
           <button
             v-if="t.action"
             type="button"
             class="toast-action-btn"
             @click="t.action!.handler()"
-          >{{ t.action.label }}</button>
+          >
+            {{ t.action.label }}
+          </button>
           <button
             type="button"
             class="toast-dismiss"
             aria-label="Fermer"
             @click="toast.remove(t.id)"
-          >×</button>
+          >
+            ×
+          </button>
         </li>
       </TransitionGroup>
     </div>
@@ -168,9 +180,9 @@ git commit -m "feat: add toast store with auto-dismiss and persistent toasts"
 </template>
 
 <script setup lang="ts">
-import { useToastStore } from '../stores/toast'
+import { useToastStore } from "../stores/toast";
 
-const toast = useToastStore()
+const toast = useToastStore();
 </script>
 
 <style scoped>
@@ -241,10 +253,14 @@ const toast = useToastStore()
   opacity: 1;
 }
 .toast-enter-active {
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
 }
 .toast-leave-active {
-  transition: transform 0.18s ease, opacity 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    opacity 0.18s ease;
 }
 .toast-enter-from {
   transform: translateY(-1rem);
@@ -286,6 +302,7 @@ git commit -m "feat: add ToastContainer component with slide-down animation"
 ### Task 3: Wiring dans App.vue, ListView.vue, StatsView.vue
 
 **Files:**
+
 - Modify: `src/App.vue`
 - Modify: `src/views/ListView.vue`
 - Modify: `src/views/StatsView.vue`
@@ -297,53 +314,58 @@ Dans `<template>`, ajouter `<ToastContainer />` juste avant `</template>` (hors 
 Remplacer le `<script setup>` entièrement :
 
 ```ts
-import { ref } from 'vue'
-import HeaderNav from './components/HeaderNav.vue'
-import BottomNav from './components/BottomNav.vue'
-import FabButton from './components/FabButton.vue'
-import MigraineFormModal from './components/MigraineForm/MigraineFormModal.vue'
-import ToastContainer from './components/ToastContainer.vue'
-import { useSettingsStore } from './stores/settings'
-import { useToastStore } from './stores/toast'
+import { ref } from "vue";
+import HeaderNav from "./components/HeaderNav.vue";
+import BottomNav from "./components/BottomNav.vue";
+import FabButton from "./components/FabButton.vue";
+import MigraineFormModal from "./components/MigraineForm/MigraineFormModal.vue";
+import ToastContainer from "./components/ToastContainer.vue";
+import { useSettingsStore } from "./stores/settings";
+import { useToastStore } from "./stores/toast";
 
-useSettingsStore()
+useSettingsStore();
 
-const toastStore = useToastStore()
-const formOpen = ref(false)
-const pendingDraftToastId = ref<string | null>(null)
+const toastStore = useToastStore();
+const formOpen = ref(false);
+const pendingDraftToastId = ref<string | null>(null);
 
 function openForm() {
   if (pendingDraftToastId.value) {
-    toastStore.remove(pendingDraftToastId.value)
-    pendingDraftToastId.value = null
+    toastStore.remove(pendingDraftToastId.value);
+    pendingDraftToastId.value = null;
   }
-  formOpen.value = true
+  formOpen.value = true;
 }
 
 function onFormSaved() {
   if (pendingDraftToastId.value) {
-    toastStore.remove(pendingDraftToastId.value)
-    pendingDraftToastId.value = null
+    toastStore.remove(pendingDraftToastId.value);
+    pendingDraftToastId.value = null;
   }
-  toastStore.add({ message: 'Migraine enregistrée !', type: 'success', persistent: false })
-  formOpen.value = false
+  toastStore.add({
+    message: "Migraine enregistrée !",
+    type: "success",
+    persistent: false,
+  });
+  formOpen.value = false;
 }
 
 function onFormClose() {
-  formOpen.value = false
+  formOpen.value = false;
   if (pendingDraftToastId.value) {
-    toastStore.remove(pendingDraftToastId.value)
+    toastStore.remove(pendingDraftToastId.value);
   }
   pendingDraftToastId.value = toastStore.add({
-    message: 'Brouillon en attente',
-    type: 'pending',
+    message: "Brouillon en attente",
+    type: "pending",
     persistent: true,
-    action: { label: 'Reprendre', handler: openForm },
-  })
+    action: { label: "Reprendre", handler: openForm },
+  });
 }
 ```
 
 Dans `<template>`, mettre à jour :
+
 ```html
 <HeaderNav @add="openForm" />
 ...
@@ -355,41 +377,57 @@ Dans `<template>`, mettre à jour :
 - [ ] **Step 2: Modifier `src/views/ListView.vue`**
 
 Dans `<script setup>`, ajouter :
+
 ```ts
-import { useToastStore } from '../stores/toast'
-const toastStore = useToastStore()
+import { useToastStore } from "../stores/toast";
+const toastStore = useToastStore();
 ```
 
 Remplacer `@saved="editId = null"` par `@saved="onEditSaved"` et `@saved="addFormOpen = false"` par `@saved="onAddSaved"`.
 
 Ajouter les handlers :
+
 ```ts
 function onEditSaved() {
-  editId.value = null
-  toastStore.add({ message: 'Migraine mise à jour !', type: 'success', persistent: false })
+  editId.value = null;
+  toastStore.add({
+    message: "Migraine mise à jour !",
+    type: "success",
+    persistent: false,
+  });
 }
 
 function onAddSaved() {
-  addFormOpen.value = false
-  toastStore.add({ message: 'Migraine enregistrée !', type: 'success', persistent: false })
+  addFormOpen.value = false;
+  toastStore.add({
+    message: "Migraine enregistrée !",
+    type: "success",
+    persistent: false,
+  });
 }
 ```
 
 - [ ] **Step 3: Modifier `src/views/StatsView.vue`**
 
 Dans `<script setup>`, ajouter :
+
 ```ts
-import { useToastStore } from '../stores/toast'
-const toastStore = useToastStore()
+import { useToastStore } from "../stores/toast";
+const toastStore = useToastStore();
 ```
 
 Remplacer `@saved="emptyStateFormOpen = false"` par `@saved="onEmptyStateSaved"`.
 
 Ajouter :
+
 ```ts
 function onEmptyStateSaved() {
-  emptyStateFormOpen.value = false
-  toastStore.add({ message: 'Migraine enregistrée !', type: 'success', persistent: false })
+  emptyStateFormOpen.value = false;
+  toastStore.add({
+    message: "Migraine enregistrée !",
+    type: "success",
+    persistent: false,
+  });
 }
 ```
 
@@ -406,6 +444,7 @@ Expected: PASS.
 - [ ] **Step 6: Manual check**
 
 Run: `npm run dev`.
+
 - Ouvrir la modale, remplir des champs, cliquer "×" → toast "Brouillon en attente" avec bouton "Reprendre" apparaît.
 - Cliquer "Reprendre" → toast disparaît, modale rouvre.
 - Enregistrer → toast "Migraine enregistrée !" apparaît 3 secondes puis disparaît automatiquement.

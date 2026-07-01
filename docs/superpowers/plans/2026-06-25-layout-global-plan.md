@@ -4,7 +4,7 @@
 
 **Goal:** Redesign HeaderNav (icône app, typo, settings icon, responsive mobile), BottomNav avec FAB central, ListView scrollable, swipe inter-pages Stats ↔ Liste.
 
-**Architecture:** 4 tâches indépendantes — HeaderNav → BottomNav (+ suppression FabButton) → ListView scroll + App.vue swipe → commit final.
+**Architecture:** 4 tâches indépendantes - HeaderNav → BottomNav (+ suppression FabButton) → ListView scroll + App.vue swipe → commit final.
 
 **Dépendances :** `lucide-vue-next` déjà installé. `@vueuse/core` déjà installé (utilisé par le formulaire).
 
@@ -13,6 +13,7 @@
 ### Task 1: HeaderNav redesign
 
 **Files:**
+
 - Modify: `src/components/HeaderNav.vue`
 
 - [ ] **Step 1: Remplacer le contenu complet de `src/components/HeaderNav.vue`**
@@ -21,7 +22,12 @@
 <template>
   <header class="header-nav">
     <div class="header-brand">
-      <img src="/icons/favicon-32.png" alt="" class="brand-icon" aria-hidden="true" />
+      <img
+        src="/icons/favicon-32.png"
+        alt=""
+        class="brand-icon"
+        aria-hidden="true"
+      />
       <span class="brand-name">Migracount</span>
     </div>
 
@@ -63,17 +69,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { Pencil, BarChart2, List, Settings as SettingsIcon } from 'lucide-vue-next'
-import { useMedocsFavorisStore } from '../stores/medocsFavoris'
-import MedocsEditModal from './MedocsEditModal.vue'
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import {
+  Pencil,
+  BarChart2,
+  List,
+  Settings as SettingsIcon,
+} from "lucide-vue-next";
+import { useMedocsFavorisStore } from "../stores/medocsFavoris";
+import MedocsEditModal from "./MedocsEditModal.vue";
 
-defineEmits<{ add: [] }>()
+defineEmits<{ add: [] }>();
 
-const router = useRouter()
-const favoris = useMedocsFavorisStore()
-const showMedocsEdit = ref(false)
+const router = useRouter();
+const favoris = useMedocsFavorisStore();
+const showMedocsEdit = ref(false);
 </script>
 
 <style scoped>
@@ -162,9 +173,15 @@ const showMedocsEdit = ref(false)
   font-size: 0.9rem;
 }
 @media (min-width: 1024px) {
-  .header-links { display: flex; }
-  .add-btn { display: inline-block; }
-  .header-nav { padding: 0 1.5rem; }
+  .header-links {
+    display: flex;
+  }
+  .add-btn {
+    display: inline-block;
+  }
+  .header-nav {
+    padding: 0 1.5rem;
+  }
 }
 </style>
 ```
@@ -191,10 +208,11 @@ git commit -m "feat: redesign header with app icon, modern typo, settings icon a
 ### Task 2: BottomNav avec FAB central + suppression FabButton
 
 **Files:**
+
 - Modify: `src/components/BottomNav.vue`
 - Delete: `src/components/FabButton.vue` (suppression physique)
 
-Note: `FabButton.vue` est encore importé dans `App.vue` — ce sera corrigé dans Task 3.
+Note: `FabButton.vue` est encore importé dans `App.vue` - ce sera corrigé dans Task 3.
 
 - [ ] **Step 1: Remplacer le contenu de `src/components/BottomNav.vue`**
 
@@ -205,7 +223,12 @@ Note: `FabButton.vue` est encore importé dans `App.vue` — ce sera corrigé da
       <BarChart2 :size="20" />
       <span>Stats</span>
     </RouterLink>
-    <button type="button" class="fab-center" @click="$emit('add')" aria-label="Ajouter une migraine">
+    <button
+      type="button"
+      class="fab-center"
+      @click="$emit('add')"
+      aria-label="Ajouter une migraine"
+    >
       <Plus :size="24" />
     </button>
     <RouterLink :to="{ name: 'liste' }" class="nav-item">
@@ -216,9 +239,9 @@ Note: `FabButton.vue` est encore importé dans `App.vue` — ce sera corrigé da
 </template>
 
 <script setup lang="ts">
-import { BarChart2, List, Plus } from 'lucide-vue-next'
+import { BarChart2, List, Plus } from "lucide-vue-next";
 
-defineEmits<{ add: [] }>()
+defineEmits<{ add: [] }>();
 </script>
 
 <style scoped>
@@ -266,7 +289,9 @@ defineEmits<{ add: [] }>()
   flex: 0 0 auto;
 }
 @media (min-width: 1024px) {
-  .bottom-nav { display: none; }
+  .bottom-nav {
+    display: none;
+  }
 }
 </style>
 ```
@@ -280,7 +305,7 @@ git rm src/components/FabButton.vue
 - [ ] **Step 3: Type-check et build**
 
 Run: `npm run build`
-Expected: FAIL — `App.vue` importe encore `FabButton`. C'est attendu à ce stade. Continuer à Task 3.
+Expected: FAIL - `App.vue` importe encore `FabButton`. C'est attendu à ce stade. Continuer à Task 3.
 
 - [ ] **Step 4: Commit**
 
@@ -294,6 +319,7 @@ git commit -m "feat: add FAB and icons to BottomNav, remove standalone FabButton
 ### Task 3: App.vue swipe inter-pages + fix ListView scroll
 
 **Files:**
+
 - Modify: `src/App.vue`
 - Modify: `src/views/ListView.vue`
 
@@ -310,75 +336,83 @@ git commit -m "feat: add FAB and icons to BottomNav, remove standalone FabButton
     </RouterView>
   </main>
   <BottomNav @add="openForm" />
-  <MigraineFormModal v-if="formOpen" @close="onFormClose" @saved="onFormSaved" />
+  <MigraineFormModal
+    v-if="formOpen"
+    @close="onFormClose"
+    @saved="onFormSaved"
+  />
   <ToastContainer />
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useSwipe } from '@vueuse/core'
-import HeaderNav from './components/HeaderNav.vue'
-import BottomNav from './components/BottomNav.vue'
-import MigraineFormModal from './components/MigraineForm/MigraineFormModal.vue'
-import ToastContainer from './components/ToastContainer.vue'
-import { useSettingsStore } from './stores/settings'
-import { useToastStore } from './stores/toast'
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import { useSwipe } from "@vueuse/core";
+import HeaderNav from "./components/HeaderNav.vue";
+import BottomNav from "./components/BottomNav.vue";
+import MigraineFormModal from "./components/MigraineForm/MigraineFormModal.vue";
+import ToastContainer from "./components/ToastContainer.vue";
+import { useSettingsStore } from "./stores/settings";
+import { useToastStore } from "./stores/toast";
 
-useSettingsStore()
+useSettingsStore();
 
-const router = useRouter()
-const toastStore = useToastStore()
-const formOpen = ref(false)
-const pendingDraftToastId = ref<string | null>(null)
-const mainRef = ref<HTMLElement | null>(null)
-const pageTransition = ref<'slide-next' | 'slide-prev'>('slide-next')
+const router = useRouter();
+const toastStore = useToastStore();
+const formOpen = ref(false);
+const pendingDraftToastId = ref<string | null>(null);
+const mainRef = ref<HTMLElement | null>(null);
+const pageTransition = ref<"slide-next" | "slide-prev">("slide-next");
 
-const routeOrder: Record<string, number> = { stats: 0, liste: 1 }
+const routeOrder: Record<string, number> = { stats: 0, liste: 1 };
 
 function openForm() {
   if (pendingDraftToastId.value) {
-    toastStore.remove(pendingDraftToastId.value)
-    pendingDraftToastId.value = null
+    toastStore.remove(pendingDraftToastId.value);
+    pendingDraftToastId.value = null;
   }
-  formOpen.value = true
+  formOpen.value = true;
 }
 
 function onFormSaved() {
   if (pendingDraftToastId.value) {
-    toastStore.remove(pendingDraftToastId.value)
-    pendingDraftToastId.value = null
+    toastStore.remove(pendingDraftToastId.value);
+    pendingDraftToastId.value = null;
   }
-  toastStore.add({ message: 'Migraine enregistrée !', type: 'success', persistent: false })
-  formOpen.value = false
+  toastStore.add({
+    message: "Migraine enregistrée !",
+    type: "success",
+    persistent: false,
+  });
+  formOpen.value = false;
 }
 
 function onFormClose() {
-  formOpen.value = false
+  formOpen.value = false;
   if (pendingDraftToastId.value) {
-    toastStore.remove(pendingDraftToastId.value)
+    toastStore.remove(pendingDraftToastId.value);
   }
   pendingDraftToastId.value = toastStore.add({
-    message: 'Brouillon en attente',
-    type: 'pending',
+    message: "Brouillon en attente",
+    type: "pending",
     persistent: true,
-    action: { label: 'Reprendre', handler: openForm },
-  })
+    action: { label: "Reprendre", handler: openForm },
+  });
 }
 
 useSwipe(mainRef, {
   onSwipeEnd(_event, direction) {
-    const currentOrder = routeOrder[router.currentRoute.value.name as string]
-    if (currentOrder === undefined) return
-    if (direction === 'left' && currentOrder < 1) {
-      pageTransition.value = 'slide-next'
-      router.push({ name: 'liste' })
-    } else if (direction === 'right' && currentOrder > 0) {
-      pageTransition.value = 'slide-prev'
-      router.push({ name: 'stats' })
+    const currentOrder = routeOrder[router.currentRoute.value.name as string];
+    if (currentOrder === undefined) return;
+    if (direction === "left" && currentOrder < 1) {
+      pageTransition.value = "slide-next";
+      router.push({ name: "liste" });
+    } else if (direction === "right" && currentOrder > 0) {
+      pageTransition.value = "slide-prev";
+      router.push({ name: "stats" });
     }
   },
-})
+});
 </script>
 
 <style scoped>
@@ -400,7 +434,9 @@ useSwipe(mainRef, {
 .slide-next-leave-active,
 .slide-prev-enter-active,
 .slide-prev-leave-active {
-  transition: transform 0.28s ease, opacity 0.28s ease;
+  transition:
+    transform 0.28s ease,
+    opacity 0.28s ease;
   position: absolute;
   top: 0;
   left: 0;
@@ -452,7 +488,7 @@ Remplacer par :
 - [ ] **Step 3: Type-check et build**
 
 Run: `npm run build`
-Expected: clean — FabButton n'est plus importé.
+Expected: clean - FabButton n'est plus importé.
 
 - [ ] **Step 4: Run tests**
 
@@ -462,6 +498,7 @@ Expected: PASS.
 - [ ] **Step 5: Manual check**
 
 Run: `npm run dev`.
+
 - Sur mobile (< 1024px) : header visible (logo + settings icon), BottomNav visible (Stats | + | Liste), + ouvre la modale.
 - Sur desktop (≥ 1024px) : header avec nav Stats/Liste, + Ajouter visible, BottomNav masqué.
 - Swipe gauche sur Stats → animation slide → page Liste.

@@ -1,6 +1,6 @@
 # README Implementation Plan
 
-> **For agentic workers:** Tâche unique — écrire `README.md` à la racine du projet selon la spec `docs/superpowers/specs/2026-06-25-readme-design.md`.
+> **For agentic workers:** Tâche unique - écrire `README.md` à la racine du projet selon la spec `docs/superpowers/specs/2026-06-25-readme-design.md`.
 
 **Goal:** README.md en français, utile pour l'auteur et quiconque clone le repo.
 
@@ -9,6 +9,7 @@
 ### Task 1: Écrire README.md
 
 **Files:**
+
 - Create: `README.md` (à la racine du projet)
 
 - [ ] **Step 1: Lire les scripts disponibles pour les commandes exactes**
@@ -23,7 +24,7 @@ Lire la liste des fichiers/dossiers dans `src/` pour documenter la structure.
 
 Structure selon la spec :
 
-```md
+````md
 # Migracount
 
 Application PWA de suivi personnel des crises de migraine, 100% locale (aucune donnée transmise).
@@ -31,42 +32,47 @@ Application PWA de suivi personnel des crises de migraine, 100% locale (aucune d
 ## Fonctionnalités
 
 ### Accueil / Dashboard
+
 - Résumé : dernière crise, durée moyenne, crises ce mois-ci.
 - Graphiques interactifs : fréquence et intensité par jour / semaine / mois.
 - Vue détaillée au clic sur chaque graphique.
 
 ### Liste des migraines
+
 - Liste chronologique avec recherche par mot-clé et filtre par mois.
 - Édition d'une migraine existante en cliquant dessus.
 
 ### Formulaire de saisie
+
 - Stepper en 8 étapes : Quand, Intensité, Médicaments, Symptômes, Localisation, Déclencheurs, Notes, Récapitulatif.
 - Navigation par boutons ou par swipe gauche/droite.
 - Sauvegarde automatique du brouillon en cours de saisie.
 
 ### Réglages
+
 - Thème : Clair, Sombre, Auto (système), Mode Migraine (palette douce, animations désactivées).
 - Police : Normale, Lexend, OpenDyslexic.
 - Export / Import des données au format JSON.
 
 ### PWA & Offline
+
 - Installable sur mobile et desktop.
 - Fonctionne hors-ligne après le premier chargement.
 - Toutes les données sont stockées localement dans `localStorage`.
 
 ## Stack technique
 
-| Couche | Technologie |
-|--------|-------------|
-| Framework | Vue 3 (Composition API, `<script setup>`) |
-| Bundler | Vite + TypeScript |
-| État | Pinia |
-| Routing | Vue Router |
-| Graphiques | Chart.js + vue-chartjs |
-| Icônes | lucide-vue-next |
-| Swipe | @vueuse/core (`useSwipe`) |
-| PWA | vite-plugin-pwa (Workbox) |
-| Tests | Vitest |
+| Couche     | Technologie                               |
+| ---------- | ----------------------------------------- |
+| Framework  | Vue 3 (Composition API, `<script setup>`) |
+| Bundler    | Vite + TypeScript                         |
+| État       | Pinia                                     |
+| Routing    | Vue Router                                |
+| Graphiques | Chart.js + vue-chartjs                    |
+| Icônes     | lucide-vue-next                           |
+| Swipe      | @vueuse/core (`useSwipe`)                 |
+| PWA        | vite-plugin-pwa (Workbox)                 |
+| Tests      | Vitest                                    |
 
 ## Installation & lancement
 
@@ -78,6 +84,7 @@ npm run preview    # Prévisualiser le build
 npm run test       # Lancer les tests unitaires
 npm run icons      # Regénérer les icônes PWA depuis src/assets/logo.svg
 ```
+````
 
 ## Structure du projet
 
@@ -114,7 +121,8 @@ src/
 Migracount ne collecte aucune donnée. Tout est stocké dans `localStorage` du navigateur, sur l'appareil uniquement.
 
 L'export JSON (page Réglages) génère un fichier local téléchargé sur l'appareil. L'import remplace les données actuelles par le contenu du fichier importé.
-```
+
+````
 
 - [ ] **Step 4: Vérifier le build**
 
@@ -126,4 +134,4 @@ Expected: clean.
 ```bash
 git add README.md
 git commit -m "docs: add README in French with features, stack, install and project structure"
-```
+````

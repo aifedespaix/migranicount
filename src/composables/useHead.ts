@@ -3,7 +3,7 @@ const SITE_NAME = 'Migracount'
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`
 const DEFAULT_OG_IMAGE_WIDTH = 1200
 const DEFAULT_OG_IMAGE_HEIGHT = 630
-const DEFAULT_OG_IMAGE_ALT = 'Migracount — suivi personnel des crises de migraine'
+const DEFAULT_OG_IMAGE_ALT = 'Migracount - suivi personnel des crises de migraine'
 
 export interface SeoMeta {
   title: string
@@ -42,7 +42,7 @@ function setLinkTag(rel: string, href: string): void {
 }
 
 export function applySeo(meta: SeoMeta, path: string): void {
-  document.title = `${meta.title} — ${SITE_NAME}`
+  document.title = `${meta.title} - ${SITE_NAME}`
 
   setMetaTag('name', 'description', meta.description)
   setMetaTag('name', 'robots', meta.robots ?? 'index, follow')

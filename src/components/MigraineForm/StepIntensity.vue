@@ -1,19 +1,27 @@
 <template>
   <div class="step">
-    <input type="range" min="1" max="10" v-model.number="model.intensite" class="intensity-slider" />
-    <p class="intensity-value" :style="{ color: trackColor }">{{ model.intensite }} / 10 — {{ label }}</p>
+    <input
+      type="range"
+      min="1"
+      max="10"
+      v-model.number="model.intensite"
+      class="intensity-slider"
+    />
+    <p class="intensity-value" :style="{ color: trackColor }">
+      {{ model.intensite }} / 10 - {{ label }}
+    </p>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { intensityColor, intensityLabel } from '../../utils/intensity'
-import type { MigraineDraft } from './draft'
+import { computed } from "vue";
+import { intensityColor, intensityLabel } from "../../utils/intensity";
+import type { MigraineDraft } from "./draft";
 
-const model = defineModel<MigraineDraft>({ required: true })
+const model = defineModel<MigraineDraft>({ required: true });
 
-const trackColor = computed(() => intensityColor(model.value.intensite))
-const label = computed(() => intensityLabel(model.value.intensite))
+const trackColor = computed(() => intensityColor(model.value.intensite));
+const label = computed(() => intensityLabel(model.value.intensite));
 </script>
 
 <style scoped>

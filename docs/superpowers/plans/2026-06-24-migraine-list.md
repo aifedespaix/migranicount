@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- `ul`/`ol` get a CSS reset (`list-style: none; margin: 0; padding: 0;`) in `src/styles/theme.css` — global, not view-scoped.
+- `ul`/`ol` get a CSS reset (`list-style: none; margin: 0; padding: 0;`) in `src/styles/theme.css` - global, not view-scoped.
 - Migraine card shows: relative date, intensity badge (existing), duration, médocs (existing), "Avortée" badge (existing), plus conditionally: nausée/vomissement/aura indicators (only when `true`) and localisation label (only when not `null`).
 - Card hover: `border-color: var(--color-accent)` + `transform: translateY(-2px)`, matching the Home dashboard's `.chart-card` hover treatment.
 - Grid: 1 column by default, 2 columns at `min-width: 768px`, 3 columns at `min-width: 1280px`.
@@ -25,17 +25,18 @@
 
 ## File Structure
 
-- Modify `src/styles/theme.css` — add the list reset.
-- Create `src/utils/migraineFilters.ts` — pure `filterMigraines` function.
-- Create `src/utils/migraineFilters.test.ts` — its tests.
-- Modify `src/components/MigraineListItem.vue` — card markup/styles, new conditional badges.
-- Modify `src/views/ListView.vue` — filter inputs, two empty states, grid layout.
+- Modify `src/styles/theme.css` - add the list reset.
+- Create `src/utils/migraineFilters.ts` - pure `filterMigraines` function.
+- Create `src/utils/migraineFilters.test.ts` - its tests.
+- Modify `src/components/MigraineListItem.vue` - card markup/styles, new conditional badges.
+- Modify `src/views/ListView.vue` - filter inputs, two empty states, grid layout.
 
 ---
 
 ### Task 1: CSS reset for lists
 
 **Files:**
+
 - Modify: `src/styles/theme.css`
 
 - [ ] **Step 1: Add the reset**
@@ -43,7 +44,8 @@
 Append to the end of `src/styles/theme.css`:
 
 ```css
-ul, ol {
+ul,
+ol {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -52,7 +54,7 @@ ul, ol {
 
 - [ ] **Step 2: Visually verify**
 
-Run: `npm run dev`, open `/liste`. Expected: no bullet markers or default left-padding on the migraine list (the list will still look unstyled until Task 4/5 land — just confirm no bullets/indentation).
+Run: `npm run dev`, open `/liste`. Expected: no bullet markers or default left-padding on the migraine list (the list will still look unstyled until Task 4/5 land - just confirm no bullets/indentation).
 
 - [ ] **Step 3: Commit**
 
@@ -66,10 +68,12 @@ git commit -m "feat: reset default list styles globally"
 ### Task 2: `filterMigraines` helper
 
 **Files:**
+
 - Create: `src/utils/migraineFilters.ts`
 - Test: `src/utils/migraineFilters.test.ts`
 
 **Interfaces:**
+
 - Produces: `filterMigraines(migraines: Migraine[], opts: { keyword?: string; month?: string }): Migraine[]`
 
 - [ ] **Step 1: Write the failing tests**
@@ -77,135 +81,155 @@ git commit -m "feat: reset default list styles globally"
 Create `src/utils/migraineFilters.test.ts`:
 
 ```ts
-import { describe, it, expect } from 'vitest'
-import { filterMigraines } from './migraineFilters'
-import type { Migraine } from '../types/migraine'
+import { describe, it, expect } from "vitest";
+import { filterMigraines } from "./migraineFilters";
+import type { Migraine } from "../types/migraine";
 
 function makeMigraine(overrides: Partial<Migraine>): Migraine {
   return {
-    id: 'x', date: '2026-06-01', heureDebut: '08:00', heureFin: '10:00',
-    medocs: [], intensite: 5, avortee: false, nausee: false, vomissement: false,
-    aura: false, localisation: null, declencheurs: [], createdAt: '', updatedAt: '',
+    id: "x",
+    date: "2026-06-01",
+    heureDebut: "08:00",
+    heureFin: "10:00",
+    medocs: [],
+    intensite: 5,
+    avortee: false,
+    nausee: false,
+    vomissement: false,
+    aura: false,
+    localisation: null,
+    declencheurs: [],
+    createdAt: "",
+    updatedAt: "",
     ...overrides,
-  }
+  };
 }
 
-describe('filterMigraines', () => {
-  it('returns all migraines when no filters are given', () => {
-    const data = [makeMigraine({ id: 'a' }), makeMigraine({ id: 'b' })]
-    expect(filterMigraines(data, {})).toHaveLength(2)
-  })
+describe("filterMigraines", () => {
+  it("returns all migraines when no filters are given", () => {
+    const data = [makeMigraine({ id: "a" }), makeMigraine({ id: "b" })];
+    expect(filterMigraines(data, {})).toHaveLength(2);
+  });
 
-  it('filters by keyword matching a médoc name', () => {
+  it("filters by keyword matching a médoc name", () => {
     const data = [
-      makeMigraine({ id: 'a', medocs: [{ id: '1', nom: 'Triptan', heure: '08:00' }] }),
-      makeMigraine({ id: 'b', medocs: [{ id: '2', nom: 'Doliprane', heure: '08:00' }] }),
-    ]
-    const result = filterMigraines(data, { keyword: 'triptan' })
-    expect(result.map((m) => m.id)).toEqual(['a'])
-  })
+      makeMigraine({
+        id: "a",
+        medocs: [{ id: "1", nom: "Triptan", heure: "08:00" }],
+      }),
+      makeMigraine({
+        id: "b",
+        medocs: [{ id: "2", nom: "Doliprane", heure: "08:00" }],
+      }),
+    ];
+    const result = filterMigraines(data, { keyword: "triptan" });
+    expect(result.map((m) => m.id)).toEqual(["a"]);
+  });
 
-  it('filters by keyword matching notes, case- and accent-insensitive', () => {
+  it("filters by keyword matching notes, case- and accent-insensitive", () => {
     const data = [
-      makeMigraine({ id: 'a', notes: 'Crise après café' }),
-      makeMigraine({ id: 'b', notes: 'Sans rapport' }),
-    ]
-    const result = filterMigraines(data, { keyword: 'CAFE' })
-    expect(result.map((m) => m.id)).toEqual(['a'])
-  })
+      makeMigraine({ id: "a", notes: "Crise après café" }),
+      makeMigraine({ id: "b", notes: "Sans rapport" }),
+    ];
+    const result = filterMigraines(data, { keyword: "CAFE" });
+    expect(result.map((m) => m.id)).toEqual(["a"]);
+  });
 
-  it('filters by keyword matching a déclencheur', () => {
+  it("filters by keyword matching a déclencheur", () => {
     const data = [
-      makeMigraine({ id: 'a', declencheurs: ['stress', 'fatigue'] }),
-      makeMigraine({ id: 'b', declencheurs: ['alcool'] }),
-    ]
-    const result = filterMigraines(data, { keyword: 'fatigue' })
-    expect(result.map((m) => m.id)).toEqual(['a'])
-  })
+      makeMigraine({ id: "a", declencheurs: ["stress", "fatigue"] }),
+      makeMigraine({ id: "b", declencheurs: ["alcool"] }),
+    ];
+    const result = filterMigraines(data, { keyword: "fatigue" });
+    expect(result.map((m) => m.id)).toEqual(["a"]);
+  });
 
-  it('filters by keyword matching the localisation label', () => {
+  it("filters by keyword matching the localisation label", () => {
     const data = [
-      makeMigraine({ id: 'a', localisation: 'bilaterale' }),
-      makeMigraine({ id: 'b', localisation: 'nuque' }),
-    ]
-    const result = filterMigraines(data, { keyword: 'bilat' })
-    expect(result.map((m) => m.id)).toEqual(['a'])
-  })
+      makeMigraine({ id: "a", localisation: "bilaterale" }),
+      makeMigraine({ id: "b", localisation: "nuque" }),
+    ];
+    const result = filterMigraines(data, { keyword: "bilat" });
+    expect(result.map((m) => m.id)).toEqual(["a"]);
+  });
 
-  it('filters by month', () => {
+  it("filters by month", () => {
     const data = [
-      makeMigraine({ id: 'a', date: '2026-06-15' }),
-      makeMigraine({ id: 'b', date: '2026-05-15' }),
-    ]
-    const result = filterMigraines(data, { month: '2026-06' })
-    expect(result.map((m) => m.id)).toEqual(['a'])
-  })
+      makeMigraine({ id: "a", date: "2026-06-15" }),
+      makeMigraine({ id: "b", date: "2026-05-15" }),
+    ];
+    const result = filterMigraines(data, { month: "2026-06" });
+    expect(result.map((m) => m.id)).toEqual(["a"]);
+  });
 
-  it('combines keyword and month with AND', () => {
+  it("combines keyword and month with AND", () => {
     const data = [
-      makeMigraine({ id: 'a', date: '2026-06-15', notes: 'café' }),
-      makeMigraine({ id: 'b', date: '2026-05-15', notes: 'café' }),
-      makeMigraine({ id: 'c', date: '2026-06-15', notes: 'rien' }),
-    ]
-    const result = filterMigraines(data, { keyword: 'café', month: '2026-06' })
-    expect(result.map((m) => m.id)).toEqual(['a'])
-  })
+      makeMigraine({ id: "a", date: "2026-06-15", notes: "café" }),
+      makeMigraine({ id: "b", date: "2026-05-15", notes: "café" }),
+      makeMigraine({ id: "c", date: "2026-06-15", notes: "rien" }),
+    ];
+    const result = filterMigraines(data, { keyword: "café", month: "2026-06" });
+    expect(result.map((m) => m.id)).toEqual(["a"]);
+  });
 
-  it('treats empty-string keyword/month as no filter', () => {
-    const data = [makeMigraine({ id: 'a' }), makeMigraine({ id: 'b' })]
-    expect(filterMigraines(data, { keyword: '', month: '' })).toHaveLength(2)
-  })
-})
+  it("treats empty-string keyword/month as no filter", () => {
+    const data = [makeMigraine({ id: "a" }), makeMigraine({ id: "b" })];
+    expect(filterMigraines(data, { keyword: "", month: "" })).toHaveLength(2);
+  });
+});
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run src/utils/migraineFilters.test.ts`
-Expected: FAIL — `Cannot find module './migraineFilters'`
+Expected: FAIL - `Cannot find module './migraineFilters'`
 
 - [ ] **Step 3: Implement the helper**
 
 Create `src/utils/migraineFilters.ts`:
 
 ```ts
-import type { Migraine } from '../types/migraine'
+import type { Migraine } from "../types/migraine";
 
-const LOCALISATION_LABELS: Record<NonNullable<Migraine['localisation']>, string> = {
-  gauche: 'Gauche',
-  droite: 'Droite',
-  bilaterale: 'Bilatérale',
-  nuque: 'Nuque',
-}
+const LOCALISATION_LABELS: Record<
+  NonNullable<Migraine["localisation"]>,
+  string
+> = {
+  gauche: "Gauche",
+  droite: "Droite",
+  bilaterale: "Bilatérale",
+  nuque: "Nuque",
+};
 
 function normalize(s: string): string {
   return s
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
 }
 
 function matchesKeyword(migraine: Migraine, keyword: string): boolean {
-  const needle = normalize(keyword)
+  const needle = normalize(keyword);
   const haystacks = [
     ...migraine.medocs.map((m) => m.nom),
-    migraine.notes ?? '',
+    migraine.notes ?? "",
     ...migraine.declencheurs,
-    migraine.localisation ? LOCALISATION_LABELS[migraine.localisation] : '',
-  ]
-  return haystacks.some((h) => normalize(h).includes(needle))
+    migraine.localisation ? LOCALISATION_LABELS[migraine.localisation] : "",
+  ];
+  return haystacks.some((h) => normalize(h).includes(needle));
 }
 
 export function filterMigraines(
   migraines: Migraine[],
-  opts: { keyword?: string; month?: string }
+  opts: { keyword?: string; month?: string },
 ): Migraine[] {
-  const keyword = opts.keyword?.trim()
-  const month = opts.month?.trim()
+  const keyword = opts.keyword?.trim();
+  const month = opts.month?.trim();
   return migraines.filter((m) => {
-    if (keyword && !matchesKeyword(m, keyword)) return false
-    if (month && !m.date.startsWith(month)) return false
-    return true
-  })
+    if (keyword && !matchesKeyword(m, keyword)) return false;
+    if (month && !m.date.startsWith(month)) return false;
+    return true;
+  });
 }
 ```
 
@@ -226,9 +250,11 @@ git commit -m "feat: add filterMigraines helper for keyword/month list filtering
 ### Task 3: Enrich `MigraineListItem` into a card
 
 **Files:**
+
 - Modify: `src/components/MigraineListItem.vue`
 
 **Interfaces:**
+
 - Consumes: `Migraine` type (unchanged props shape: `{ migraine: Migraine }`, emit `click: []`).
 
 - [ ] **Step 1: Replace the file**
@@ -240,52 +266,65 @@ Replace the full contents of `src/components/MigraineListItem.vue`:
   <li class="migraine-card" @click="$emit('click')">
     <div class="row header-row">
       <span class="date">{{ formatRelative(migraine.date) }}</span>
-      <span class="intensity" :style="{ background: intensityColor }">{{ migraine.intensite }}</span>
+      <span class="intensity" :style="{ background: intensityColor }">{{
+        migraine.intensite
+      }}</span>
     </div>
     <div class="row detail-row muted">
       <span>{{ durationLabel }}</span>
-      <span v-if="migraine.medocs.length">{{ migraine.medocs.map(m => m.nom).join(', ') }}</span>
+      <span v-if="migraine.medocs.length">{{
+        migraine.medocs.map((m) => m.nom).join(", ")
+      }}</span>
     </div>
     <div class="row badges-row" v-if="hasBadges">
       <span v-if="migraine.avortee" class="badge">Avortée</span>
       <span v-if="migraine.nausee" class="badge subtle">🤢 Nausée</span>
-      <span v-if="migraine.vomissement" class="badge subtle">🤮 Vomissement</span>
+      <span v-if="migraine.vomissement" class="badge subtle"
+        >🤮 Vomissement</span
+      >
       <span v-if="migraine.aura" class="badge subtle">✨ Aura</span>
-      <span v-if="localisationLabel" class="badge subtle">📍 {{ localisationLabel }}</span>
+      <span v-if="localisationLabel" class="badge subtle"
+        >📍 {{ localisationLabel }}</span
+      >
     </div>
   </li>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { formatRelative, formatDuration } from '../utils/date'
-import type { Migraine } from '../types/migraine'
+import { computed } from "vue";
+import { formatRelative, formatDuration } from "../utils/date";
+import type { Migraine } from "../types/migraine";
 
-const props = defineProps<{ migraine: Migraine }>()
-defineEmits<{ click: [] }>()
+const props = defineProps<{ migraine: Migraine }>();
+defineEmits<{ click: [] }>();
 
-const LOCALISATION_LABELS: Record<NonNullable<Migraine['localisation']>, string> = {
-  gauche: 'Gauche',
-  droite: 'Droite',
-  bilaterale: 'Bilatérale',
-  nuque: 'Nuque',
-}
+const LOCALISATION_LABELS: Record<
+  NonNullable<Migraine["localisation"]>,
+  string
+> = {
+  gauche: "Gauche",
+  droite: "Droite",
+  bilaterale: "Bilatérale",
+  nuque: "Nuque",
+};
 
 const durationLabel = computed(() => {
-  if (!props.migraine.heureFin) return 'en cours'
-  const [h1, m1] = props.migraine.heureDebut.split(':').map(Number)
-  const [h2, m2] = props.migraine.heureFin.split(':').map(Number)
-  return formatDuration(h2 * 60 + m2 - (h1 * 60 + m1))
-})
+  if (!props.migraine.heureFin) return "en cours";
+  const [h1, m1] = props.migraine.heureDebut.split(":").map(Number);
+  const [h2, m2] = props.migraine.heureFin.split(":").map(Number);
+  return formatDuration(h2 * 60 + m2 - (h1 * 60 + m1));
+});
 
 const intensityColor = computed(() => {
-  const hue = 50 - (props.migraine.intensite / 10) * 50
-  return `hsl(${hue}, 80%, 50%)`
-})
+  const hue = 50 - (props.migraine.intensite / 10) * 50;
+  return `hsl(${hue}, 80%, 50%)`;
+});
 
 const localisationLabel = computed(() =>
-  props.migraine.localisation ? LOCALISATION_LABELS[props.migraine.localisation] : null
-)
+  props.migraine.localisation
+    ? LOCALISATION_LABELS[props.migraine.localisation]
+    : null,
+);
 
 const hasBadges = computed(
   () =>
@@ -293,8 +332,8 @@ const hasBadges = computed(
     props.migraine.nausee ||
     props.migraine.vomissement ||
     props.migraine.aura ||
-    localisationLabel.value !== null
-)
+    localisationLabel.value !== null,
+);
 </script>
 
 <style scoped>
@@ -305,7 +344,9 @@ const hasBadges = computed(
   padding: 1rem;
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -375,12 +416,14 @@ git commit -m "feat: redesign MigraineListItem as an info-rich hoverable card"
 
 ---
 
-### Task 4: Rewire `ListView` — filters, grid, dual empty states
+### Task 4: Rewire `ListView` - filters, grid, dual empty states
 
 **Files:**
+
 - Modify: `src/views/ListView.vue`
 
 **Interfaces:**
+
 - Consumes: `filterMigraines` from `../utils/migraineFilters` (Task 2), `MigraineListItem` (Task 3, unchanged props/emit), `MigraineFormModal` (existing, props `{ editId?: string }`, emits `close: []; saved: []`).
 
 - [ ] **Step 1: Replace the file**
@@ -394,10 +437,12 @@ Replace the full contents of `src/views/ListView.vue`:
 
     <div v-if="migraines.migraines.length === 0" class="empty-state">
       <p>
-        Aucune migraine enregistrée pour le moment. Note ta première crise pour commencer à
-        suivre tes statistiques.
+        Aucune migraine enregistrée pour le moment. Note ta première crise pour
+        commencer à suivre tes statistiques.
       </p>
-      <button class="cta-btn" @click="addFormOpen = true">Ajouter une migraine</button>
+      <button class="cta-btn" @click="addFormOpen = true">
+        Ajouter une migraine
+      </button>
     </div>
 
     <template v-else>
@@ -413,41 +458,61 @@ Replace the full contents of `src/views/ListView.vue`:
 
       <div v-if="filtered.length === 0" class="empty-state">
         <p>Aucun résultat pour ces filtres.</p>
-        <button class="cta-btn" @click="resetFilters">Réinitialiser les filtres</button>
+        <button class="cta-btn" @click="resetFilters">
+          Réinitialiser les filtres
+        </button>
       </div>
 
       <ul v-else class="migraine-grid">
-        <MigraineListItem v-for="m in filtered" :key="m.id" :migraine="m" @click="editId = m.id" />
+        <MigraineListItem
+          v-for="m in filtered"
+          :key="m.id"
+          :migraine="m"
+          @click="editId = m.id"
+        />
       </ul>
     </template>
 
-    <MigraineFormModal v-if="editId" :edit-id="editId" @close="editId = null" @saved="editId = null" />
-    <MigraineFormModal v-if="addFormOpen" @close="addFormOpen = false" @saved="addFormOpen = false" />
+    <MigraineFormModal
+      v-if="editId"
+      :edit-id="editId"
+      @close="editId = null"
+      @saved="editId = null"
+    />
+    <MigraineFormModal
+      v-if="addFormOpen"
+      @close="addFormOpen = false"
+      @saved="addFormOpen = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useMigrainesStore } from '../stores/migraines'
-import { filterMigraines } from '../utils/migraineFilters'
-import MigraineListItem from '../components/MigraineListItem.vue'
-import MigraineFormModal from '../components/MigraineForm/MigraineFormModal.vue'
+import { ref, computed } from "vue";
+import { useMigrainesStore } from "../stores/migraines";
+import { filterMigraines } from "../utils/migraineFilters";
+import MigraineListItem from "../components/MigraineListItem.vue";
+import MigraineFormModal from "../components/MigraineForm/MigraineFormModal.vue";
 
-const migraines = useMigrainesStore()
-const editId = ref<string | null>(null)
-const addFormOpen = ref(false)
-const keyword = ref('')
-const month = ref('')
+const migraines = useMigrainesStore();
+const editId = ref<string | null>(null);
+const addFormOpen = ref(false);
+const keyword = ref("");
+const month = ref("");
 
 const sorted = computed(() =>
-  [...migraines.migraines].sort((a, b) => (a.date + a.heureDebut < b.date + b.heureDebut ? 1 : -1))
-)
+  [...migraines.migraines].sort((a, b) =>
+    a.date + a.heureDebut < b.date + b.heureDebut ? 1 : -1,
+  ),
+);
 
-const filtered = computed(() => filterMigraines(sorted.value, { keyword: keyword.value, month: month.value }))
+const filtered = computed(() =>
+  filterMigraines(sorted.value, { keyword: keyword.value, month: month.value }),
+);
 
 function resetFilters() {
-  keyword.value = ''
-  month.value = ''
+  keyword.value = "";
+  month.value = "";
 }
 </script>
 
@@ -496,10 +561,14 @@ function resetFilters() {
   gap: 1rem;
 }
 @media (min-width: 768px) {
-  .migraine-grid { grid-template-columns: repeat(2, 1fr); }
+  .migraine-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 @media (min-width: 1280px) {
-  .migraine-grid { grid-template-columns: repeat(3, 1fr); }
+  .migraine-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 </style>
 ```
@@ -507,11 +576,12 @@ function resetFilters() {
 - [ ] **Step 2: Check `MigraineFormModal`'s prop/emit signature still matches**
 
 Run: `grep -n "defineProps\|defineEmits" src/components/MigraineForm/MigraineFormModal.vue`
-Expected: `defineProps<{ editId?: string }>()` and `defineEmits<{ close: []; saved: [] }>()` — both already used correctly above (the no-`editId` instance creates a new migraine; the `editId`-bound instance edits an existing one).
+Expected: `defineProps<{ editId?: string }>()` and `defineEmits<{ close: []; saved: [] }>()` - both already used correctly above (the no-`editId` instance creates a new migraine; the `editId`-bound instance edits an existing one).
 
 - [ ] **Step 3: Visually verify**
 
 Run: `npm run dev`, open `/liste`:
+
 - With 0 migraines: confirm onboarding message + "Ajouter une migraine" button, which opens the form.
 - With migraines: confirm search box + month picker render, grid shows 1/2/3 columns depending on window width, typing a keyword that matches nothing shows "Aucun résultat pour ces filtres" + reset button, and resetting restores the full grid.
 - Click a card: confirm it still opens the edit form for that migraine (existing `editId` behavior unchanged).
@@ -532,6 +602,6 @@ git commit -m "feat: add search/month filters and dual empty states to ListView"
 
 ## Final Verification
 
-- [ ] Run `npx vitest run` — all tests pass.
-- [ ] Run `npx vue-tsc --noEmit` — no type errors.
+- [ ] Run `npx vitest run` - all tests pass.
+- [ ] Run `npx vue-tsc --noEmit` - no type errors.
 - [ ] Run `npm run dev` and manually check `/liste`: no bullet markers, card hover effect, responsive column count, keyword search across médocs/notes/déclencheurs/localisation, month filter, AND-combination of both filters, both empty states, click-to-edit still works.

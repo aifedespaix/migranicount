@@ -7,11 +7,11 @@ Part 1 of 5 in the broader UI/UX overhaul (Home → List → Form → Settings �
 - Fixed header on all screen sizes (mobile + desktop).
 - Page uses full viewport width (no artificial max-width container).
 - Entire dashboard (cards + charts) fits within the viewport height with no page scroll (`100dvh` minus header/bottom-nav).
-- Charts laid out in a 3-column grid in landscape orientation, stacked 1-column in portrait — driven by `@media (orientation: landscape)`, not a width breakpoint.
+- Charts laid out in a 3-column grid in landscape orientation, stacked 1-column in portrait - driven by `@media (orientation: landscape)`, not a width breakpoint.
 - Clicking a chart opens a fullscreen detail view with an enlarged chart plus stats specific to that chart.
 - Empty state (no migraines recorded) replaces the dashboard with an explanatory message and a CTA to log the first migraine.
 - The FAB ("+") button is visible bottom-right on all screen sizes, including desktop, in addition to the existing header "Ajouter" button. Both open the same `MigraineFormModal`.
-- Button/form visual polish is explicitly out of scope here — covered by a later phase of this overhaul.
+- Button/form visual polish is explicitly out of scope here - covered by a later phase of this overhaul.
 
 ## Layout
 
@@ -38,11 +38,12 @@ New component, `position: fixed` covering the viewport, opened from `StatsView` 
   - **Frequency**: total migraines count, busiest month (label + count), trend vs previous period (e.g. last 3 months vs prior 3 months, simple percentage or up/down indicator).
   - **Intensity**: distribution by intensity level (count per level, e.g. as a simple breakdown list), overall average intensity.
   - **Efficacy**: treatments ranked by success rate (% of uses marked effective), descending.
-- Close via an explicit close button (and Escape key) — no save/discard semantics needed since this is read-only.
+- Close via an explicit close button (and Escape key) - no save/discard semantics needed since this is read-only.
 
 ## Empty state
 
 When `migraines.migraines.length === 0`, `StatsView` renders only:
+
 - A short paragraph explaining the app's purpose (tracking migraines to spot patterns/stats).
 - A CTA button "Répertorier une migraine" that opens `MigraineFormModal` (same modal as header/FAB).
 

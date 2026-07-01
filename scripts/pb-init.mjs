@@ -46,7 +46,7 @@ async function collectionExists(name) {
 async function createMigrainesCollection() {
   const name = 'migraines'
   if (await collectionExists(name)) {
-    console.log(`· Collection "${name}" existe déjà — skip`)
+    console.log(`· Collection "${name}" existe déjà - skip`)
     return
   }
 
@@ -84,7 +84,7 @@ async function createMigrainesCollection() {
 async function createMedocsFavorisCollection() {
   const name = 'medocs_favoris'
   if (await collectionExists(name)) {
-    console.log(`· Collection "${name}" existe déjà — skip`)
+    console.log(`· Collection "${name}" existe déjà - skip`)
     return
   }
 
@@ -116,7 +116,7 @@ async function createMedocsFavorisCollection() {
 async function createUserPreferencesCollection() {
   const name = 'user_preferences'
   if (await collectionExists(name)) {
-    console.log(`· Collection "${name}" existe déjà — skip`)
+    console.log(`· Collection "${name}" existe déjà - skip`)
     return
   }
 
@@ -157,7 +157,7 @@ async function updateMedocsFavorisCollection() {
     if (!existingNames.includes('expectedEffects'))
       newFields.push({ type: 'text', name: 'expectedEffects', max: 500 })
     if (!newFields.length) {
-      console.log('· Collection "medocs_favoris" déjà à jour — skip')
+      console.log('· Collection "medocs_favoris" déjà à jour - skip')
       return
     }
     await pb.collections.update(col.id, { fields: [...col.fields, ...newFields] })
@@ -172,7 +172,7 @@ async function configureUsersDeleteRule() {
     const usersCollection = await pb.collections.getOne('users')
     const desired = 'id = @request.auth.id'
     if (usersCollection.deleteRule === desired) {
-      console.log('· Collection "users" deleteRule deja configuree — skip')
+      console.log('· Collection "users" deleteRule deja configuree - skip')
       return
     }
     await pb.collections.update('users', { deleteRule: desired })

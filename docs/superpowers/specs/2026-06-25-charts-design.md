@@ -16,18 +16,19 @@ Domaine 5 sur 6 du lot d'améliorations UI/UX.
 - `StatsView.vue` : retirer la `<button class="chart-card">` pour l'efficacité et `openDetail('efficacy')`. Les 2 graphiques restants (Fréquence, Intensité) occupent la grille à 2 colonnes sur desktop.
 - `ChartDetailModal.vue` : retirer la branche `v-else` (EfficacyChart), mettre `v-else-if="chart === 'intensity'"`. Prop type passe de `'frequency' | 'intensity' | 'efficacy'` à `'frequency' | 'intensity'`. Retirer l'import `EfficacyChart` et les computed `efficacyRank`.
 - `StatsView.vue` : `activeDetail` type passe à `'frequency' | 'intensity' | null`.
-- `EfficacyChart.vue` : le fichier est conservé mais n'est plus importé nulle part (peut être supprimé ou laissé inutilisé — plan inclut la suppression).
+- `EfficacyChart.vue` : le fichier est conservé mais n'est plus importé nulle part (peut être supprimé ou laissé inutilisé - plan inclut la suppression).
 
 ### Sélecteur de période
 
-Local à `StatsView.vue` — pas de store (préférence non persistée, reset à chaque visite).
+Local à `StatsView.vue` - pas de store (préférence non persistée, reset à chaque visite).
 
 ```ts
-type Period = 'day' | 'week' | 'month'
-const period = ref<Period>(defaultPeriod(migraines.migraines))
+type Period = "day" | "week" | "month";
+const period = ref<Period>(defaultPeriod(migraines.migraines));
 ```
 
 `defaultPeriod` est une nouvelle fonction utilitaire exportée de `src/utils/stats.ts` :
+
 - 0 migraine → `'month'`
 - Migraine la plus ancienne < 3 mois → `'day'`
 - Entre 3 et 6 mois → `'week'`
@@ -55,10 +56,23 @@ defaultPeriod(migraines): Period
 Nouvelle prop `period: 'day' | 'week' | 'month'` avec default `'month'`.
 
 Le `computed` de `chartData` sélectionne la fonction selon `props.period` :
+
 ```ts
-if (props.period === 'day')    data = dailyFrequency(props.migraines).map(d => ({ label: d.day.slice(5), count: d.count }))
-else if (props.period === 'week') data = weeklyFrequency(props.migraines).map(d => ({ label: d.week.slice(5), count: d.count }))
-else                           data = monthlyFrequency(props.migraines).map(d => ({ label: d.month.slice(5), count: d.count }))
+if (props.period === "day")
+  data = dailyFrequency(props.migraines).map((d) => ({
+    label: d.day.slice(5),
+    count: d.count,
+  }));
+else if (props.period === "week")
+  data = weeklyFrequency(props.migraines).map((d) => ({
+    label: d.week.slice(5),
+    count: d.count,
+  }));
+else
+  data = monthlyFrequency(props.migraines).map((d) => ({
+    label: d.month.slice(5),
+    count: d.count,
+  }));
 ```
 
 Idem pour IntensityChart (avec `avg` au lieu de `count`).
@@ -74,5 +88,5 @@ Chart.js utilise déjà `responsive: true, maintainAspectRatio: false`. Ajouter 
 ## Out of scope
 
 - Pas de persistance de la période sélectionnée.
-- `ChartDetailModal` ne reçoit pas de prop `period` — il reste toujours en vue mensuelle.
+- `ChartDetailModal` ne reçoit pas de prop `period` - il reste toujours en vue mensuelle.
 - Pas de graphique de type "camembert" ni d'autres types de visualisation.

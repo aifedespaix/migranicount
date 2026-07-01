@@ -15,7 +15,8 @@ Part 2 of 5 in the broader UI/UX overhaul (Home → **List** → Form → Settin
 Add to `src/styles/theme.css` (global, benefits the whole app, not just this view):
 
 ```css
-ul, ol {
+ul,
+ol {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -30,12 +31,12 @@ ul, ol {
 - **Detail row**: duration (`durationLabel`, existing logic) + médocs taken (comma-joined names, existing logic).
 - **Badges row** (only rendered when applicable, each conditionally shown):
   - "Avortée" badge (existing).
-  - Nausée icon/label, Vomissement icon/label, Aura icon/label — shown only when each respective boolean is `true`.
-  - Localisation label (gauche/droite/bilatérale/nuque) — shown only when `localisation !== null`.
+  - Nausée icon/label, Vomissement icon/label, Aura icon/label - shown only when each respective boolean is `true`.
+  - Localisation label (gauche/droite/bilatérale/nuque) - shown only when `localisation !== null`.
 - Card styling: background `var(--color-surface)`, border-radius, padding, subtle shadow. On hover: `border-color: var(--color-accent)` + `transform: translateY(-2px)`, consistent with the `.chart-card` hover treatment introduced on the Home dashboard.
 - Clicking anywhere on the card still emits `click` (opens `MigraineFormModal` in edit mode, unchanged from current behavior).
 
-No new icon library is introduced — icons are simple inline Unicode/emoji or minimal inline SVGs consistent with the project's current lack of an icon dependency (`package.json` has no icon package). Exact glyphs are a small implementation detail, not a spec-level decision.
+No new icon library is introduced - icons are simple inline Unicode/emoji or minimal inline SVGs consistent with the project's current lack of an icon dependency (`package.json` has no icon package). Exact glyphs are a small implementation detail, not a spec-level decision.
 
 ## Layout
 
@@ -48,14 +49,18 @@ No new icon library is introduced — icons are simple inline Unicode/emoji or m
   gap: 1rem;
 }
 @media (min-width: 768px) {
-  .migraine-grid { grid-template-columns: repeat(2, 1fr); }
+  .migraine-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 @media (min-width: 1280px) {
-  .migraine-grid { grid-template-columns: repeat(3, 1fr); }
+  .migraine-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 ```
 
-This view is not fit-to-screen like the Home dashboard — it scrolls normally when content exceeds the viewport (a list is expected to grow and scroll; only the Home dashboard had the no-scroll requirement).
+This view is not fit-to-screen like the Home dashboard - it scrolls normally when content exceeds the viewport (a list is expected to grow and scroll; only the Home dashboard had the no-scroll requirement).
 
 ## Filters
 
@@ -71,8 +76,8 @@ Filtering logic lives in a new pure helper (not a Vue component) so it's indepen
 // src/utils/migraineFilters.ts
 export function filterMigraines(
   migraines: Migraine[],
-  opts: { keyword?: string; month?: string }
-): Migraine[]
+  opts: { keyword?: string; month?: string },
+): Migraine[];
 ```
 
 ## Empty states

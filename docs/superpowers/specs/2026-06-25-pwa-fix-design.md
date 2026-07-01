@@ -1,4 +1,4 @@
-# Correctif Technique — PWA Cache / Service Worker
+# Correctif Technique - PWA Cache / Service Worker
 
 Domaine 6 sur 6 du lot d'améliorations UI/UX.
 
@@ -16,7 +16,7 @@ Domaine 6 sur 6 du lot d'améliorations UI/UX.
 
 **Deux changements :**
 
-### 1. `vite.config.ts` — workbox skipWaiting + clientsClaim
+### 1. `vite.config.ts` - workbox skipWaiting + clientsClaim
 
 ```ts
 workbox: {
@@ -29,16 +29,16 @@ workbox: {
 - `skipWaiting: true` : le nouveau SW s'active immédiatement sans attendre la fermeture des onglets.
 - `clientsClaim: true` : le nouveau SW prend le contrôle de tous les clients (onglets) existants.
 
-### 2. `src/main.ts` — rechargement automatique à l'activation d'un nouveau SW
+### 2. `src/main.ts` - rechargement automatique à l'activation d'un nouveau SW
 
 ```ts
-if ('serviceWorker' in navigator) {
-  let refreshing = false
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (refreshing) return
-    refreshing = true
-    window.location.reload()
-  })
+if ("serviceWorker" in navigator) {
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
 }
 ```
 
@@ -60,5 +60,5 @@ Pas de test automatisé possible pour le comportement SW en jsdom. Vérification
 
 ## Out of scope
 
-- Pas de toast ou d'UI "Mise à jour disponible — cliquer pour recharger" (stratégie `prompt`) — le rechargement automatique est suffisant pour un outil personnel.
+- Pas de toast ou d'UI "Mise à jour disponible - cliquer pour recharger" (stratégie `prompt`) - le rechargement automatique est suffisant pour un outil personnel.
 - Pas de modification du manifest PWA.

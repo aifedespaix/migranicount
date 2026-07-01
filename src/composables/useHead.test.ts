@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { applySeo } from './useHead'
 
 beforeEach(() => {
@@ -8,7 +8,7 @@ beforeEach(() => {
 describe('applySeo', () => {
   it('sets document.title', () => {
     applySeo({ title: 'Test', description: 'A description for testing purposes.' }, '/test')
-    expect(document.title).toBe('Test — Migracount')
+    expect(document.title).toBe('Test - Migracount')
   })
 
   it('creates meta[name=description] on first call', () => {

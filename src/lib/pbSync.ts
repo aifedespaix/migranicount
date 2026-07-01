@@ -1,5 +1,5 @@
+import type { MedocFavori, Migraine } from '../types/migraine'
 import { pb } from './pocketbase'
-import type { Migraine, MedocFavori } from '../types/migraine'
 
 function avorteeToStr(v: boolean | 'probable'): string {
   if (v === 'probable') return 'probable'
@@ -64,7 +64,7 @@ export async function deleteMigraineRemote(localId: string): Promise<void> {
     const existing = await pb.collection('migraines').getFirstListItem(`localId="${localId}"`)
     await pb.collection('migraines').delete(existing['id'] as string)
   } catch {
-    // not found remotely — nothing to delete
+    // not found remotely - nothing to delete
   }
 }
 
@@ -147,7 +147,7 @@ export async function patchPreferences(patch: Record<string, unknown>): Promise<
       const created = await pb.collection('user_preferences').create({ userId, ...patch })
       prefsRecordId = created['id'] as string
     } catch {
-      // concurrent create won the race — look up the record and update instead
+      // concurrent create won the race - look up the record and update instead
       try {
         const existing = await pb.collection('user_preferences').getFirstListItem(
           `userId="${userId}"`,
