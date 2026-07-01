@@ -24,9 +24,9 @@ export const useMigrainesStore = defineStore('migraines', () => {
   }
 
   function restore(m: Migraine): void {
-    saveMigraine(m as any)
+    const saved = saveMigraine(m as any)
     migraines.value = listMigraines()
-    if (pb.authStore.isValid) pushMigraine(m).catch(console.error)
+    if (pb.authStore.isValid) pushMigraine(saved).catch(console.error)
   }
 
   function getById(id: string): Migraine | undefined {
