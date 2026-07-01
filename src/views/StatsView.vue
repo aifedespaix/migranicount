@@ -41,13 +41,13 @@
         <div class="chart-wrap">
           <FrequencyChart :migraines="migraines.migraines" :period="period" :treatments="activeTreatments" />
         </div>
-        <TreatmentLegend
-          v-if="allTreatments.length"
-          :entries="allTreatments"
-          :selected="selectedTreatments"
-          @update:selected="selectedTreatments = $event"
-        />
       </button>
+      <TreatmentLegend
+        v-if="allTreatments.length"
+        :entries="allTreatments"
+        :selected="selectedTreatments"
+        @update:selected="selectedTreatments = $event"
+      />
 
       <div class="stats-buttons">
         <StatsButton title="Intensité" :facts="intensityFacts" @click="openDetail('intensity')" />
