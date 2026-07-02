@@ -41,17 +41,21 @@ export function averageIntensityByMonth(migraines: Migraine[], from: Date = new 
 }
 
 export function medocEfficacy(migraines: Migraine[]): { nom: string; pctAvortee: number; total: number }[] {
-  const byMedoc = new Map<string, { total: number; avortee: number }>()
+  // Regroupe par medocId (stable) plutôt que par nom : un renommage du médicament au catalogue
+  // ne doit pas scinder son historique en deux entités distinctes.
+  const byMedoc = new Map<string, { nom: string; total: number; avortee: number }>()
   for (const m of migraines) {
-    const noms = new Set(m.medocs.map((p) => p.nom))
-    for (const nom of noms) {
-      const bucket = byMedoc.get(nom) ?? { total: 0, avortee: 0 }
+    const keys = new Map<string, string>()
+    for (const p of m.medocs) keys.set(p.medocId ?? p.nom, p.nom)
+    for (const [key, nom] of keys) {
+      const bucket = byMedoc.get(key) ?? { nom, total: 0, avortee: 0 }
+      bucket.nom = nom
       bucket.total += 1
       if (m.avortee === true || m.avortee === 'probable') bucket.avortee += 1
-      byMedoc.set(nom, bucket)
+      byMedoc.set(key, bucket)
     }
   }
-  return Array.from(byMedoc.entries()).map(([nom, { total, avortee }]) => ({
+  return Array.from(byMedoc.values()).map(({ nom, total, avortee }) => ({
     nom,
     total,
     pctAvortee: Math.round((avortee / total) * 100),
@@ -216,14 +220,18 @@ export function durationDistribution(migraines: Migraine[]): { label: string; co
 }
 
 export function triggerFrequency(migraines: Migraine[]): { tag: string; count: number }[] {
-  const map = new Map<string, number>()
+  // Regroupe par id (stable) plutôt que par nom : un renommage du déclencheur
+  // ne doit pas scinder son historique en deux entités distinctes.
+  const map = new Map<string, { tag: string; count: number }>()
   for (const m of migraines) {
     for (const d of m.declencheurs) {
-      map.set(d, (map.get(d) ?? 0) + 1)
+      const bucket = map.get(d.id) ?? { tag: d.nom, count: 0 }
+      bucket.tag = d.nom
+      bucket.count += 1
+      map.set(d.id, bucket)
     }
   }
-  return Array.from(map.entries())
-    .map(([tag, count]) => ({ tag, count }))
+  return Array.from(map.values())
     .sort((a, b) => b.count - a.count)
     .slice(0, 10)
 }
@@ -311,6 +319,24 @@ export function splitMigrainesByPeriod(
   return { inPeriod, outPeriod }
 }
 
+/** Fusionne des intervalles [start, end] triés et se chevauchant, pour ne pas compter deux fois les jours communs. */
+function mergeDateIntervals(
+  intervals: { start: string; end: string }[],
+): { start: string; end: string }[] {
+  if (!intervals.length) return []
+  const sorted = [...intervals].sort((a, b) => a.start.localeCompare(b.start))
+  const merged: { start: string; end: string }[] = [{ ...sorted[0] }]
+  for (const cur of sorted.slice(1)) {
+    const last = merged[merged.length - 1]
+    if (cur.start <= last.end) {
+      if (cur.end > last.end) last.end = cur.end
+    } else {
+      merged.push({ ...cur })
+    }
+  }
+  return merged
+}
+
 export interface PeriodStats {
   avgFreqPerMonth: number
   avgDurationMin: number
@@ -351,7 +377,7 @@ export function treatmentEfficacyAnalysis(
 
       const { inPeriod, outPeriod } = splitMigrainesByPeriod(migraines, medTimeline)
 
-      const treatDays = medTimeline.reduce((sum, t) => {
+      const treatDays = mergeDateIntervals(medTimeline).reduce((sum, t) => {
         const d = (new Date(t.end).getTime() - new Date(t.start).getTime()) / 86400000
         return sum + Math.max(0, d)
       }, 0)

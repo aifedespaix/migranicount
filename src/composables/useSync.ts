@@ -16,16 +16,34 @@ import {
   listMedocsFavoris,
   listDeclencheursFavoris,
   listSymptomesCustom,
+  listTombstones,
   registerMedocUsage,
   addMedocFavoriWithDetails,
-  registerDeclencheur,
-  addSymptomeCustom,
+  setTreatmentPeriods,
 } from '../storage/migraineRepository'
+import { pushTombstone } from '../lib/pbSync'
+import { processOutbox } from '../lib/syncOutbox'
+import { mergeTreatmentPeriods } from '../lib/periodMerge'
 import { getJSON, setJSON } from '../storage/storage'
-import type { Migraine, MedocFavori } from '../types/migraine'
+import type { Migraine, MedocFavori, CatalogTag, TreatmentPeriod } from '../types/migraine'
+import type { Tombstone, TombstoneEntityType } from '../types/sync'
 import type { RecordModel } from 'pocketbase'
 
 const SETTINGS_KEY = 'settings'
+const DECLENCHEURS_KEY = 'declencheursFavoris'
+const SYMPTOMES_KEY = 'symptomesCustom'
+const TOMBSTONES_KEY = 'tombstones'
+
+function tombstonedIds(type: TombstoneEntityType): Set<string> {
+  return new Set(listTombstones().filter((t) => t.entityType === type).map((t) => t.entityId))
+}
+
+function mergeCatalogTags(local: CatalogTag[], remote: CatalogTag[]): CatalogTag[] {
+  const map = new Map<string, CatalogTag>()
+  for (const t of remote) map.set(t.id, t)
+  for (const t of local) map.set(t.id, t)
+  return Array.from(map.values())
+}
 
 let realtimeUnsubscribers: Array<() => void> = []
 let diffAccumulator: {
@@ -69,6 +87,7 @@ export function useSync() {
       const beforeDecl = listDeclencheursFavoris()
       const beforeSympt = listSymptomesCustom()
 
+      await _mergeTombstones(userId)
       await Promise.all([
         _mergeMigraines(userId),
         _mergeMedocs(userId),
@@ -111,6 +130,33 @@ export function useSync() {
     await _mergeAndToast(pb.authStore.record!.id)
   }
 
+  /** Fusionne les tombstones AVANT tout le reste : sans ça, un merge ne peut pas distinguer
+   *  "jamais synchronisé" de "supprimé ailleurs pendant l'offline", et ressuscite les suppressions. */
+  async function _mergeTombstones(userId: string): Promise<void> {
+    const remote: RecordModel[] = await pb.collection('tombstones').getFullList({
+      filter: `userId="${userId}"`,
+    })
+    const local = listTombstones()
+
+    const map = new Map<string, Tombstone>()
+    for (const t of local) map.set(`${t.entityType}:${t.entityId}`, t)
+    for (const r of remote) {
+      const key = `${r['entityType']}:${r['entityId']}`
+      if (!map.has(key)) {
+        map.set(key, {
+          entityType: r['entityType'] as TombstoneEntityType,
+          entityId: r['entityId'] as string,
+          deletedAt: r['deletedAt'] as string,
+        })
+      }
+    }
+    setJSON(TOMBSTONES_KEY, Array.from(map.values()))
+
+    const remoteKeys = new Set(remote.map((r) => `${r['entityType']}:${r['entityId']}`))
+    const toUpload = local.filter((t) => !remoteKeys.has(`${t.entityType}:${t.entityId}`))
+    await Promise.allSettled(toUpload.map((t) => pushTombstone(t)))
+  }
+
   async function _mergeMigraines(userId: string): Promise<void> {
     const remoteMigraines: RecordModel[] = await pb.collection('migraines').getFullList({
       filter: `userId="${userId}"`,
@@ -119,6 +165,7 @@ export function useSync() {
     const localMigraines = listMigraines()
     const localMap = new Map(localMigraines.map((m) => [m.id, m]))
     const remoteMap = new Map(remoteMigraines.map((r) => [r['localId'] as string, r]))
+    const deletedIds = tombstonedIds('migraine')
 
     const allLocalIds = new Set([...localMap.keys(), ...remoteMap.keys()])
     const mergedLocally: Migraine[] = []
@@ -127,6 +174,12 @@ export function useSync() {
     for (const localId of allLocalIds) {
       const local = localMap.get(localId)
       const remote = remoteMap.get(localId)
+
+      if (deletedIds.has(localId)) {
+        // supprimée quelque part : jamais résurrectée, et on nettoie la copie distante orpheline
+        if (remote) void pb.collection('migraines').delete(remote['id'] as string).catch(() => {})
+        continue
+      }
 
       if (local && remote) {
         const localDate = new Date(local.updatedAt).getTime()
@@ -163,26 +216,40 @@ export function useSync() {
     })
     const localMedocs = listMedocsFavoris()
 
-    const localMap = new Map(localMedocs.map((f) => [f.nom, f]))
+    const localMap = new Map(localMedocs.map((f) => [f.id, f]))
     const remoteMap = new Map(remoteMedocs.map((r) => [r['localId'] as string, r]))
+    const deletedIds = tombstonedIds('medoc')
 
-    const allNoms = new Set([...localMap.keys(), ...remoteMap.keys()])
+    const allIds = new Set([...localMap.keys(), ...remoteMap.keys()])
     const toUpload: MedocFavori[] = []
 
-    for (const nom of allNoms) {
-      const local = localMap.get(nom)
-      const remote = remoteMap.get(nom)
+    for (const id of allIds) {
+      const local = localMap.get(id)
+      const remote = remoteMap.get(id)
+
+      if (deletedIds.has(id)) {
+        if (remote) void pb.collection('medocs_favoris').delete(remote['id'] as string).catch(() => {})
+        continue
+      }
 
       if (local && remote) {
         const mergedUsage = Math.max(local.usageCount, (remote['usageCount'] as number) ?? 0)
         if (local.usageCount < mergedUsage) {
-          registerMedocUsage(nom, local.description)
+          registerMedocUsage(local.nom, local.description)
         }
-        toUpload.push({ ...local, usageCount: mergedUsage })
+
+        const remotePeriods = (remote['treatmentPeriods'] as TreatmentPeriod[] | null) ?? []
+        const mergedPeriods = mergeTreatmentPeriods(local.treatmentPeriods ?? [], remotePeriods)
+        if (JSON.stringify(mergedPeriods) !== JSON.stringify(local.treatmentPeriods ?? [])) {
+          setTreatmentPeriods(local.id, mergedPeriods)
+        }
+
+        toUpload.push({ ...local, usageCount: mergedUsage, treatmentPeriods: mergedPeriods })
       } else if (local && !remote) {
         toUpload.push(local)
       } else if (!local && remote) {
         addMedocFavoriWithDetails({
+          id,
           nom: remote['nom'] as string,
           description: (remote['description'] as string) ?? undefined,
           posologieParJour: (remote['posologieParJour'] as number) ?? undefined,
@@ -197,10 +264,10 @@ export function useSync() {
 
     await Promise.allSettled(
       toUpload.map(async (f) => {
-        const remote = remoteMap.get(f.nom)
+        const remote = remoteMap.get(f.id)
         const payload = {
           userId,
-          localId: f.nom,
+          localId: f.id,
           nom: f.nom,
           description: f.description ?? null,
           usageCount: f.usageCount,
@@ -245,17 +312,23 @@ export function useSync() {
       return
     }
 
-    const remoteDeclencheurs = (remotePrefs['declencheursFavoris'] as string[]) || []
-    const remoteSymptomes = (remotePrefs['symptomesCustom'] as string[]) || []
+    const deletedDeclIds = tombstonedIds('declencheur')
+    const deletedSymptIds = tombstonedIds('symptome')
+    const remoteDeclencheurs = ((remotePrefs['declencheursFavoris'] as CatalogTag[]) || [])
+      .filter((d) => !deletedDeclIds.has(d.id))
+    const remoteSymptomes = ((remotePrefs['symptomesCustom'] as CatalogTag[]) || [])
+      .filter((s) => !deletedSymptIds.has(s.id))
 
-    const mergedDeclencheurs = Array.from(new Set([...localDeclencheurs, ...remoteDeclencheurs]))
-    const mergedSymptomes = Array.from(new Set([...localSymptomes, ...remoteSymptomes]))
+    const mergedDeclencheurs = mergeCatalogTags(localDeclencheurs, remoteDeclencheurs)
+      .filter((d) => !deletedDeclIds.has(d.id))
+    const mergedSymptomes = mergeCatalogTags(localSymptomes, remoteSymptomes)
+      .filter((s) => !deletedSymptIds.has(s.id))
     const mergedTheme = (remotePrefs['theme'] as string) || localSettings.theme
     const mergedFont = (remotePrefs['dyslexicFont'] as string) || localSettings.dyslexicFont
 
     setJSON(SETTINGS_KEY, { theme: mergedTheme, dyslexicFont: mergedFont })
-    for (const tag of mergedDeclencheurs) registerDeclencheur(tag)
-    for (const s of mergedSymptomes) addSymptomeCustom(s)
+    setJSON(DECLENCHEURS_KEY, mergedDeclencheurs)
+    setJSON(SYMPTOMES_KEY, mergedSymptomes)
 
     const settings = useSettingsStore()
     settings.applyFromSync(
@@ -273,6 +346,7 @@ export function useSync() {
 
   async function startRealtimeSync(): Promise<void> {
     if (!pb.authStore.isValid) return
+    void processOutbox()
     const userId = pb.authStore.record!.id
     const migrainesStore = useMigrainesStore()
     const medocsStore = useMedocsFavorisStore()
@@ -283,6 +357,7 @@ export function useSync() {
     const unsubMigraines = await pb.collection('migraines').subscribe('*', (e) => {
       if ((e.record['userId'] as string) !== userId) return
       if (e.action === 'create' || e.action === 'update') {
+        if (tombstonedIds('migraine').has(e.record['localId'] as string)) return
         const incoming = remoteToMigraine(e.record as unknown as Record<string, unknown>)
         const existing = migrainesStore.getById(incoming.id)
         if (!existing || new Date(incoming.updatedAt) > new Date(existing.updatedAt)) {
@@ -314,10 +389,13 @@ export function useSync() {
     const unsubMedocs = await pb.collection('medocs_favoris').subscribe('*', (e) => {
       if ((e.record['userId'] as string) !== userId) return
       if (e.action === 'create' || e.action === 'update') {
+        const id = e.record['localId'] as string
+        if (tombstonedIds('medoc').has(id)) return
         const nom = e.record['nom'] as string
-        const existing = listMedocsFavoris().find((f) => f.nom === nom)
+        const existing = listMedocsFavoris().find((f) => f.id === id)
         if (!existing) {
           addMedocFavoriWithDetails({
+            id,
             nom,
             description: (e.record['description'] as string) ?? undefined,
             posologieParJour: (e.record['posologieParJour'] as number) ?? undefined,
@@ -337,31 +415,70 @@ export function useSync() {
     // Préférences (déclencheurs + symptômes)
     const unsubPrefs = await pb.collection('user_preferences').subscribe('*', (e) => {
       if ((e.record['userId'] as string) !== userId) return
-      const remoteDeclencheurs = (e.record['declencheursFavoris'] as string[]) || []
-      const remoteSymptomes = (e.record['symptomesCustom'] as string[]) || []
+      const deletedDeclIds = tombstonedIds('declencheur')
+      const deletedSymptIds = tombstonedIds('symptome')
+      const remoteDeclencheurs = ((e.record['declencheursFavoris'] as CatalogTag[]) || [])
+        .filter((d) => !deletedDeclIds.has(d.id))
+      const remoteSymptomes = ((e.record['symptomesCustom'] as CatalogTag[]) || [])
+        .filter((s) => !deletedSymptIds.has(s.id))
 
       const localDecl = listDeclencheursFavoris()
       const localSympt = listSymptomesCustom()
+      const localDeclIds = new Set(localDecl.map((d) => d.id))
+      const localSymptIds = new Set(localSympt.map((s) => s.id))
 
+      const mergedDecl = [...localDecl]
       for (const d of remoteDeclencheurs) {
-        if (!localDecl.includes(d)) {
-          registerDeclencheur(d)
-          diffAccumulator.catalogueItems.push(`Déclencheur « ${d} » ajouté`)
+        if (!localDeclIds.has(d.id)) {
+          mergedDecl.push(d)
+          diffAccumulator.catalogueItems.push(`Déclencheur « ${d.nom} » ajouté`)
         }
       }
+      const mergedSympt = [...localSympt]
       for (const s of remoteSymptomes) {
-        if (!localSympt.includes(s)) {
-          addSymptomeCustom(s)
-          diffAccumulator.catalogueItems.push(`Symptôme « ${s} » ajouté`)
+        if (!localSymptIds.has(s.id)) {
+          mergedSympt.push(s)
+          diffAccumulator.catalogueItems.push(`Symptôme « ${s.nom} » ajouté`)
         }
       }
+      if (mergedDecl.length !== localDecl.length) setJSON(DECLENCHEURS_KEY, mergedDecl)
+      if (mergedSympt.length !== localSympt.length) setJSON(SYMPTOMES_KEY, mergedSympt)
 
       declStore.refresh()
       symptStore.refresh()
       if (diffAccumulator.catalogueItems.length > 0) scheduleFlushToasts()
     })
 
-    realtimeUnsubscribers.push(unsubMigraines, unsubMedocs, unsubPrefs)
+    // Tombstones : propage immédiatement une suppression faite sur un autre appareil,
+    // sans attendre le prochain merge complet au login/reconnexion.
+    const unsubTombstones = await pb.collection('tombstones').subscribe('*', (e) => {
+      if ((e.record['userId'] as string) !== userId) return
+      if (e.action !== 'create') return
+      const entityType = e.record['entityType'] as TombstoneEntityType
+      const entityId = e.record['entityId'] as string
+      const deletedAt = e.record['deletedAt'] as string
+
+      const local = listTombstones()
+      if (!local.some((t) => t.entityType === entityType && t.entityId === entityId)) {
+        setJSON(TOMBSTONES_KEY, [...local, { entityType, entityId, deletedAt }])
+      }
+
+      if (entityType === 'migraine') {
+        setJSON('migraines', listMigraines().filter((m) => m.id !== entityId))
+        migrainesStore.refresh()
+      } else if (entityType === 'medoc') {
+        setJSON('medocsFavoris', listMedocsFavoris().filter((f) => f.id !== entityId))
+        medocsStore.refresh()
+      } else if (entityType === 'declencheur') {
+        setJSON(DECLENCHEURS_KEY, listDeclencheursFavoris().filter((d) => d.id !== entityId))
+        declStore.refresh()
+      } else if (entityType === 'symptome') {
+        setJSON(SYMPTOMES_KEY, listSymptomesCustom().filter((s) => s.id !== entityId))
+        symptStore.refresh()
+      }
+    })
+
+    realtimeUnsubscribers.push(unsubMigraines, unsubMedocs, unsubPrefs, unsubTombstones)
   }
 
   function stopRealtimeSync(): void {

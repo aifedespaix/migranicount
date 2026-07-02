@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed, watchEffect } from 'vue'
 import { getJSON, setJSON } from '../storage/storage'
 import { pb } from '../lib/pocketbase'
-import { patchPreferences } from '../lib/pbSync'
+import { enqueue } from '../lib/syncOutbox'
 
 export type ThemeChoice = 'light' | 'dark' | 'auto' | 'migraine'
 export type FontChoice = 'none' | 'lexend'
@@ -59,7 +59,7 @@ export const useSettingsStore = defineStore('settings', () => {
     theme.value = t
     persist()
     if (pb.authStore.isValid) {
-      patchPreferences({ theme: t }).catch(console.error)
+      enqueue({ type: 'preferences-patch', patch: { theme: t } })
     }
   }
 
@@ -67,7 +67,7 @@ export const useSettingsStore = defineStore('settings', () => {
     dyslexicFont.value = f
     persist()
     if (pb.authStore.isValid) {
-      patchPreferences({ dyslexicFont: f }).catch(console.error)
+      enqueue({ type: 'preferences-patch', patch: { dyslexicFont: f } })
     }
   }
 

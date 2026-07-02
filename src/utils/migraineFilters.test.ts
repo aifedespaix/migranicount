@@ -19,8 +19,8 @@ describe('filterMigraines', () => {
 
   it('filters by keyword matching a médoc name', () => {
     const data = [
-      makeMigraine({ id: 'a', medocs: [{ id: '1', nom: 'Triptan', heure: '08:00' }] }),
-      makeMigraine({ id: 'b', medocs: [{ id: '2', nom: 'Doliprane', heure: '08:00' }] }),
+      makeMigraine({ id: 'a', medocs: [{ id: '1', nom: 'Triptan', heure: '08:00', medocId: null }] }),
+      makeMigraine({ id: 'b', medocs: [{ id: '2', nom: 'Doliprane', heure: '08:00', medocId: null }] }),
     ]
     const result = filterMigraines(data, { keyword: 'triptan' })
     expect(result.map((m) => m.id)).toEqual(['a'])
@@ -37,8 +37,8 @@ describe('filterMigraines', () => {
 
   it('filters by keyword matching a déclencheur', () => {
     const data = [
-      makeMigraine({ id: 'a', declencheurs: ['stress', 'fatigue'] }),
-      makeMigraine({ id: 'b', declencheurs: ['alcool'] }),
+      makeMigraine({ id: 'a', declencheurs: [{ id: 'd1', nom: 'stress' }, { id: 'd2', nom: 'fatigue' }] }),
+      makeMigraine({ id: 'b', declencheurs: [{ id: 'd3', nom: 'alcool' }] }),
     ]
     const result = filterMigraines(data, { keyword: 'fatigue' })
     expect(result.map((m) => m.id)).toEqual(['a'])

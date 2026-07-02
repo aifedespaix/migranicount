@@ -61,27 +61,27 @@ describe('computeMigrainesDiff', () => {
 
 describe('computeCatalogueDiff', () => {
   it('détecte un médoc ajouté', () => {
-    const medoc: MedocFavori = { nom: 'Doliprane', usageCount: 1 }
+    const medoc: MedocFavori = { id: 'm1', nom: 'Doliprane', usageCount: 1 }
     const diff = computeCatalogueDiff([], [medoc], [], [], [], [])
     expect(diff.total).toBe(1)
     expect(diff.items[0]).toContain('Doliprane')
   })
 
   it('détecte un déclencheur ajouté', () => {
-    const diff = computeCatalogueDiff([], [], [], ['Stress'], [], [])
+    const diff = computeCatalogueDiff([], [], [], [{ id: 'd1', nom: 'Stress' }], [], [])
     expect(diff.total).toBe(1)
     expect(diff.items[0]).toContain('Stress')
   })
 
   it('détecte un symptôme ajouté', () => {
-    const diff = computeCatalogueDiff([], [], [], [], [], ['Aura'])
+    const diff = computeCatalogueDiff([], [], [], [], [], [{ id: 's1', nom: 'Aura' }])
     expect(diff.total).toBe(1)
     expect(diff.items[0]).toContain('Aura')
   })
 
   it('cumule plusieurs types', () => {
-    const medoc: MedocFavori = { nom: 'Ibuprofène', usageCount: 1 }
-    const diff = computeCatalogueDiff([], [medoc], [], ['Stress'], [], ['Aura'])
+    const medoc: MedocFavori = { id: 'm2', nom: 'Ibuprofène', usageCount: 1 }
+    const diff = computeCatalogueDiff([], [medoc], [], [{ id: 'd1', nom: 'Stress' }], [], [{ id: 's1', nom: 'Aura' }])
     expect(diff.total).toBe(3)
   })
 })

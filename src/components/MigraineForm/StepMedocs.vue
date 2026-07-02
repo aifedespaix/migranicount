@@ -153,15 +153,16 @@ function scheduleCloseDropdown() {
 function addNew() {
   if (!nomInput.value.trim()) return
   const nom = capitalizeFirstLetter(nomInput.value)
+  const favori = favoris.registerUsage(nom, descriptionInput.value || undefined)
   model.value.medocs.push({
     id: newId(),
+    medocId: favori.id,
     nom,
     description: descriptionInput.value || undefined,
     heure: heureInput.value,
     posologieParJour: selectedFavori.value?.posologieParJour,
     intervalleHeures: selectedFavori.value?.intervalleHeures,
   })
-  favoris.registerUsage(nom, descriptionInput.value || undefined)
   nomInput.value = ''
   descriptionInput.value = ''
   selectedFavori.value = null

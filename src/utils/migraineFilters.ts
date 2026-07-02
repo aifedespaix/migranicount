@@ -14,9 +14,9 @@ function matchesKeyword(migraine: Migraine, keyword: string): boolean {
   const haystacks = [
     ...migraine.medocs.map((m) => m.nom),
     migraine.notes ?? '',
-    ...migraine.declencheurs,
+    ...migraine.declencheurs.map((d) => d.nom),
     zoneLabel(migraine.zone) ?? '',
-    ...migraine.symptomes,
+    ...migraine.symptomes.map((s) => s.nom),
     intensityLabel(migraine.intensite),
     migraine.avortee ? 'avortée' : '',
   ]

@@ -3,8 +3,9 @@ import {
   monthlyFrequency, averageIntensityByMonth, medocEfficacy, averageDurationMinutes,
   frequencyTrendStats, intensityDistribution, averageIntensity, efficacyRanking,
   dailyFrequency, weeklyFrequency, averageIntensityByDay, averageIntensityByWeek, defaultPeriod,
+  treatmentEfficacyAnalysis,
 } from './stats'
-import type { Migraine } from '../types/migraine'
+import type { Migraine, MedocFavori } from '../types/migraine'
 
 function makeMigraine(overrides: Partial<Migraine>): Migraine {
   return {
@@ -45,9 +46,9 @@ describe('averageIntensityByMonth', () => {
 describe('medocEfficacy', () => {
   it('computes % aborted per medoc', () => {
     const data = [
-      makeMigraine({ medocs: [{ id: '1', nom: 'Triptan', heure: '08:00' }], avortee: true }),
-      makeMigraine({ medocs: [{ id: '2', nom: 'Triptan', heure: '08:00' }], avortee: false }),
-      makeMigraine({ medocs: [{ id: '3', nom: 'Doliprane', heure: '08:00' }], avortee: true }),
+      makeMigraine({ medocs: [{ id: '1', nom: 'Triptan', heure: '08:00', medocId: null }], avortee: true }),
+      makeMigraine({ medocs: [{ id: '2', nom: 'Triptan', heure: '08:00', medocId: null }], avortee: false }),
+      makeMigraine({ medocs: [{ id: '3', nom: 'Doliprane', heure: '08:00', medocId: null }], avortee: true }),
     ]
     const result = medocEfficacy(data)
     const triptan = result.find((r) => r.nom === 'Triptan')
@@ -57,8 +58,8 @@ describe('medocEfficacy', () => {
 
   it('counts "probable" as avortee in pctAvortee', () => {
     const data = [
-      makeMigraine({ medocs: [{ id: '1', nom: 'Triptan', heure: '08:00' }], avortee: 'probable' }),
-      makeMigraine({ medocs: [{ id: '2', nom: 'Triptan', heure: '08:00' }], avortee: false }),
+      makeMigraine({ medocs: [{ id: '1', nom: 'Triptan', heure: '08:00', medocId: null }], avortee: 'probable' }),
+      makeMigraine({ medocs: [{ id: '2', nom: 'Triptan', heure: '08:00', medocId: null }], avortee: false }),
     ]
     const result = medocEfficacy(data)
     expect(result.find((r) => r.nom === 'Triptan')?.pctAvortee).toBe(50)
@@ -144,9 +145,9 @@ describe('averageIntensity', () => {
 describe('efficacyRanking', () => {
   it('ranks medocs by % aborted, descending', () => {
     const data = [
-      makeMigraine({ medocs: [{ id: '1', nom: 'Triptan', heure: '08:00' }], avortee: true }),
-      makeMigraine({ medocs: [{ id: '2', nom: 'Triptan', heure: '08:00' }], avortee: true }),
-      makeMigraine({ medocs: [{ id: '3', nom: 'Doliprane', heure: '08:00' }], avortee: false }),
+      makeMigraine({ medocs: [{ id: '1', nom: 'Triptan', heure: '08:00', medocId: null }], avortee: true }),
+      makeMigraine({ medocs: [{ id: '2', nom: 'Triptan', heure: '08:00', medocId: null }], avortee: true }),
+      makeMigraine({ medocs: [{ id: '3', nom: 'Doliprane', heure: '08:00', medocId: null }], avortee: false }),
     ]
     const result = efficacyRanking(data)
     expect(result[0].nom).toBe('Triptan')
@@ -217,6 +218,27 @@ describe('averageIntensityByWeek', () => {
     ]
     const result = averageIntensityByWeek(data, from, 2)
     expect(result.find(r => r.week === '2026-06-22')?.avg).toBe(5)
+  })
+})
+
+describe('treatmentEfficacyAnalysis', () => {
+  it('does not double-count days for overlapping treatment periods', () => {
+    const medoc: MedocFavori = {
+      id: 'med-1', nom: 'Propranolol', usageCount: 0, isLongTermTreatment: true,
+      treatmentPeriods: [
+        { id: 'p1', startDate: '2026-01-01', endDate: '2026-01-31', updatedAt: '' },
+        { id: 'p2', startDate: '2026-01-15', endDate: '2026-02-15', updatedAt: '' },
+      ],
+    }
+    const migraines = [
+      makeMigraine({ id: 'm0', date: '2025-12-01' }), // établit firstDate avant les périodes
+      makeMigraine({ id: 'm1', date: '2026-01-20' }), // dans le chevauchement
+    ]
+    const result = treatmentEfficacyAnalysis(migraines, [medoc])
+    expect(result).toHaveLength(1)
+    // intervalle fusionné 01-01 → 02-15 = 45 jours ≈ 1,48 mois -> ≈0,7 crise/mois
+    // (un calcul buggé qui somme 30+31=61 jours ≈ 2,00 mois donnerait 0,5)
+    expect(result[0].inPeriod.avgFreqPerMonth).toBe(0.7)
   })
 })
 

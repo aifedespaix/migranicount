@@ -3,13 +3,13 @@
     <div class="pill-group">
       <button
         v-for="tag in declencheurs.tags()"
-        :key="tag"
+        :key="tag.id"
         type="button"
         class="pill-btn"
-        :class="{ active: model.declencheurs.includes(tag) }"
+        :class="{ active: model.declencheurs.some((d) => d.id === tag.id) }"
         @click="toggleTag(tag)"
       >
-        {{ tag }}
+        {{ tag.nom }}
       </button>
     </div>
     <form class="add-form" @submit.prevent="addCustomTag">
@@ -35,22 +35,23 @@ import { ref } from 'vue'
 import { Plus } from 'lucide-vue-next'
 import { useDeclencheursStore } from '../../stores/declencheurs'
 import type { MigraineDraft } from './draft'
+import type { CatalogTag } from '../../types/migraine'
 
 const model = defineModel<MigraineDraft>({ required: true })
 const declencheurs = useDeclencheursStore()
 const customTag = ref('')
 const isFocused = ref(false)
 
-function toggleTag(tag: string) {
-  const i = model.value.declencheurs.indexOf(tag)
+function toggleTag(tag: CatalogTag) {
+  const i = model.value.declencheurs.findIndex((d) => d.id === tag.id)
   if (i >= 0) model.value.declencheurs.splice(i, 1)
   else model.value.declencheurs.push(tag)
 }
 
 function addCustomTag() {
   if (!customTag.value.trim()) return
-  declencheurs.register(customTag.value)
-  model.value.declencheurs.push(customTag.value)
+  const created = declencheurs.register(customTag.value)
+  model.value.declencheurs.push(created)
   customTag.value = ''
 }
 </script>

@@ -2,14 +2,14 @@
   <div class="step">
     <div class="pill-group">
       <button
-        v-for="nom in symptomes.symptomes()"
-        :key="nom"
+        v-for="tag in symptomes.symptomes()"
+        :key="tag.id"
         type="button"
         class="pill-btn"
-        :class="{ active: model.symptomes.includes(nom) }"
-        @click="toggleSymptome(nom)"
+        :class="{ active: model.symptomes.some((s) => s.id === tag.id) }"
+        @click="toggleSymptome(tag)"
       >
-        {{ nom }}
+        {{ tag.nom }}
       </button>
     </div>
     <form class="add-form" @submit.prevent="addCustom">
@@ -35,22 +35,23 @@ import { ref } from 'vue'
 import { Plus } from 'lucide-vue-next'
 import { useSymptomesStore } from '../../stores/symptomes'
 import type { MigraineDraft } from './draft'
+import type { CatalogTag } from '../../types/migraine'
 
 const model = defineModel<MigraineDraft>({ required: true })
 const symptomes = useSymptomesStore()
 const customNom = ref('')
 const isFocused = ref(false)
 
-function toggleSymptome(nom: string) {
-  const i = model.value.symptomes.indexOf(nom)
+function toggleSymptome(tag: CatalogTag) {
+  const i = model.value.symptomes.findIndex((s) => s.id === tag.id)
   if (i >= 0) model.value.symptomes.splice(i, 1)
-  else model.value.symptomes.push(nom)
+  else model.value.symptomes.push(tag)
 }
 
 function addCustom() {
   if (!customNom.value.trim()) return
-  symptomes.add(customNom.value)
-  model.value.symptomes.push(customNom.value)
+  const created = symptomes.add(customNom.value)
+  model.value.symptomes.push(created)
   customNom.value = ''
 }
 </script>

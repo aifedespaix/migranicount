@@ -1,4 +1,4 @@
-import type { Migraine, MedocFavori } from '../types/migraine'
+import type { Migraine, MedocFavori, CatalogTag } from '../types/migraine'
 
 export interface MigrainesDiff {
   added: Migraine[]
@@ -38,26 +38,26 @@ export function computeMigrainesDiff(before: Migraine[], after: Migraine[]): Mig
 export function computeCatalogueDiff(
   beforeMedocs: MedocFavori[],
   afterMedocs: MedocFavori[],
-  beforeDecl: string[],
-  afterDecl: string[],
-  beforeSympt: string[],
-  afterSympt: string[],
+  beforeDecl: CatalogTag[],
+  afterDecl: CatalogTag[],
+  beforeSympt: CatalogTag[],
+  afterSympt: CatalogTag[],
 ): CatalogueDiff {
   const items: string[] = []
 
-  const beforeMedocSet = new Set(beforeMedocs.map((f) => f.nom))
+  const beforeMedocSet = new Set(beforeMedocs.map((f) => f.id))
   for (const m of afterMedocs) {
-    if (!beforeMedocSet.has(m.nom)) items.push(`${m.nom} ajouté au catalogue`)
+    if (!beforeMedocSet.has(m.id)) items.push(`${m.nom} ajouté au catalogue`)
   }
 
-  const beforeDeclSet = new Set(beforeDecl)
+  const beforeDeclSet = new Set(beforeDecl.map((d) => d.id))
   for (const d of afterDecl) {
-    if (!beforeDeclSet.has(d)) items.push(`Déclencheur « ${d} » ajouté`)
+    if (!beforeDeclSet.has(d.id)) items.push(`Déclencheur « ${d.nom} » ajouté`)
   }
 
-  const beforeSymptSet = new Set(beforeSympt)
+  const beforeSymptSet = new Set(beforeSympt.map((s) => s.id))
   for (const s of afterSympt) {
-    if (!beforeSymptSet.has(s)) items.push(`Symptôme « ${s} » ajouté`)
+    if (!beforeSymptSet.has(s.id)) items.push(`Symptôme « ${s.nom} » ajouté`)
   }
 
   return { total: items.length, items }

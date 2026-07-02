@@ -51,7 +51,7 @@
         <div class="pill-group">
           <span v-if="model.avortee === true" class="pill-btn active">Avortée ✓</span>
           <span v-else-if="model.avortee === 'probable'" class="pill-btn active" style="background: var(--color-muted)">Avortée (probable)</span>
-          <span v-for="s in model.symptomes" :key="s" class="pill-btn">{{ s }}</span>
+          <span v-for="s in model.symptomes" :key="s.id" class="pill-btn">{{ s.nom }}</span>
         </div>
       </div>
     </div>
@@ -69,7 +69,7 @@
       <div class="recap-content">
         <p class="recap-label">Déclencheurs</p>
         <div class="pill-group">
-          <span v-for="d in model.declencheurs" :key="d" class="pill-btn">{{ d }}</span>
+          <span v-for="d in model.declencheurs" :key="d.id" class="pill-btn">{{ d.nom }}</span>
         </div>
       </div>
     </div>

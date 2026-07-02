@@ -143,6 +143,35 @@ async function createUserPreferencesCollection() {
   console.log(`✓ Collection "${name}" créée`)
 }
 
+async function createTombstonesCollection() {
+  const name = 'tombstones'
+  if (await collectionExists(name)) {
+    console.log(`· Collection "${name}" existe déjà - skip`)
+    return
+  }
+
+  const rule = '@request.auth.id = userId'
+  await pb.collections.create({
+    name,
+    type: 'base',
+    listRule: rule,
+    viewRule: rule,
+    createRule: rule,
+    updateRule: rule,
+    deleteRule: rule,
+    fields: [
+      { type: 'text', name: 'userId', required: true },
+      { type: 'text', name: 'entityType', required: true },
+      { type: 'text', name: 'entityId', required: true },
+      { type: 'text', name: 'deletedAt', required: true },
+    ],
+    indexes: [
+      'CREATE UNIQUE INDEX idx_tombstones_user_entity ON tombstones (userId, entityType, entityId)',
+    ],
+  })
+  console.log(`✓ Collection "${name}" créée`)
+}
+
 async function updateMedocsFavorisCollection() {
   try {
     const col = await pb.collections.getOne('medocs_favoris')
@@ -193,6 +222,7 @@ async function main() {
   await createMedocsFavorisCollection()
   await updateMedocsFavorisCollection()
   await createUserPreferencesCollection()
+  await createTombstonesCollection()
 
   console.log('\nConfiguration des regles de suppression...\n')
   await configureUsersDeleteRule()
@@ -201,15 +231,19 @@ async function main() {
 ┌─────────────────────────────────────────────────────────┐
 │  Collections PocketBase initialisées avec succès !     │
 │                                                         │
-│  ÉTAPE MANUELLE REQUISE :                               │
-│  Configurer Google OAuth2 dans l'admin PocketBase :     │
-│  ${PB_URL}_/                                            │
-│  → Settings > Auth providers > Google                   │
-│  → Activer + saisir Client ID et Client Secret         │
-│    depuis console.developers.google.com                 │
-│                                                         │
-│  Redirect URI à saisir dans Google Console :            │
-│  ${PB_URL}api/oauth2-redirect                           │
+│  ÉTAPES MANUELLES REQUISES :                             │
+│  1. Google OAuth2 dans l'admin PocketBase :              │
+│     ${PB_URL}_/                                          │
+│     → Settings > Auth providers > Google                 │
+│     → Activer + saisir Client ID et Client Secret        │
+│       depuis console.developers.google.com               │
+│     Redirect URI à saisir dans Google Console :          │
+│     ${PB_URL}api/oauth2-redirect                         │
+│                                                           │
+│  2. Batch requests (requis pour les suppressions          │
+│     atomiques delete+tombstone) :                        │
+│     ${PB_URL}_/ → Settings > Application > Batch requests│
+│     → Activer "Enable batch requests"                    │
 └─────────────────────────────────────────────────────────┘
 `)
   console.log('  → deleteRule "users" : id = @request.auth.id (suppression compte activee)')

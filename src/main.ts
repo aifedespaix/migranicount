@@ -8,6 +8,7 @@ import './styles/form.css'
 import './styles/fonts.css'
 import { pb } from './lib/pocketbase'
 import { useSync } from './composables/useSync'
+import { processOutbox } from './lib/syncOutbox'
 
 const pinia = createPinia()
 const app = createApp(App).use(pinia).use(router)
@@ -21,6 +22,11 @@ if (pb.authStore.isValid) {
     .then(() => sync.startRealtimeSync())
     .catch(console.error)
 }
+
+// Retente les opérations de sync en attente (échouées faute de réseau) dès la reconnexion
+window.addEventListener('online', () => {
+  void processOutbox()
+})
 
 if ('serviceWorker' in navigator) {
   const hadController = Boolean(navigator.serviceWorker.controller)

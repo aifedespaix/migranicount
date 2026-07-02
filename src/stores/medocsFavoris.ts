@@ -13,64 +13,67 @@ import {
   addTreatmentPeriod as repoAddTreatmentPeriod,
   updateTreatmentPeriod as repoUpdateTreatmentPeriod,
   removeTreatmentPeriod as repoRemoveTreatmentPeriod,
+  recordTombstone,
 } from '../storage/migraineRepository'
 import { pb } from '../lib/pocketbase'
-import { pushMedocFavori, deleteMedocFavoriRemote } from '../lib/pbSync'
+import { enqueue } from '../lib/syncOutbox'
 import type { TreatmentPeriod, MedocFavori } from '../types/migraine'
 import type { DefaultMedication } from '../data/defaultMedications'
 
 export const useMedocsFavorisStore = defineStore('medocsFavoris', () => {
   const favoris = ref(listMedocsFavoris())
 
-  function registerUsage(nom: string, description?: string): void {
-    registerMedocUsage(nom, description)
-    favoris.value = listMedocsFavoris()
-    const updated = favoris.value.find((f) => f.nom === nom)
-    if (updated && pb.authStore.isValid) pushMedocFavori(updated).catch(console.error)
+  function pushIfOnline(medoc: MedocFavori | undefined): void {
+    if (medoc && pb.authStore.isValid) enqueue({ type: 'medoc-upsert', medoc })
   }
 
-  function updateDescription(nom: string, description: string): void {
-    updateMedocFavoriDescription(nom, description)
+  function registerUsage(nom: string, description?: string): MedocFavori {
+    registerMedocUsage(nom, description)
     favoris.value = listMedocsFavoris()
-    const updated = favoris.value.find((f) => f.nom === nom)
-    if (updated && pb.authStore.isValid) pushMedocFavori(updated).catch(console.error)
+    const updated = favoris.value.find((f) => f.nom === nom)!
+    pushIfOnline(updated)
+    return updated
+  }
+
+  function updateDescription(id: string, description: string): void {
+    updateMedocFavoriDescription(id, description)
+    favoris.value = listMedocsFavoris()
+    pushIfOnline(favoris.value.find((f) => f.id === id))
   }
 
   function addMedoc(nom: string, description?: string): void {
     addMedocFavori(nom, description)
     favoris.value = listMedocsFavoris()
-    const added = favoris.value.find((f) => f.nom === nom)
-    if (added && pb.authStore.isValid) pushMedocFavori(added).catch(console.error)
+    pushIfOnline(favoris.value.find((f) => f.nom === nom))
   }
 
-  function deleteMedoc(nom: string): void {
-    deleteMedocFavori(nom)
+  function deleteMedoc(id: string): void {
+    deleteMedocFavori(id)
+    const tombstone = recordTombstone('medoc', id)
     favoris.value = listMedocsFavoris()
-    if (pb.authStore.isValid) deleteMedocFavoriRemote(nom).catch(console.error)
+    if (pb.authStore.isValid) enqueue({ type: 'medoc-delete', id, tombstone })
   }
 
   function restore(medoc: MedocFavori): void {
     addMedocFavoriWithDetails(medoc)
     favoris.value = listMedocsFavoris()
-    const added = favoris.value.find((f) => f.nom === medoc.nom)
-    if (added && pb.authStore.isValid) pushMedocFavori(added).catch(console.error)
-  }
-
-  function updatePosologie(nom: string, posologieParJour?: number, intervalleHeures?: number): void {
-    updateMedocFavoriPosologie(nom, posologieParJour, intervalleHeures)
-    favoris.value = listMedocsFavoris()
-    const updated = favoris.value.find((f) => f.nom === nom)
-    if (updated && pb.authStore.isValid) pushMedocFavori(updated).catch(console.error)
-  }
-
-  function renameMedoc(oldNom: string, newNom: string): void {
-    renameMedocFavori(oldNom, newNom)
-    favoris.value = listMedocsFavoris()
-    if (pb.authStore.isValid) {
-      deleteMedocFavoriRemote(oldNom).catch(console.error)
-      const renamed = favoris.value.find((f) => f.nom === newNom)
-      if (renamed) pushMedocFavori(renamed).catch(console.error)
+    const added = favoris.value.find((f) => f.id === medoc.id)
+    if (added && pb.authStore.isValid) {
+      enqueue({ type: 'medoc-upsert', medoc: added })
+      enqueue({ type: 'tombstone-clear', entityType: 'medoc', entityId: medoc.id })
     }
+  }
+
+  function updatePosologie(id: string, posologieParJour?: number, intervalleHeures?: number): void {
+    updateMedocFavoriPosologie(id, posologieParJour, intervalleHeures)
+    favoris.value = listMedocsFavoris()
+    pushIfOnline(favoris.value.find((f) => f.id === id))
+  }
+
+  function renameMedoc(id: string, newNom: string): void {
+    renameMedocFavori(id, newNom)
+    favoris.value = listMedocsFavoris()
+    pushIfOnline(favoris.value.find((f) => f.id === id))
   }
 
   function refresh(): void {
@@ -91,39 +94,34 @@ export const useMedocsFavorisStore = defineStore('medocsFavoris', () => {
       expectedEffects: med.expectedEffects,
     })
     favoris.value = listMedocsFavoris()
-    const added = favoris.value.find((f) => f.nom === med.nom)
-    if (added && pb.authStore.isValid) pushMedocFavori(added).catch(console.error)
+    pushIfOnline(favoris.value.find((f) => f.nom === med.nom))
   }
 
   function updateDetails(
-    nom: string,
+    id: string,
     updates: Partial<Pick<MedocFavori, 'isLongTermTreatment' | 'sideEffects' | 'expectedEffects'>>,
   ): void {
-    updateMedocFavoriDetails(nom, updates)
+    updateMedocFavoriDetails(id, updates)
     favoris.value = listMedocsFavoris()
-    const updated = favoris.value.find((f) => f.nom === nom)
-    if (updated && pb.authStore.isValid) pushMedocFavori(updated).catch(console.error)
+    pushIfOnline(favoris.value.find((f) => f.id === id))
   }
 
-  function addPeriod(nom: string, period: TreatmentPeriod): void {
-    repoAddTreatmentPeriod(nom, period)
+  function addPeriod(medocId: string, period: Omit<TreatmentPeriod, 'id' | 'updatedAt'>): void {
+    repoAddTreatmentPeriod(medocId, period)
     favoris.value = listMedocsFavoris()
-    const updated = favoris.value.find((f) => f.nom === nom)
-    if (updated && pb.authStore.isValid) pushMedocFavori(updated).catch(console.error)
+    pushIfOnline(favoris.value.find((f) => f.id === medocId))
   }
 
-  function updatePeriod(nom: string, index: number, period: TreatmentPeriod): void {
-    repoUpdateTreatmentPeriod(nom, index, period)
+  function updatePeriod(medocId: string, periodId: string, period: Omit<TreatmentPeriod, 'id' | 'updatedAt'>): void {
+    repoUpdateTreatmentPeriod(medocId, periodId, period)
     favoris.value = listMedocsFavoris()
-    const updated = favoris.value.find((f) => f.nom === nom)
-    if (updated && pb.authStore.isValid) pushMedocFavori(updated).catch(console.error)
+    pushIfOnline(favoris.value.find((f) => f.id === medocId))
   }
 
-  function removePeriod(nom: string, index: number): void {
-    repoRemoveTreatmentPeriod(nom, index)
+  function removePeriod(medocId: string, periodId: string): void {
+    repoRemoveTreatmentPeriod(medocId, periodId)
     favoris.value = listMedocsFavoris()
-    const updated = favoris.value.find((f) => f.nom === nom)
-    if (updated && pb.authStore.isValid) pushMedocFavori(updated).catch(console.error)
+    pushIfOnline(favoris.value.find((f) => f.id === medocId))
   }
 
   return {

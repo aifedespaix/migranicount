@@ -1,5 +1,11 @@
+export interface CatalogTag {
+  id: string
+  nom: string
+}
+
 export interface MedocPris {
   id: string
+  medocId: string | null
   nom: string
   description?: string
   heure: string
@@ -15,7 +21,7 @@ export interface Migraine {
   medocs: MedocPris[]
   intensite: number
   avortee: boolean | 'probable'
-  symptomes: string[]
+  symptomes: CatalogTag[]
   /** @deprecated remplacé par symptomes */
   nausee?: boolean
   /** @deprecated remplacé par symptomes */
@@ -23,18 +29,21 @@ export interface Migraine {
   /** @deprecated remplacé par symptomes */
   aura?: boolean
   zone: 'gauche' | 'droite' | 'bilaterale' | 'nuque' | null
-  declencheurs: string[]
+  declencheurs: CatalogTag[]
   notes?: string
   createdAt: string
   updatedAt: string
 }
 
 export interface TreatmentPeriod {
+  id: string
   startDate: string
   endDate: string | null
+  updatedAt: string
 }
 
 export interface MedocFavori {
+  id: string
   nom: string
   description?: string
   usageCount: number

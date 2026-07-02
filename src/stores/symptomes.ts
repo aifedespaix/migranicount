@@ -5,44 +5,58 @@ import {
   addSymptomeCustom,
   deleteSymptomeCustom,
   renameSymptomeCustom,
+  restoreSymptomeCustom,
+  recordTombstone,
 } from '../storage/migraineRepository'
 import { pb } from '../lib/pocketbase'
-import { patchPreferences } from '../lib/pbSync'
-
-const DEFAULTS = ['Nausée', 'Vomissement', 'Aura visuelle']
+import { enqueue } from '../lib/syncOutbox'
+import { DEFAULT_SYMPTOMES } from '../data/defaultTags'
+import type { CatalogTag } from '../types/migraine'
 
 export const useSymptomesStore = defineStore('symptomes', () => {
   const customSymptomes = ref(listSymptomesCustom())
 
-  function symptomes() {
-    return Array.from(new Set([...DEFAULTS, ...customSymptomes.value]))
+  function symptomes(): CatalogTag[] {
+    return [...DEFAULT_SYMPTOMES, ...customSymptomes.value]
   }
 
-  function isDefault(nom: string) {
-    return DEFAULTS.includes(nom)
+  function isDefault(id: string) {
+    return DEFAULT_SYMPTOMES.some((s) => s.id === id)
   }
 
-  function add(nom: string): void {
-    addSymptomeCustom(nom)
+  function add(nom: string): CatalogTag {
+    const created = addSymptomeCustom(nom)
     customSymptomes.value = listSymptomesCustom()
     if (pb.authStore.isValid) {
-      patchPreferences({ symptomesCustom: customSymptomes.value }).catch(console.error)
+      enqueue({ type: 'preferences-patch', patch: { symptomesCustom: customSymptomes.value } })
+    }
+    return created
+  }
+
+  function remove(id: string): void {
+    deleteSymptomeCustom(id)
+    const tombstone = recordTombstone('symptome', id)
+    customSymptomes.value = listSymptomesCustom()
+    if (pb.authStore.isValid) {
+      enqueue({ type: 'preferences-patch', patch: { symptomesCustom: customSymptomes.value } })
+      enqueue({ type: 'tombstone-push', tombstone })
     }
   }
 
-  function remove(nom: string): void {
-    deleteSymptomeCustom(nom)
+  function rename(id: string, newNom: string): void {
+    renameSymptomeCustom(id, newNom)
     customSymptomes.value = listSymptomesCustom()
     if (pb.authStore.isValid) {
-      patchPreferences({ symptomesCustom: customSymptomes.value }).catch(console.error)
+      enqueue({ type: 'preferences-patch', patch: { symptomesCustom: customSymptomes.value } })
     }
   }
 
-  function rename(oldNom: string, newNom: string): void {
-    renameSymptomeCustom(oldNom, newNom)
+  function restore(tag: CatalogTag): void {
+    restoreSymptomeCustom(tag)
     customSymptomes.value = listSymptomesCustom()
     if (pb.authStore.isValid) {
-      patchPreferences({ symptomesCustom: customSymptomes.value }).catch(console.error)
+      enqueue({ type: 'preferences-patch', patch: { symptomesCustom: customSymptomes.value } })
+      enqueue({ type: 'tombstone-clear', entityType: 'symptome', entityId: tag.id })
     }
   }
 
@@ -50,5 +64,5 @@ export const useSymptomesStore = defineStore('symptomes', () => {
     customSymptomes.value = listSymptomesCustom()
   }
 
-  return { customSymptomes, symptomes, isDefault, add, remove, rename, refresh }
+  return { customSymptomes, symptomes, isDefault, add, remove, rename, restore, refresh }
 })

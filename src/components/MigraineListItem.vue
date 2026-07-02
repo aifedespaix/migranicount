@@ -19,7 +19,7 @@
         <div v-if="migraine.symptomes.length" class="detail-row">
           <span class="detail-label">Symptômes</span>
           <div class="pill-list">
-            <span v-for="s in migraine.symptomes.slice(0, 3)" :key="s" class="pill">{{ s }}</span>
+            <span v-for="s in migraine.symptomes.slice(0, 3)" :key="s.id" class="pill">{{ s.nom }}</span>
             <span v-if="migraine.symptomes.length > 3" class="pill">+{{ migraine.symptomes.length - 3 }}</span>
           </div>
         </div>
@@ -31,7 +31,7 @@
 
       <div v-if="migraine.declencheurs.length || zoneLabel" class="card-footer">
         <span v-if="zoneLabel" class="footer-tag">{{ zoneLabel }}</span>
-        <span v-for="d in migraine.declencheurs.slice(0, 2)" :key="d" class="footer-tag">{{ d }}</span>
+        <span v-for="d in migraine.declencheurs.slice(0, 2)" :key="d.id" class="footer-tag">{{ d.nom }}</span>
         <span v-if="migraine.declencheurs.length > 2" class="footer-more">+{{ migraine.declencheurs.length - 2 }}</span>
       </div>
 

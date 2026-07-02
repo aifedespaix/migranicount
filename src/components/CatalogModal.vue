@@ -54,11 +54,11 @@
                 <ul class="catalog-list">
                   <li
                     v-for="item in medocs.crisisMeds"
-                    :key="item.nom"
+                    :key="item.id"
                     class="catalog-item"
                   >
                     <div
-                      v-if="editingMedoc?.nom === item.nom"
+                      v-if="editingMedoc?.id === item.id"
                       class="catalog-edit-form"
                     >
                       <input
@@ -160,7 +160,7 @@
                           type="button"
                           class="icon-action-btn icon-action-btn--danger"
                           title="Supprimer"
-                          @click="deleteMedoc(item.nom)"
+                          @click="deleteMedoc(item.id)"
                         >
                           <Trash2 :size="15" />
                         </button>
@@ -186,11 +186,11 @@
                 <ul class="catalog-list">
                   <li
                     v-for="item in medocs.longTermMeds"
-                    :key="item.nom"
+                    :key="item.id"
                     class="catalog-item catalog-item--fond"
                   >
                     <div
-                      v-if="editingMedoc?.nom === item.nom"
+                      v-if="editingMedoc?.id === item.id"
                       class="catalog-edit-form"
                     >
                       <input
@@ -253,14 +253,14 @@
                       <div class="periods-section">
                         <div class="periods-header">Périodes de prise</div>
                         <div
-                          v-for="(period, idx) in item.treatmentPeriods ?? []"
-                          :key="idx"
+                          v-for="period in item.treatmentPeriods ?? []"
+                          :key="period.id"
                           class="period-row"
                         >
                           <div
                             v-if="
-                              editingPeriod?.medocNom === item.nom &&
-                              editingPeriod.index === idx
+                              editingPeriod?.medocId === item.id &&
+                              editingPeriod.periodId === period.id
                             "
                             class="period-edit-form"
                           >
@@ -315,7 +315,7 @@
                                 type="button"
                                 class="icon-action-btn"
                                 title="Modifier"
-                                @click="openEditPeriod(item.nom, idx, period)"
+                                @click="openEditPeriod(item.id, period)"
                               >
                                 <Pencil :size="13" />
                               </button>
@@ -323,7 +323,7 @@
                                 type="button"
                                 class="icon-action-btn icon-action-btn--danger"
                                 title="Supprimer"
-                                @click="deletePeriod(item.nom, idx)"
+                                @click="deletePeriod(item.id, period.id)"
                               >
                                 <Trash2 :size="13" />
                               </button>
@@ -334,8 +334,8 @@
                         <!-- Formulaire ajout période -->
                         <div
                           v-if="
-                            editingPeriod?.medocNom === item.nom &&
-                            editingPeriod.index === null
+                            editingPeriod?.medocId === item.id &&
+                            editingPeriod.periodId === null
                           "
                           class="period-edit-form"
                         >
@@ -380,7 +380,7 @@
                           v-else
                           type="button"
                           class="btn-add-period"
-                          @click="openAddPeriod(item.nom)"
+                          @click="openAddPeriod(item.id)"
                         >
                           <Plus :size="12" /> Ajouter une période
                         </button>
@@ -420,8 +420,8 @@
                           class="catalog-period-chips"
                         >
                           <span
-                            v-for="(period, idx) in item.treatmentPeriods"
-                            :key="idx"
+                            v-for="period in item.treatmentPeriods"
+                            :key="period.id"
                             class="period-chip"
                             :class="{ 'period-chip--ongoing': !period.endDate }"
                             >{{ formatPeriodChip(period) }}</span
@@ -446,7 +446,7 @@
                           type="button"
                           class="icon-action-btn icon-action-btn--danger"
                           title="Supprimer"
-                          @click="deleteMedoc(item.nom)"
+                          @click="deleteMedoc(item.id)"
                         >
                           <Trash2 :size="15" />
                         </button>
@@ -466,12 +466,12 @@
               <div v-else-if="stepIndex === 1">
                 <ul class="catalog-list">
                   <li
-                    v-for="nom in symptomes.symptomes()"
-                    :key="nom"
+                    v-for="tag in symptomes.symptomes()"
+                    :key="tag.id"
                     class="catalog-item"
                   >
                     <div
-                      v-if="editingSymptome?.nom === nom"
+                      v-if="editingSymptome?.id === tag.id"
                       class="catalog-edit-form"
                     >
                       <input
@@ -501,29 +501,29 @@
                     </div>
                     <template v-else>
                       <div class="catalog-item-info">
-                        <span class="catalog-item-nom">{{ nom }}</span>
+                        <span class="catalog-item-nom">{{ tag.nom }}</span>
                         <span
-                          v-if="symptomes.isDefault(nom)"
+                          v-if="symptomes.isDefault(tag.id)"
                           class="catalog-item-badge"
                           >défaut</span
                         >
                       </div>
                       <div class="catalog-item-actions">
                         <button
-                          v-if="!symptomes.isDefault(nom)"
+                          v-if="!symptomes.isDefault(tag.id)"
                           type="button"
                           class="icon-action-btn"
                           title="Renommer"
-                          @click="startSymptomeEdit(nom)"
+                          @click="startSymptomeEdit(tag)"
                         >
                           <Pencil :size="15" />
                         </button>
                         <button
-                          v-if="!symptomes.isDefault(nom)"
+                          v-if="!symptomes.isDefault(tag.id)"
                           type="button"
                           class="icon-action-btn icon-action-btn--danger"
                           title="Supprimer"
-                          @click="deleteSymptome(nom)"
+                          @click="deleteSymptome(tag)"
                         >
                           <Trash2 :size="15" />
                         </button>
@@ -538,20 +538,20 @@
                 <ul class="catalog-list">
                   <li
                     v-for="tag in declencheurs.tags()"
-                    :key="tag"
+                    :key="tag.id"
                     class="catalog-item"
                   >
                     <div class="catalog-item-info">
-                      <span class="catalog-item-nom">{{ tag }}</span>
+                      <span class="catalog-item-nom">{{ tag.nom }}</span>
                       <span
-                        v-if="declencheurs.isDefault(tag)"
+                        v-if="declencheurs.isDefault(tag.id)"
                         class="catalog-item-badge"
                         >défaut</span
                       >
                     </div>
                     <div class="catalog-item-actions">
                       <button
-                        v-if="!declencheurs.isDefault(tag)"
+                        v-if="!declencheurs.isDefault(tag.id)"
                         type="button"
                         class="icon-action-btn icon-action-btn--danger"
                         title="Supprimer"
@@ -669,7 +669,8 @@ import { useDeclencheursStore } from "../stores/declencheurs";
 import { useMedocsFavorisStore } from "../stores/medocsFavoris";
 import { useSymptomesStore } from "../stores/symptomes";
 import { useToastStore } from "../stores/toast";
-import type { MedocFavori, TreatmentPeriod } from "../types/migraine";
+import type { MedocFavori, TreatmentPeriod, CatalogTag } from "../types/migraine";
+import { periodsOverlap } from "../lib/periodMerge";
 import { todayISO } from "../utils/date";
 import { capitalizeFirstLetter } from "../utils/text";
 import AddMedocModal from "./AddMedocModal.vue";
@@ -723,7 +724,7 @@ const showAddMedoc = ref(false);
 // ─── Édition médicaments ───────────────────────────────────────────────────
 
 const editingMedoc = ref<{
-  nom: string;
+  id: string;
   newNom: string;
   description: string;
   posologieParJour: number | undefined;
@@ -735,7 +736,7 @@ const editingMedoc = ref<{
 
 function startMedocEdit(item: MedocFavori) {
   editingMedoc.value = {
-    nom: item.nom,
+    id: item.id,
     newNom: item.nom,
     description: item.description ?? "",
     posologieParJour: item.posologieParJour,
@@ -749,7 +750,7 @@ function startMedocEdit(item: MedocFavori) {
 function saveMedocEdit() {
   if (!editingMedoc.value) return;
   const {
-    nom,
+    id,
     newNom,
     description,
     posologieParJour,
@@ -759,15 +760,14 @@ function saveMedocEdit() {
     expectedEffects,
   } = editingMedoc.value;
   const capitalized = capitalizeFirstLetter(newNom.trim());
-  if (capitalized && capitalized !== nom) medocs.renameMedoc(nom, capitalized);
-  const finalNom = capitalized || nom;
-  medocs.updateDescription(finalNom, description);
+  if (capitalized) medocs.renameMedoc(id, capitalized);
+  medocs.updateDescription(id, description);
   medocs.updatePosologie(
-    finalNom,
+    id,
     posologieParJour && !isNaN(posologieParJour) ? posologieParJour : undefined,
     intervalleHeures && !isNaN(intervalleHeures) ? intervalleHeures : undefined,
   );
-  medocs.updateDetails(finalNom, {
+  medocs.updateDetails(id, {
     isLongTermTreatment,
     sideEffects: sideEffects || undefined,
     expectedEffects: expectedEffects || undefined,
@@ -779,27 +779,27 @@ function saveMedocEdit() {
 // ─── Périodes de traitement ───────────────────────────────────────────────
 
 const editingPeriod = ref<{
-  medocNom: string;
-  index: number | null;
+  medocId: string;
+  periodId: string | null;
   startDate: string;
   endDate: string;
   ongoing: boolean;
 } | null>(null);
 
-function openAddPeriod(nom: string) {
+function openAddPeriod(medocId: string) {
   editingPeriod.value = {
-    medocNom: nom,
-    index: null,
+    medocId,
+    periodId: null,
     startDate: todayISO(),
     endDate: "",
     ongoing: true,
   };
 }
 
-function openEditPeriod(nom: string, index: number, period: TreatmentPeriod) {
+function openEditPeriod(medocId: string, period: TreatmentPeriod) {
   editingPeriod.value = {
-    medocNom: nom,
-    index,
+    medocId,
+    periodId: period.id,
     startDate: period.startDate,
     endDate: period.endDate ?? "",
     ongoing: period.endDate === null,
@@ -808,14 +808,29 @@ function openEditPeriod(nom: string, index: number, period: TreatmentPeriod) {
 
 function savePeriod() {
   if (!editingPeriod.value) return;
-  const { medocNom, index, startDate, endDate, ongoing } = editingPeriod.value;
+  const { medocId, periodId, startDate, endDate, ongoing } = editingPeriod.value;
   if (!startDate) return;
-  const period: TreatmentPeriod = {
-    startDate,
-    endDate: ongoing ? null : endDate || null,
-  };
-  if (index === null) medocs.addPeriod(medocNom, period);
-  else medocs.updatePeriod(medocNom, index, period);
+  const finalEndDate = ongoing ? null : endDate || null;
+  if (finalEndDate && finalEndDate < startDate) {
+    toastStore.add({
+      type: "danger",
+      message: "La date de fin doit être postérieure à la date de début",
+    });
+    return;
+  }
+  const period = { startDate, endDate: finalEndDate };
+
+  const medoc = medocs.favoris.find((m) => m.id === medocId);
+  const otherPeriods = (medoc?.treatmentPeriods ?? []).filter((p) => p.id !== periodId);
+  if (otherPeriods.some((p) => periodsOverlap(p, period))) {
+    toastStore.add({
+      type: "danger",
+      message: "Cette période chevauche une période existante pour ce médicament",
+    });
+  }
+
+  if (periodId === null) medocs.addPeriod(medocId, period);
+  else medocs.updatePeriod(medocId, periodId, period);
   editingPeriod.value = null;
 }
 
@@ -852,21 +867,21 @@ function formatShortDate(iso: string): string {
 // ─── Symptômes ────────────────────────────────────────────────────────────
 
 const newSymptomeNom = ref("");
-const editingSymptome = ref<{ nom: string; newNom: string } | null>(null);
+const editingSymptome = ref<{ id: string; newNom: string } | null>(null);
 
 function addSymptome() {
   if (!newSymptomeNom.value.trim()) return;
   symptomes.add(capitalizeFirstLetter(newSymptomeNom.value.trim()));
   newSymptomeNom.value = "";
 }
-function startSymptomeEdit(nom: string) {
-  editingSymptome.value = { nom, newNom: nom };
+function startSymptomeEdit(tag: CatalogTag) {
+  editingSymptome.value = { id: tag.id, newNom: tag.nom };
 }
 function saveSymptomeEdit() {
   if (!editingSymptome.value) return;
-  const { nom, newNom } = editingSymptome.value;
+  const { id, newNom } = editingSymptome.value;
   const capitalized = capitalizeFirstLetter(newNom.trim());
-  if (capitalized && capitalized !== nom) symptomes.rename(nom, capitalized);
+  if (capitalized) symptomes.rename(id, capitalized);
   editingSymptome.value = null;
 }
 
@@ -881,37 +896,37 @@ function addDeclencheur() {
 
 // ─── Suppression ──────────────────────────────────────────────────────────
 
-function deleteMedoc(nom: string) {
-  const snapshot = medocs.favoris.find((m) => m.nom === nom);
+function deleteMedoc(id: string) {
+  const snapshot = medocs.favoris.find((m) => m.id === id);
   if (!snapshot) return;
-  medocs.deleteMedoc(nom);
+  medocs.deleteMedoc(id);
   toastStore.add({
     type: "danger",
-    message: `Médicament "${nom}" supprimé`,
+    message: `Médicament "${snapshot.nom}" supprimé`,
     action: { label: "Annuler", handler: () => medocs.restore({ ...snapshot }) },
   });
 }
 
-function deleteSymptome(nom: string) {
-  symptomes.remove(nom);
+function deleteSymptome(tag: CatalogTag) {
+  symptomes.remove(tag.id);
   toastStore.add({
     type: "danger",
-    message: `Symptôme "${nom}" supprimé`,
-    action: { label: "Annuler", handler: () => symptomes.add(nom) },
+    message: `Symptôme "${tag.nom}" supprimé`,
+    action: { label: "Annuler", handler: () => symptomes.restore(tag) },
   });
 }
 
-function deleteDeclencheur(tag: string) {
-  declencheurs.deleteCustom(tag);
+function deleteDeclencheur(tag: CatalogTag) {
+  declencheurs.deleteCustom(tag.id);
   toastStore.add({
     type: "danger",
-    message: `Déclencheur "${tag}" supprimé`,
-    action: { label: "Annuler", handler: () => declencheurs.register(tag) },
+    message: `Déclencheur "${tag.nom}" supprimé`,
+    action: { label: "Annuler", handler: () => declencheurs.restore(tag) },
   });
 }
 
-function deletePeriod(medocNom: string, idx: number) {
-  medocs.removePeriod(medocNom, idx);
+function deletePeriod(medocId: string, periodId: string) {
+  medocs.removePeriod(medocId, periodId);
   toastStore.add({ type: "danger", message: "Période supprimée" });
 }
 </script>

@@ -1,13 +1,42 @@
 import { getJSON, setJSON } from './storage'
 import { newId } from '../utils/uuid'
-import type { Migraine, MedocFavori, TreatmentPeriod } from '../types/migraine'
+import { DEFAULT_SYMPTOMES, DEFAULT_DECLENCHEURS } from '../data/defaultTags'
+import type { Migraine, MedocFavori, TreatmentPeriod, CatalogTag } from '../types/migraine'
+import type { Tombstone, TombstoneEntityType } from '../types/sync'
 
 const MIGRAINES_KEY = 'migraines'
 const MEDOCS_KEY = 'medocsFavoris'
 const DECLENCHEURS_KEY = 'declencheursFavoris'
 const SYMPTOMES_KEY = 'symptomesCustom'
+const TOMBSTONES_KEY = 'tombstones'
 const SCHEMA_VERSION_KEY = 'schemaVersion'
-const SCHEMA_VERSION = 3
+const SCHEMA_VERSION = 4
+
+export function listTombstones(): Tombstone[] {
+  return getJSON<Tombstone[]>(TOMBSTONES_KEY, [])
+}
+
+/** Enregistre (ou rafraîchit) une suppression, pour empêcher la résurrection lors d'un merge de sync. */
+export function recordTombstone(entityType: TombstoneEntityType, entityId: string): Tombstone {
+  const items = listTombstones()
+  const existing = items.find((t) => t.entityType === entityType && t.entityId === entityId)
+  const tombstone: Tombstone = { entityType, entityId, deletedAt: new Date().toISOString() }
+  if (existing) {
+    existing.deletedAt = tombstone.deletedAt
+    setJSON(TOMBSTONES_KEY, items)
+    return existing
+  }
+  setJSON(TOMBSTONES_KEY, [...items, tombstone])
+  return tombstone
+}
+
+/** Efface une suppression enregistrée (undo), pour permettre à l'entité restaurée d'être re-synchronisée normalement. */
+export function clearTombstone(entityType: TombstoneEntityType, entityId: string): void {
+  setJSON(
+    TOMBSTONES_KEY,
+    listTombstones().filter((t) => !(t.entityType === entityType && t.entityId === entityId)),
+  )
+}
 
 function migrateMigraine(m: any): Migraine {
   if (!Array.isArray(m.symptomes)) {
@@ -21,10 +50,68 @@ function migrateMigraine(m: any): Migraine {
     m.zone = m.localisation
     delete m.localisation
   }
+  if (!Array.isArray(m.declencheurs)) m.declencheurs = []
   return m as Migraine
 }
 
+function toCatalogTags(raw: any[]): CatalogTag[] {
+  if (raw.length === 0) return []
+  if (typeof raw[0] === 'string') return (raw as string[]).map((nom) => ({ id: newId(), nom }))
+  return raw as CatalogTag[]
+}
+
+/** Migre en une fois toutes les données héritées (string[] / medocs sans id) vers le modèle à IDs stables. */
+function migrateToV4(): void {
+  const rawMedocs = getJSON<any[]>(MEDOCS_KEY, [])
+  let medocsChanged = false
+  for (const m of rawMedocs) {
+    if (!m.id) {
+      m.id = newId()
+      medocsChanged = true
+    }
+  }
+  if (medocsChanged) setJSON(MEDOCS_KEY, rawMedocs)
+  const medocIdByNom = new Map<string, string>(rawMedocs.map((m) => [m.nom, m.id]))
+
+  const symptCustom = toCatalogTags(getJSON<any[]>(SYMPTOMES_KEY, []))
+  setJSON(SYMPTOMES_KEY, symptCustom)
+
+  const declCustom = toCatalogTags(getJSON<any[]>(DECLENCHEURS_KEY, []))
+  setJSON(DECLENCHEURS_KEY, declCustom)
+
+  const symptByNom = new Map<string, CatalogTag>(
+    [...DEFAULT_SYMPTOMES, ...symptCustom].map((s) => [s.nom, s]),
+  )
+  const declByNom = new Map<string, CatalogTag>(
+    [...DEFAULT_DECLENCHEURS, ...declCustom].map((d) => [d.nom, d]),
+  )
+
+  const rawMigraines = getJSON<any[]>(MIGRAINES_KEY, []).map(migrateMigraine) as any[]
+  for (const m of rawMigraines) {
+    if (m.symptomes.length && typeof m.symptomes[0] === 'string') {
+      m.symptomes = (m.symptomes as string[]).map((nom) => symptByNom.get(nom) ?? { id: newId(), nom })
+    }
+    if (m.declencheurs.length && typeof m.declencheurs[0] === 'string') {
+      m.declencheurs = (m.declencheurs as string[]).map((nom) => declByNom.get(nom) ?? { id: newId(), nom })
+    }
+    if (Array.isArray(m.medocs)) {
+      for (const p of m.medocs) {
+        if (p.medocId === undefined) p.medocId = medocIdByNom.get(p.nom) ?? null
+      }
+    }
+  }
+  setJSON(MIGRAINES_KEY, rawMigraines)
+}
+
+function ensureMigrated(): void {
+  const version = getJSON<number>(SCHEMA_VERSION_KEY, 0)
+  if (version >= SCHEMA_VERSION) return
+  migrateToV4()
+  setJSON(SCHEMA_VERSION_KEY, SCHEMA_VERSION)
+}
+
 export function listMigraines(): Migraine[] {
+  ensureMigrated()
   return getJSON<Migraine[]>(MIGRAINES_KEY, []).map(migrateMigraine)
 }
 
@@ -53,135 +140,196 @@ export function saveMigraine(input: MigraineInput): Migraine {
 
 export function deleteMigraine(id: string): void {
   setJSON(MIGRAINES_KEY, listMigraines().filter((m) => m.id !== id))
+  recordTombstone('migraine', id)
 }
 
 export function listMedocsFavoris(): MedocFavori[] {
+  ensureMigrated()
   return getJSON<MedocFavori[]>(MEDOCS_KEY, [])
 }
 
-export function registerMedocUsage(nom: string, description?: string): void {
+export function registerMedocUsage(nom: string, description?: string): MedocFavori {
   const favoris = listMedocsFavoris()
   const existing = favoris.find((f) => f.nom === nom)
   if (existing) {
     existing.usageCount += 1
     if (description) existing.description = description
-  } else {
-    favoris.push({ nom, description, usageCount: 1 })
+    setJSON(MEDOCS_KEY, favoris)
+    return existing
   }
+  const created: MedocFavori = { id: newId(), nom, description, usageCount: 1 }
+  favoris.push(created)
   setJSON(MEDOCS_KEY, favoris)
+  return created
 }
 
-export function updateMedocFavoriDescription(nom: string, description: string): void {
+export function updateMedocFavoriDescription(id: string, description: string): void {
   const favoris = listMedocsFavoris()
-  const existing = favoris.find((f) => f.nom === nom)
+  const existing = favoris.find((f) => f.id === id)
   if (!existing) return
   existing.description = description || undefined
   setJSON(MEDOCS_KEY, favoris)
 }
 
 export function updateMedocFavoriPosologie(
-  nom: string,
+  id: string,
   posologieParJour?: number,
   intervalleHeures?: number,
 ): void {
   const favoris = listMedocsFavoris()
-  const existing = favoris.find((f) => f.nom === nom)
+  const existing = favoris.find((f) => f.id === id)
   if (!existing) return
   existing.posologieParJour = posologieParJour || undefined
   existing.intervalleHeures = intervalleHeures || undefined
   setJSON(MEDOCS_KEY, favoris)
 }
 
-export function listDeclencheursFavoris(): string[] {
-  return getJSON<string[]>(DECLENCHEURS_KEY, [])
+export function listDeclencheursFavoris(): CatalogTag[] {
+  ensureMigrated()
+  return getJSON<CatalogTag[]>(DECLENCHEURS_KEY, [])
 }
 
-export function registerDeclencheur(tag: string): void {
+export function registerDeclencheur(nom: string): CatalogTag {
   const tags = listDeclencheursFavoris()
-  if (!tags.includes(tag)) setJSON(DECLENCHEURS_KEY, [...tags, tag])
+  const existing = tags.find((t) => t.nom === nom)
+  if (existing) return existing
+  const created: CatalogTag = { id: newId(), nom }
+  setJSON(DECLENCHEURS_KEY, [...tags, created])
+  return created
 }
 
-export function deleteDeclencheur(tag: string): void {
-  setJSON(DECLENCHEURS_KEY, listDeclencheursFavoris().filter((t) => t !== tag))
+export function deleteDeclencheur(id: string): void {
+  setJSON(DECLENCHEURS_KEY, listDeclencheursFavoris().filter((t) => t.id !== id))
+  recordTombstone('declencheur', id)
 }
 
-export function addMedocFavori(nom: string, description?: string): void {
+export function addMedocFavori(nom: string, description?: string): MedocFavori {
   const favoris = listMedocsFavoris()
-  if (!favoris.find((f) => f.nom === nom)) {
-    favoris.push({ nom, description, usageCount: 0 })
-    setJSON(MEDOCS_KEY, favoris)
-  }
+  const existing = favoris.find((f) => f.nom === nom)
+  if (existing) return existing
+  const created: MedocFavori = { id: newId(), nom, description, usageCount: 0 }
+  favoris.push(created)
+  setJSON(MEDOCS_KEY, favoris)
+  return created
 }
 
-export function deleteMedocFavori(nom: string): void {
-  setJSON(MEDOCS_KEY, listMedocsFavoris().filter((f) => f.nom !== nom))
+export function deleteMedocFavori(id: string): void {
+  setJSON(MEDOCS_KEY, listMedocsFavoris().filter((f) => f.id !== id))
+  recordTombstone('medoc', id)
 }
 
-export function renameMedocFavori(oldNom: string, newNom: string): void {
+export function renameMedocFavori(id: string, newNom: string): void {
   const favoris = listMedocsFavoris()
-  const existing = favoris.find((f) => f.nom === oldNom)
+  const existing = favoris.find((f) => f.id === id)
   if (!existing) return
   existing.nom = newNom
   setJSON(MEDOCS_KEY, favoris)
 }
 
-export function listSymptomesCustom(): string[] {
-  return getJSON<string[]>(SYMPTOMES_KEY, [])
+export function listSymptomesCustom(): CatalogTag[] {
+  ensureMigrated()
+  return getJSON<CatalogTag[]>(SYMPTOMES_KEY, [])
 }
 
-export function addSymptomeCustom(nom: string): void {
+export function addSymptomeCustom(nom: string): CatalogTag {
   const items = listSymptomesCustom()
-  if (!items.includes(nom)) setJSON(SYMPTOMES_KEY, [...items, nom])
+  const existing = items.find((s) => s.nom === nom)
+  if (existing) return existing
+  const created: CatalogTag = { id: newId(), nom }
+  setJSON(SYMPTOMES_KEY, [...items, created])
+  return created
 }
 
-export function deleteSymptomeCustom(nom: string): void {
-  setJSON(SYMPTOMES_KEY, listSymptomesCustom().filter((s) => s !== nom))
+export function deleteSymptomeCustom(id: string): void {
+  setJSON(SYMPTOMES_KEY, listSymptomesCustom().filter((s) => s.id !== id))
+  recordTombstone('symptome', id)
 }
 
-export function renameSymptomeCustom(oldNom: string, newNom: string): void {
-  setJSON(SYMPTOMES_KEY, listSymptomesCustom().map((s) => (s === oldNom ? newNom : s)))
+export function renameSymptomeCustom(id: string, newNom: string): void {
+  setJSON(SYMPTOMES_KEY, listSymptomesCustom().map((s) => (s.id === id ? { ...s, nom: newNom } : s)))
 }
 
-export function addMedocFavoriWithDetails(med: Omit<MedocFavori, 'usageCount'>): void {
+/** Réinsère un symptôme en conservant son id d'origine (undo de suppression), au lieu d'en miner un nouveau. */
+export function restoreSymptomeCustom(tag: CatalogTag): CatalogTag {
+  const items = listSymptomesCustom()
+  const existing = items.find((s) => s.id === tag.id || s.nom === tag.nom)
+  clearTombstone('symptome', tag.id)
+  if (existing) return existing
+  setJSON(SYMPTOMES_KEY, [...items, tag])
+  return tag
+}
+
+/** Réinsère un déclencheur en conservant son id d'origine (undo de suppression), au lieu d'en miner un nouveau. */
+export function restoreDeclencheur(tag: CatalogTag): CatalogTag {
+  const items = listDeclencheursFavoris()
+  const existing = items.find((t) => t.id === tag.id || t.nom === tag.nom)
+  clearTombstone('declencheur', tag.id)
+  if (existing) return existing
+  setJSON(DECLENCHEURS_KEY, [...items, tag])
+  return tag
+}
+
+export function addMedocFavoriWithDetails(
+  med: Omit<MedocFavori, 'id' | 'usageCount'> & { id?: string; usageCount?: number },
+): MedocFavori {
   const favoris = listMedocsFavoris()
-  if (!favoris.find((f) => f.nom === med.nom)) {
-    favoris.push({ ...med, usageCount: 0 })
-    setJSON(MEDOCS_KEY, favoris)
-  }
+  const existing = favoris.find((f) => f.nom === med.nom)
+  if (existing) return existing
+  const created: MedocFavori = { ...med, id: med.id ?? newId(), usageCount: med.usageCount ?? 0 }
+  favoris.push(created)
+  setJSON(MEDOCS_KEY, favoris)
+  clearTombstone('medoc', created.id)
+  return created
 }
 
 export function updateMedocFavoriDetails(
-  nom: string,
+  id: string,
   updates: Partial<Pick<MedocFavori, 'isLongTermTreatment' | 'sideEffects' | 'expectedEffects'>>,
 ): void {
   const favoris = listMedocsFavoris()
-  const existing = favoris.find((f) => f.nom === nom)
+  const existing = favoris.find((f) => f.id === id)
   if (!existing) return
   Object.assign(existing, updates)
   setJSON(MEDOCS_KEY, favoris)
 }
 
-export function addTreatmentPeriod(nom: string, period: TreatmentPeriod): void {
+export function addTreatmentPeriod(medocId: string, period: Omit<TreatmentPeriod, 'id' | 'updatedAt'>): void {
   const favoris = listMedocsFavoris()
-  const existing = favoris.find((f) => f.nom === nom)
+  const existing = favoris.find((f) => f.id === medocId)
   if (!existing) return
-  existing.treatmentPeriods = [...(existing.treatmentPeriods ?? []), period]
+  const created: TreatmentPeriod = { ...period, id: newId(), updatedAt: new Date().toISOString() }
+  existing.treatmentPeriods = [...(existing.treatmentPeriods ?? []), created]
   setJSON(MEDOCS_KEY, favoris)
 }
 
-export function updateTreatmentPeriod(nom: string, index: number, period: TreatmentPeriod): void {
+export function updateTreatmentPeriod(
+  medocId: string,
+  periodId: string,
+  period: Omit<TreatmentPeriod, 'id' | 'updatedAt'>,
+): void {
   const favoris = listMedocsFavoris()
-  const existing = favoris.find((f) => f.nom === nom)
-  if (!existing || !existing.treatmentPeriods || index >= existing.treatmentPeriods.length) return
-  existing.treatmentPeriods = existing.treatmentPeriods.map((p, i) => (i === index ? period : p))
-  setJSON(MEDOCS_KEY, favoris)
-}
-
-export function removeTreatmentPeriod(nom: string, index: number): void {
-  const favoris = listMedocsFavoris()
-  const existing = favoris.find((f) => f.nom === nom)
+  const existing = favoris.find((f) => f.id === medocId)
   if (!existing?.treatmentPeriods) return
-  existing.treatmentPeriods = existing.treatmentPeriods.filter((_, i) => i !== index)
+  existing.treatmentPeriods = existing.treatmentPeriods.map((p) =>
+    p.id === periodId ? { ...period, id: periodId, updatedAt: new Date().toISOString() } : p,
+  )
+  setJSON(MEDOCS_KEY, favoris)
+}
+
+/** Remplace en bloc les périodes d'un médicament (utilisé par le merge de sync, après fusion par id). */
+export function setTreatmentPeriods(medocId: string, periods: TreatmentPeriod[]): void {
+  const favoris = listMedocsFavoris()
+  const existing = favoris.find((f) => f.id === medocId)
+  if (!existing) return
+  existing.treatmentPeriods = periods
+  setJSON(MEDOCS_KEY, favoris)
+}
+
+export function removeTreatmentPeriod(medocId: string, periodId: string): void {
+  const favoris = listMedocsFavoris()
+  const existing = favoris.find((f) => f.id === medocId)
+  if (!existing?.treatmentPeriods) return
+  existing.treatmentPeriods = existing.treatmentPeriods.filter((p) => p.id !== periodId)
   setJSON(MEDOCS_KEY, favoris)
 }
 

@@ -1,4 +1,5 @@
-import type { MedocFavori, Migraine } from '../types/migraine'
+import type { MedocFavori, Migraine, CatalogTag } from '../types/migraine'
+import type { Tombstone, TombstoneEntityType } from '../types/sync'
 import { pb } from './pocketbase'
 
 function avorteeToStr(v: boolean | 'probable'): string {
@@ -38,9 +39,9 @@ export function remoteToMigraine(r: Record<string, unknown>): Migraine {
     medocs: (r['medocs'] as Migraine['medocs']) || [],
     intensite: r['intensite'] as number,
     avortee: strToAvortee(r['avortee'] as string),
-    symptomes: (r['symptomes'] as string[]) || [],
+    symptomes: (r['symptomes'] as CatalogTag[]) || [],
     zone: (r['zone'] as Migraine['zone']) || null,
-    declencheurs: (r['declencheurs'] as string[]) || [],
+    declencheurs: (r['declencheurs'] as CatalogTag[]) || [],
     notes: (r['notes'] as string) || undefined,
     createdAt: r['created'] as string,
     updatedAt: (r['localUpdatedAt'] as string) || (r['created'] as string),
@@ -68,12 +69,38 @@ export async function deleteMigraineRemote(localId: string): Promise<void> {
   }
 }
 
+/**
+ * Supprime l'enregistrement distant ET crée le tombstone en une seule transaction PocketBase
+ * (pb.createBatch) : soit les deux réussissent, soit aucun n'est appliqué. Évite l'état
+ * intermédiaire "supprimé à distance mais sans tombstone" (ou l'inverse) qu'un enchaînement
+ * de deux requêtes séparées peut laisser en cas d'échec réseau entre les deux.
+ */
+export async function deleteMigraineAndTombstoneAtomic(localId: string, tombstone: Tombstone): Promise<void> {
+  if (!pb.authStore.isValid) return
+  const userId = pb.authStore.record!.id
+  const [existingMigraine, existingTombstone] = await Promise.all([
+    pb.collection('migraines').getFirstListItem(`localId="${localId}"`).catch(() => null),
+    pb.collection('tombstones')
+      .getFirstListItem(`userId="${userId}" && entityType="migraine" && entityId="${localId}"`)
+      .catch(() => null),
+  ])
+  if (!existingMigraine && existingTombstone) return // déjà pleinement supprimé côté distant
+  const batch = pb.createBatch()
+  if (existingMigraine) batch.collection('migraines').delete(existingMigraine['id'] as string)
+  if (!existingTombstone) {
+    batch.collection('tombstones').create({
+      userId, entityType: 'migraine', entityId: localId, deletedAt: tombstone.deletedAt,
+    })
+  }
+  await batch.send()
+}
+
 export async function pushMedocFavori(f: MedocFavori): Promise<void> {
   if (!pb.authStore.isValid) return
   const userId = pb.authStore.record!.id
   try {
     const existing = await pb.collection('medocs_favoris').getFirstListItem(
-      `userId="${userId}" && localId="${f.nom}"`
+      `userId="${userId}" && localId="${f.id}"`
     )
     await pb.collection('medocs_favoris').update(existing['id'] as string, {
       nom: f.nom,
@@ -89,7 +116,7 @@ export async function pushMedocFavori(f: MedocFavori): Promise<void> {
   } catch {
     await pb.collection('medocs_favoris').create({
       userId,
-      localId: f.nom,
+      localId: f.id,
       nom: f.nom,
       description: f.description ?? null,
       usageCount: f.usageCount,
@@ -103,16 +130,65 @@ export async function pushMedocFavori(f: MedocFavori): Promise<void> {
   }
 }
 
-export async function deleteMedocFavoriRemote(nom: string): Promise<void> {
+export async function deleteMedocFavoriRemote(id: string): Promise<void> {
   if (!pb.authStore.isValid) return
   const userId = pb.authStore.record!.id
   try {
     const existing = await pb.collection('medocs_favoris').getFirstListItem(
-      `userId="${userId}" && localId="${nom}"`
+      `userId="${userId}" && localId="${id}"`
     )
     await pb.collection('medocs_favoris').delete(existing['id'] as string)
   } catch {
     // not found remotely
+  }
+}
+
+/** Équivalent atomique (pb.createBatch) de deleteMedocFavoriRemote + pushTombstone. Voir deleteMigraineAndTombstoneAtomic. */
+export async function deleteMedocAndTombstoneAtomic(id: string, tombstone: Tombstone): Promise<void> {
+  if (!pb.authStore.isValid) return
+  const userId = pb.authStore.record!.id
+  const [existingMedoc, existingTombstone] = await Promise.all([
+    pb.collection('medocs_favoris').getFirstListItem(`userId="${userId}" && localId="${id}"`).catch(() => null),
+    pb.collection('tombstones')
+      .getFirstListItem(`userId="${userId}" && entityType="medoc" && entityId="${id}"`)
+      .catch(() => null),
+  ])
+  if (!existingMedoc && existingTombstone) return
+  const batch = pb.createBatch()
+  if (existingMedoc) batch.collection('medocs_favoris').delete(existingMedoc['id'] as string)
+  if (!existingTombstone) {
+    batch.collection('tombstones').create({
+      userId, entityType: 'medoc', entityId: id, deletedAt: tombstone.deletedAt,
+    })
+  }
+  await batch.send()
+}
+
+export async function pushTombstone(t: Tombstone): Promise<void> {
+  if (!pb.authStore.isValid) return
+  const userId = pb.authStore.record!.id
+  try {
+    await pb.collection('tombstones').create({
+      userId,
+      entityType: t.entityType,
+      entityId: t.entityId,
+      deletedAt: t.deletedAt,
+    })
+  } catch {
+    // déjà présent (contrainte d'unicité userId+entityType+entityId) - rien à faire
+  }
+}
+
+export async function deleteTombstoneRemote(entityType: TombstoneEntityType, entityId: string): Promise<void> {
+  if (!pb.authStore.isValid) return
+  const userId = pb.authStore.record!.id
+  try {
+    const existing = await pb.collection('tombstones').getFirstListItem(
+      `userId="${userId}" && entityType="${entityType}" && entityId="${entityId}"`
+    )
+    await pb.collection('tombstones').delete(existing['id'] as string)
+  } catch {
+    // pas de tombstone distant - rien à faire
   }
 }
 
