@@ -3,6 +3,8 @@ import StatsView from '../views/StatsView.vue'
 import ListView from '../views/ListView.vue'
 import SettingsView from '../views/SettingsView.vue'
 import ProfileView from '../views/ProfileView.vue'
+import ConfidentialiteView from '../views/ConfidentialiteView.vue'
+import MentionsLegalesView from '../views/MentionsLegalesView.vue'
 import { pb } from '../lib/pocketbase'
 import { applySeo } from '../composables/useHead'
 import type { SeoMeta } from '../composables/useHead'
@@ -26,6 +28,26 @@ export const router = createRouter({
           title: 'Tableau de bord',
           description: 'Consultez vos statistiques de migraines : fréquence, intensité moyenne, médicaments efficaces et tendances sur 12 mois.',
           robots: 'index, follow',
+          jsonLd: {
+            '@context': 'https://schema.org',
+            '@type': 'WebApplication',
+            name: 'Migracount',
+            url: 'https://migracount.aifedespaix.com/',
+            description: 'Suivez vos crises de migraine, analysez vos déclencheurs et optimisez vos traitements avec Migracount, votre journal personnel de migraine synchronisé.',
+            applicationCategory: 'HealthApplication',
+            operatingSystem: 'Any (PWA)',
+            inLanguage: 'fr-FR',
+            isAccessibleForFree: true,
+            offers: {
+              '@type': 'Offer',
+              price: '0',
+              priceCurrency: 'EUR',
+            },
+            author: {
+              '@type': 'Person',
+              name: 'Aife',
+            },
+          },
         },
       },
     },
@@ -65,6 +87,30 @@ export const router = createRouter({
           robots: 'noindex, nofollow',
         }
       }
+    },
+    {
+      path: '/confidentialite/',
+      name: 'confidentialite',
+      component: ConfidentialiteView,
+      meta: {
+        seo: {
+          title: 'Politique de confidentialité',
+          description: 'Comment Migracount traite vos données de santé : stockage local par défaut, synchronisation optionnelle et vos droits RGPD.',
+          robots: 'index, follow',
+        },
+      },
+    },
+    {
+      path: '/mentions-legales/',
+      name: 'mentions-legales',
+      component: MentionsLegalesView,
+      meta: {
+        seo: {
+          title: 'Mentions légales',
+          description: 'Informations légales sur l’éditeur et l’hébergement de Migracount, application personnelle de suivi de migraine.',
+          robots: 'index, follow',
+        },
+      },
     },
   ],
 })

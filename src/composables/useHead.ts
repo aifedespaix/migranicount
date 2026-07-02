@@ -15,6 +15,7 @@ export interface SeoMeta {
   ogImageWidth?: number
   ogImageHeight?: number
   ogImageAlt?: string
+  jsonLd?: Record<string, unknown>
 }
 
 function setMetaTag(attrName: 'name' | 'property', attrValue: string, content: string): void {
@@ -41,6 +42,24 @@ function setLinkTag(rel: string, href: string): void {
   }
 }
 
+function setJsonLd(data: Record<string, unknown> | undefined): void {
+  const existing = document.head.querySelector<HTMLScriptElement>('script#seo-jsonld')
+  if (!data) {
+    existing?.remove()
+    return
+  }
+  const json = JSON.stringify(data)
+  if (existing) {
+    existing.textContent = json
+    return
+  }
+  const el = document.createElement('script')
+  el.id = 'seo-jsonld'
+  el.type = 'application/ld+json'
+  el.textContent = json
+  document.head.appendChild(el)
+}
+
 export function applySeo(meta: SeoMeta, path: string): void {
   document.title = `${meta.title} - ${SITE_NAME}`
 
@@ -64,4 +83,6 @@ export function applySeo(meta: SeoMeta, path: string): void {
   setMetaTag('name', 'twitter:title', meta.title)
   setMetaTag('name', 'twitter:description', meta.description)
   setMetaTag('name', 'twitter:image', meta.ogImage ?? DEFAULT_OG_IMAGE)
+
+  setJsonLd(meta.jsonLd)
 }

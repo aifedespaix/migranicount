@@ -1,13 +1,8 @@
 <template>
   <div class="stats-view">
     <div v-if="migraines.migraines.length === 0" class="empty-state">
-      <h1>Migracount</h1>
-      <p>
-        Migracount t'aide à suivre tes crises de migraine au fil du temps :
-        intensité, durée, traitements pris et leur efficacité. Plus tu
-        enregistres de crises, plus les statistiques deviennent utiles pour
-        repérer des tendances.
-      </p>
+      <h1>{{ homeIntro.title }}</h1>
+      <p>{{ homeIntro.paragraph }}</p>
       <button class="cta-btn" @click="emptyStateFormOpen = true">
         Répertorier une migraine
       </button>
@@ -90,6 +85,8 @@
       </div>
     </template>
 
+    <Footer />
+
     <ChartDetailModal
       v-if="activeDetail"
       :chart="activeDetail"
@@ -122,8 +119,10 @@ import ChartDetailModal from "../components/charts/ChartDetailModal.vue";
 import FrequencyChart from "../components/charts/FrequencyChart.vue";
 import StatsButton from "../components/charts/StatsButton.vue";
 import TreatmentLegend from "../components/charts/TreatmentLegend.vue";
+import Footer from "../components/Footer.vue";
 import MigraineFormModal from "../components/MigraineForm/MigraineFormModal.vue";
 import TraitementEfficaciteModal from "../components/TraitementEfficaciteModal.vue";
+import { homeIntro } from "../content/home.mjs";
 import { useMedocsFavorisStore } from "../stores/medocsFavoris";
 import { useMigrainesStore } from "../stores/migraines";
 import { useToastStore } from "../stores/toast";
