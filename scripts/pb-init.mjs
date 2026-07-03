@@ -102,7 +102,9 @@ async function createMedocsFavorisCollection() {
       { type: 'text', name: 'localId', required: true },
       { type: 'text', name: 'nom', required: true },
       { type: 'text', name: 'description' },
-      { type: 'number', name: 'usageCount', required: true, min: 0 },
+      // required: false car PocketBase traite 0 comme "vide" pour un champ number requis,
+      // ce qui rejette la création de tout médicament jamais utilisé (usageCount initial = 0).
+      { type: 'number', name: 'usageCount', required: false, min: 0 },
       { type: 'number', name: 'posologieParJour', required: false },
       { type: 'number', name: 'intervalleHeures', required: false },
     ],
@@ -185,12 +187,25 @@ async function updateMedocsFavorisCollection() {
       newFields.push({ type: 'text', name: 'sideEffects', max: 500 })
     if (!existingNames.includes('expectedEffects'))
       newFields.push({ type: 'text', name: 'expectedEffects', max: 500 })
-    if (!newFields.length) {
+
+    // Bug : PocketBase traite 0 comme "vide" pour un champ number requis, donc tout médicament
+    // jamais utilisé (usageCount initial = 0) était rejeté à la création (400 validation_required).
+    let usageCountFixed = false
+    const fixedFields = col.fields.map((f) => {
+      if (f.name === 'usageCount' && f.required) {
+        usageCountFixed = true
+        return { ...f, required: false }
+      }
+      return f
+    })
+
+    if (!newFields.length && !usageCountFixed) {
       console.log('· Collection "medocs_favoris" déjà à jour - skip')
       return
     }
-    await pb.collections.update(col.id, { fields: [...col.fields, ...newFields] })
-    console.log(`✓ ${newFields.length} champ(s) ajouté(s) à "medocs_favoris"`)
+    await pb.collections.update(col.id, { fields: [...fixedFields, ...newFields] })
+    if (newFields.length) console.log(`✓ ${newFields.length} champ(s) ajouté(s) à "medocs_favoris"`)
+    if (usageCountFixed) console.log('✓ Champ "usageCount" corrigé (required: false) sur "medocs_favoris"')
   } catch (e) {
     console.error('✗ Impossible de mettre à jour "medocs_favoris" :', e.message)
   }
