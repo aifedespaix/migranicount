@@ -38,9 +38,11 @@ export const confidentialite = {
       ],
     },
     {
-      heading: '5. Cookies et traceurs',
+      heading: '5. Statistiques de fréquentation et cookies',
       paragraphs: [
-        "Migracount n'utilise <strong>aucun cookie</strong>, aucun outil d'analytics, aucun traceur publicitaire et n'affiche aucune publicité. Le seul stockage utilisé est le <code>localStorage</code> de votre navigateur, strictement nécessaire au fonctionnement de l'application (et, si vous êtes connecté, le maintien de votre session).",
+        "Migracount n'affiche aucune publicité et n'utilise <strong>aucun traceur publicitaire</strong>. Pour comprendre l'usage global de l'application (nombre de visites, pages consultées, pays, type d'appareil) et l'améliorer, j'utilise <strong>Umami</strong>, un outil de mesure d'audience open source que j'héberge moi-même.",
+        "Cet outil ne dépose <strong>aucun cookie</strong> : il identifie une visite via un identifiant technique haché et renouvelé chaque jour, qui ne permet pas de vous suivre d'un jour à l'autre ni d'un site à l'autre. Il respecte le réglage « Ne pas me pister » (Do Not Track) de votre navigateur. Aucune donnée de santé (crises, symptômes, traitements) ne transite par cet outil, et aucune donnée n'est partagée avec un tiers.",
+        "Vous pouvez désactiver ces statistiques à tout moment depuis la page <strong>Réglages</strong> de l'application. Le seul stockage utilisé par ailleurs est le <code>localStorage</code> de votre navigateur, strictement nécessaire au fonctionnement de l'application (et, si vous êtes connecté, au maintien de votre session).",
       ],
     },
     {

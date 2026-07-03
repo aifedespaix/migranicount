@@ -10,16 +10,18 @@ export type FontChoice = 'none' | 'lexend'
 interface SettingsState {
   theme: ThemeChoice
   dyslexicFont: FontChoice
+  analyticsEnabled: boolean
 }
 
 const STORAGE_KEY = 'settings'
-const DEFAULTS: SettingsState = { theme: 'auto', dyslexicFont: 'none' }
+const DEFAULTS: SettingsState = { theme: 'auto', dyslexicFont: 'none', analyticsEnabled: true }
 
 export const useSettingsStore = defineStore('settings', () => {
   const initial = getJSON<SettingsState>(STORAGE_KEY, DEFAULTS)
   if ((initial.dyslexicFont as string) === 'opendyslexic') initial.dyslexicFont = 'none'
   const theme = ref<ThemeChoice>(initial.theme)
   const dyslexicFont = ref<FontChoice>(initial.dyslexicFont)
+  const analyticsEnabled = ref<boolean>(initial.analyticsEnabled ?? true)
 
   const systemPrefersDark = ref(
     typeof window !== 'undefined' && window.matchMedia
@@ -52,7 +54,7 @@ export const useSettingsStore = defineStore('settings', () => {
   )
 
   function persist(): void {
-    setJSON(STORAGE_KEY, { theme: theme.value, dyslexicFont: dyslexicFont.value })
+    setJSON(STORAGE_KEY, { theme: theme.value, dyslexicFont: dyslexicFont.value, analyticsEnabled: analyticsEnabled.value })
   }
 
   function setTheme(t: ThemeChoice): void {
@@ -71,11 +73,16 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
+  function setAnalyticsEnabled(v: boolean): void {
+    analyticsEnabled.value = v
+    persist()
+  }
+
   function applyFromSync(t: ThemeChoice, f: FontChoice): void {
     theme.value = t
     dyslexicFont.value = f
     persist()
   }
 
-  return { theme, dyslexicFont, resolvedTheme, setTheme, setDyslexicFont, applyFromSync }
+  return { theme, dyslexicFont, analyticsEnabled, resolvedTheme, setTheme, setDyslexicFont, setAnalyticsEnabled, applyFromSync }
 })

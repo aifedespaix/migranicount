@@ -65,6 +65,33 @@
     </section>
 
     <section>
+      <h2>Confidentialité</h2>
+      <p class="field-label">Statistiques anonymes</p>
+      <p class="field-hint">
+        Migracount utilise Umami, un outil de mesure d'audience auto-hébergé, sans cookie ni
+        donnée personnelle. <RouterLink to="/confidentialite/">En savoir plus</RouterLink>.
+      </p>
+      <div class="pill-group">
+        <button
+          type="button"
+          class="pill-btn"
+          :class="{ active: settings.analyticsEnabled }"
+          @click="settings.setAnalyticsEnabled(true)"
+        >
+          Activées
+        </button>
+        <button
+          type="button"
+          class="pill-btn"
+          :class="{ active: !settings.analyticsEnabled }"
+          @click="settings.setAnalyticsEnabled(false)"
+        >
+          Désactivées
+        </button>
+      </div>
+    </section>
+
+    <section>
       <h2>Données</h2>
       <div class="data-actions">
         <button class="action-btn" @click="doExport">
@@ -193,6 +220,15 @@ function confirmImport() {
 }
 .import-label {
   cursor: pointer;
+}
+.field-hint {
+  font-size: 0.82rem;
+  color: var(--color-muted);
+  margin: -0.25rem 0 0.75rem;
+  line-height: 1.4;
+}
+.field-hint a {
+  color: var(--color-accent);
 }
 .sr-only {
   position: absolute;

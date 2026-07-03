@@ -21,6 +21,7 @@
     @dismiss="showDraftDialog = false"
   />
   <ToastContainer />
+  <AnalyticsNotice />
 </template>
 
 <script setup lang="ts">
@@ -33,13 +34,16 @@ import MigraineFormModal from './components/MigraineForm/MigraineFormModal.vue'
 import CatalogModal from './components/CatalogModal.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
 import ToastContainer from './components/ToastContainer.vue'
+import AnalyticsNotice from './components/AnalyticsNotice.vue'
 import { useSettingsStore } from './stores/settings'
 import { useToastStore } from './stores/toast'
+import { useAnalytics } from './composables/useAnalytics'
 import { hasSavedDraft, clearDraft } from './components/MigraineForm/draft'
 import { pb } from './lib/pocketbase'
 import { useSync } from './composables/useSync'
 
 useSettingsStore()
+useAnalytics()
 
 const sync = useSync()
 
