@@ -8,7 +8,7 @@ export const confidentialite = {
     {
       heading: '1. Qui gère cette application ?',
       paragraphs: [
-        'Migracount est un projet personnel développé et opéré par <strong>Aife</strong>. Pour toute question relative à vos données, vous pouvez me contacter à <a href="mailto:clapette01@gmail.com">clapette01@gmail.com</a>.',
+        'Migracount est un projet personnel développé et opéré par <strong>Aife</strong>. Pour toute question relative à vos données, vous pouvez me contacter à <a href="mailto:aife.contacts@gmail.com">aife.contacts@gmail.com</a>.',
       ],
     },
     {
@@ -62,7 +62,7 @@ export const confidentialite = {
         '<strong>Opposition / retrait du consentement</strong> : déconnectez-vous à tout moment pour arrêter la synchronisation.',
       ],
       paragraphsAfterList: [
-        'Pour toute question ou demande que vous ne pouvez pas effectuer vous-même dans l\'application, contactez-moi à <a href="mailto:clapette01@gmail.com">clapette01@gmail.com</a>. Vous pouvez également introduire une réclamation auprès de la <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener noreferrer">CNIL</a>.',
+        'Pour toute question ou demande que vous ne pouvez pas effectuer vous-même dans l\'application, contactez-moi à <a href="mailto:aife.contacts@gmail.com">aife.contacts@gmail.com</a>. Vous pouvez également introduire une réclamation auprès de la <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener noreferrer">CNIL</a>.',
       ],
     },
     {
@@ -81,7 +81,7 @@ export const mentionsLegales = {
       heading: 'Éditeur du site',
       paragraphs: [
         'Ce site est édité à titre personnel et non commercial par <strong>Aife</strong>.',
-        'Contact : <a href="mailto:clapette01@gmail.com">clapette01@gmail.com</a>',
+        'Contact : <a href="mailto:aife.contacts@gmail.com">aife.contacts@gmail.com</a>',
         "Migracount est un projet personnel, gratuit et sans but lucratif. Il n'est pas édité dans le cadre d'une activité professionnelle ou commerciale.",
       ],
     },

@@ -5,16 +5,17 @@
       <span class="footer-sep" aria-hidden="true">·</span>
       <RouterLink to="/mentions-legales/">Mentions légales</RouterLink>
       <span class="footer-sep" aria-hidden="true">·</span>
-      <a href="mailto:clapette01@gmail.com">Contact</a>
+      <a href="mailto:aife.contacts@gmail.com">Contact</a>
     </nav>
     <p class="footer-copy">
-      © {{ year }} Migracount — vos données de santé restent sur votre appareil, par défaut.
+      © {{ year }} Migracount — vos données de santé restent sur votre appareil,
+      par défaut.
     </p>
   </footer>
 </template>
 
 <script setup lang="ts">
-const year = new Date().getFullYear()
+const year = new Date().getFullYear();
 </script>
 
 <style scoped>
