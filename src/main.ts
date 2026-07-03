@@ -9,6 +9,7 @@ import './styles/fonts.css'
 import { pb } from './lib/pocketbase'
 import { useSync } from './composables/useSync'
 import { processOutbox } from './lib/syncOutbox'
+import { useToastStore } from './stores/toast'
 
 const pinia = createPinia()
 const app = createApp(App).use(pinia).use(router)
@@ -20,7 +21,10 @@ if (pb.authStore.isValid) {
   const sync = useSync()
   sync.mergeOnLogin()
     .then(() => sync.startRealtimeSync())
-    .catch(console.error)
+    .catch((err) => {
+      console.error(err)
+      useToastStore().add({ message: 'Échec de la synchronisation avec le cloud.', type: 'danger' })
+    })
 }
 
 // Retente les opérations de sync en attente (échouées faute de réseau) dès la reconnexion

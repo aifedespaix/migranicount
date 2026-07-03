@@ -45,7 +45,10 @@ const sync = useSync()
 
 function onVisibilityChange() {
   if (document.visibilityState === 'visible' && pb.authStore.isValid) {
-    sync.refreshFromRemote().catch(console.error)
+    sync.refreshFromRemote().catch((err) => {
+      console.error(err)
+      toastStore.add({ message: 'Échec de la synchronisation avec le cloud.', type: 'danger' })
+    })
   }
 }
 

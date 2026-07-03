@@ -78,6 +78,26 @@ function scheduleFlushToasts() {
 }
 
 export function useSync() {
+  const MERGE_STEP_LABELS = {
+    tombstones: 'suppressions',
+    migraines: 'migraines',
+    medocs: 'médicaments favoris',
+    preferences: 'préférences',
+  } as const
+
+  async function _runMergeStep(
+    step: keyof typeof MERGE_STEP_LABELS,
+    fn: () => Promise<void>,
+    failedSteps: string[],
+  ): Promise<void> {
+    try {
+      await fn()
+    } catch (err) {
+      console.error(`Sync: échec de la fusion (${step})`, err)
+      failedSteps.push(MERGE_STEP_LABELS[step])
+    }
+  }
+
   async function _mergeAndToast(userId: string): Promise<void> {
     if (mergeInFlight) return
     mergeInFlight = true
@@ -87,11 +107,14 @@ export function useSync() {
       const beforeDecl = listDeclencheursFavoris()
       const beforeSympt = listSymptomesCustom()
 
-      await _mergeTombstones(userId)
+      // Chaque étape est isolée : l'échec de l'une (ex. collection distante absente)
+      // ne doit pas empêcher les autres de se synchroniser.
+      const failedSteps: string[] = []
+      await _runMergeStep('tombstones', () => _mergeTombstones(userId), failedSteps)
       await Promise.all([
-        _mergeMigraines(userId),
-        _mergeMedocs(userId),
-        _mergePreferences(userId),
+        _runMergeStep('migraines', () => _mergeMigraines(userId), failedSteps),
+        _runMergeStep('medocs', () => _mergeMedocs(userId), failedSteps),
+        _runMergeStep('preferences', () => _mergePreferences(userId), failedSteps),
       ])
 
       useMigrainesStore().refresh()
@@ -114,6 +137,12 @@ export function useSync() {
       const toastStore = useToastStore()
       for (const msg of msgs) {
         toastStore.add({ message: msg, type: 'success' })
+      }
+      if (failedSteps.length > 0) {
+        toastStore.add({
+          message: `Échec de synchronisation (${failedSteps.join(', ')}). Réessayez plus tard.`,
+          type: 'danger',
+        })
       }
     } finally {
       mergeInFlight = false
