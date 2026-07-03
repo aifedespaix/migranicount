@@ -81,4 +81,24 @@ describe('useSettingsStore', () => {
     const store = useSettingsStore()
     expect(store.dyslexicFont).toBe('none')
   })
+
+  it('defaults analyticsEnabled to true when storage is empty', () => {
+    const store = useSettingsStore()
+    expect(store.analyticsEnabled).toBe(true)
+  })
+
+  it('setAnalyticsEnabled(false) updates the store', () => {
+    const store = useSettingsStore()
+    store.setAnalyticsEnabled(false)
+    expect(store.analyticsEnabled).toBe(false)
+  })
+
+  it('persists analyticsEnabled across store instances', () => {
+    const store = useSettingsStore()
+    store.setAnalyticsEnabled(false)
+
+    setActivePinia(createPinia())
+    const reloaded = useSettingsStore()
+    expect(reloaded.analyticsEnabled).toBe(false)
+  })
 })
