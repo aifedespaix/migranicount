@@ -41,7 +41,9 @@ Fonctions exposées : `enableAnalytics()` (injecte le tag s'il est absent) et `d
 
 ### 2. Réglage utilisateur : `useSettingsStore`
 
-Ajout de `analyticsEnabled: boolean` (défaut `true`) à `SettingsState`, avec `setAnalyticsEnabled(v: boolean)` suivant exactement le même pattern que `setTheme`/`setDyslexicFont` (persist localStorage + `enqueue({ type: 'preferences-patch', ... })` si connecté).
+Ajout de `analyticsEnabled: boolean` (défaut `true`) à `SettingsState`, avec `setAnalyticsEnabled(v: boolean)` suivant le même pattern de persistance locale que `setTheme`/`setDyslexicFont` (localStorage via `persist()`).
+
+Contrairement à `theme`/`dyslexicFont`, ce réglage n'est **pas** propagé via `enqueue({ type: 'preferences-patch', ... })` : c'est une préférence de mesure d'audience propre à cet appareil/navigateur (on ne veut pas qu'un opt-out sur un appareil réactive le tracking sur un autre via la sync), donc pas touché à `useSync.ts`/`applyFromSync`.
 
 ### 3. `useAnalytics()` composable
 
