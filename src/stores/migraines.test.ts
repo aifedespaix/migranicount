@@ -33,4 +33,17 @@ describe('useMigrainesStore', () => {
     store.remove(m.id)
     expect(store.migraines).toHaveLength(0)
   })
+
+  it('restore re-inserts a removed migraine with its original id (undo)', () => {
+    const store = useMigrainesStore()
+    const m = store.save({
+      date: '2026-06-24', heureDebut: '08:00', heureFin: null,
+      medocs: [], intensite: 5, avortee: false, symptomes: [],
+      zone: null, declencheurs: [],
+    })
+    store.remove(m.id)
+    store.restore(m)
+    expect(store.migraines).toHaveLength(1)
+    expect(store.migraines[0].id).toBe(m.id)
+  })
 })

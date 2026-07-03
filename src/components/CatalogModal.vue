@@ -23,7 +23,7 @@
         </div>
         <AppModalCloseBtn
           class="modal-close-btn"
-          @click="$emit('close')"
+          @click="requestClose"
         />
       </header>
       <div class="progress-bar">
@@ -629,7 +629,7 @@
           ghost
           size="lg"
           style="flex:1"
-          @click="$emit('close')"
+          @click="requestClose"
         >
           Fermer
         </AppButton>
@@ -647,6 +647,18 @@
     </div>
 
     <AddMedocModal v-if="showAddMedoc" @close="showAddMedoc = false" />
+
+    <UnsavedChangesDialog
+      v-if="showUnsavedDialog"
+      title="Modifications non enregistrées"
+      message="Vous avez des modifications en cours qui seront perdues."
+      stay-label="Continuer l'édition"
+      confirm-label="Enregistrer et continuer"
+      discard-label="Quitter sans enregistrer"
+      @stay="onUnsavedStay"
+      @confirm="onUnsavedConfirm"
+      @discard="onUnsavedDiscard"
+    />
   </div>
 </template>
 
@@ -664,6 +676,7 @@ import {
 } from "lucide-vue-next";
 import AppModalCloseBtn from "./AppModalCloseBtn.vue";
 import AppButton from "./AppButton.vue";
+import UnsavedChangesDialog from "./UnsavedChangesDialog.vue";
 import { computed, ref } from "vue";
 import { useDeclencheursStore } from "../stores/declencheurs";
 import { useMedocsFavorisStore } from "../stores/medocsFavoris";
@@ -675,7 +688,7 @@ import { todayISO } from "../utils/date";
 import { capitalizeFirstLetter } from "../utils/text";
 import AddMedocModal from "./AddMedocModal.vue";
 
-defineEmits<{ close: [] }>();
+const emit = defineEmits<{ close: [] }>();
 
 const medocs = useMedocsFavorisStore();
 const symptomes = useSymptomesStore();
@@ -703,18 +716,24 @@ const nextVisible = computed(() => stepIndex.value < stepTitles.length - 1);
 
 function goNext() {
   if (stepIndex.value >= stepTitles.length - 1) return;
-  transitionName.value = "slide-next";
-  stepIndex.value++;
+  guardAction(() => {
+    transitionName.value = "slide-next";
+    stepIndex.value++;
+  });
 }
 function goPrev() {
   if (stepIndex.value <= 0) return;
-  transitionName.value = "slide-prev";
-  stepIndex.value--;
+  guardAction(() => {
+    transitionName.value = "slide-prev";
+    stepIndex.value--;
+  });
 }
 function goToStep(i: number) {
   if (i === stepIndex.value) return;
-  transitionName.value = i > stepIndex.value ? "slide-next" : "slide-prev";
-  stepIndex.value = i;
+  guardAction(() => {
+    transitionName.value = i > stepIndex.value ? "slide-next" : "slide-prev";
+    stepIndex.value = i;
+  });
 }
 
 // ─── Médicaments ──────────────────────────────────────────────────────────
@@ -928,6 +947,68 @@ function deleteDeclencheur(tag: CatalogTag) {
 function deletePeriod(medocId: string, periodId: string) {
   medocs.removePeriod(medocId, periodId);
   toastStore.add({ type: "danger", message: "Période supprimée" });
+}
+
+// ─── Protection contre la perte de saisie ──────────────────────────────────
+
+const hasUnsavedEdit = computed(
+  () =>
+    !!editingMedoc.value ||
+    !!editingPeriod.value ||
+    !!editingSymptome.value ||
+    !!newSymptomeNom.value.trim() ||
+    !!newDeclencheurTag.value.trim(),
+);
+
+const showUnsavedDialog = ref(false);
+const pendingAction = ref<(() => void) | null>(null);
+
+function guardAction(action: () => void) {
+  if (hasUnsavedEdit.value) {
+    pendingAction.value = action;
+    showUnsavedDialog.value = true;
+  } else {
+    action();
+  }
+}
+
+function requestClose() {
+  guardAction(() => emit("close"));
+}
+
+function saveAllPending() {
+  if (editingPeriod.value) savePeriod();
+  if (editingMedoc.value) saveMedocEdit();
+  if (editingSymptome.value) saveSymptomeEdit();
+  if (newSymptomeNom.value.trim()) addSymptome();
+  if (newDeclencheurTag.value.trim()) addDeclencheur();
+}
+
+function discardAllPending() {
+  editingMedoc.value = null;
+  editingPeriod.value = null;
+  editingSymptome.value = null;
+  newSymptomeNom.value = "";
+  newDeclencheurTag.value = "";
+}
+
+function onUnsavedStay() {
+  showUnsavedDialog.value = false;
+  pendingAction.value = null;
+}
+
+function onUnsavedDiscard() {
+  discardAllPending();
+  showUnsavedDialog.value = false;
+  pendingAction.value?.();
+  pendingAction.value = null;
+}
+
+function onUnsavedConfirm() {
+  saveAllPending();
+  showUnsavedDialog.value = false;
+  pendingAction.value?.();
+  pendingAction.value = null;
 }
 </script>
 

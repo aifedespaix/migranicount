@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { listMigraines, saveMigraine, deleteMigraine, getMigraine, recordTombstone } from '../storage/migraineRepository'
+import { listMigraines, saveMigraine, deleteMigraine, getMigraine, recordTombstone, restoreMigraine } from '../storage/migraineRepository'
 import { pb } from '../lib/pocketbase'
 import { enqueue } from '../lib/syncOutbox'
 import type { Migraine } from '../types/migraine'
@@ -25,9 +25,12 @@ export const useMigrainesStore = defineStore('migraines', () => {
   }
 
   function restore(m: Migraine): void {
-    const saved = saveMigraine(m as any)
+    const saved = restoreMigraine(m)
     migraines.value = listMigraines()
-    if (pb.authStore.isValid) enqueue({ type: 'migraine-upsert', migraine: saved })
+    if (pb.authStore.isValid) {
+      enqueue({ type: 'migraine-upsert', migraine: saved })
+      enqueue({ type: 'tombstone-clear', entityType: 'migraine', entityId: saved.id })
+    }
   }
 
   function getById(id: string): Migraine | undefined {

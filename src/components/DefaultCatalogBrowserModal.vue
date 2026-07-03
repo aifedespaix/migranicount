@@ -182,7 +182,7 @@ import { defaultMedications } from '../data/defaultMedications'
 import { useMedocsFavorisStore } from '../stores/medocsFavoris'
 import type { DefaultMedication } from '../data/defaultMedications'
 
-defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: []; select: [med: DefaultMedication] }>()
 
 const medocs = useMedocsFavorisStore()
 const searchRef = ref<HTMLInputElement | null>(null)
@@ -205,7 +205,7 @@ const filteredMeds = computed(() => {
 
 function addMed(med: DefaultMedication) {
   if (alreadyInFavoris.value.has(med.nom)) return
-  medocs.addFromDefault(med)
+  emit('select', med)
 }
 
 function posologieText(med: DefaultMedication): string {

@@ -7,11 +7,11 @@
           Ajouter un médicament
         </span>
         <div class="add-medoc-header-actions">
-          <button type="button" class="btn-browse-catalog" @click="showCatalogBrowser = true">
+          <button type="button" class="btn-browse-catalog" @click="requestBrowseCatalog">
             <BookOpen :size="12" />
             Catalogue
           </button>
-          <AppModalCloseBtn @click="$emit('close')" />
+          <AppModalCloseBtn @click="requestClose" />
         </div>
       </header>
 
@@ -126,7 +126,23 @@
       </div>
     </div>
 
-    <DefaultCatalogBrowserModal v-if="showCatalogBrowser" @close="showCatalogBrowser = false" />
+    <DefaultCatalogBrowserModal
+      v-if="showCatalogBrowser"
+      @close="showCatalogBrowser = false"
+      @select="onCatalogSelect"
+    />
+
+    <UnsavedChangesDialog
+      v-if="showUnsavedDialog"
+      title="Médicament non ajouté"
+      :message="`Vous avez commencé à ajouter « ${addPendingForm?.nom || ''} » sans l'enregistrer dans votre répertoire.`"
+      stay-label="Continuer la saisie"
+      confirm-label="Ajouter au répertoire"
+      discard-label="Quitter sans ajouter"
+      @stay="onUnsavedStay"
+      @confirm="onUnsavedConfirm"
+      @discard="onUnsavedDiscard"
+    />
   </div>
 </template>
 
@@ -136,6 +152,7 @@ import { Plus, Search, BookOpen } from 'lucide-vue-next'
 import AppModalCloseBtn from './AppModalCloseBtn.vue'
 import { useMediaQuery } from '@vueuse/core'
 import DefaultCatalogBrowserModal from './DefaultCatalogBrowserModal.vue'
+import UnsavedChangesDialog from './UnsavedChangesDialog.vue'
 import { useMedocsFavorisStore } from '../stores/medocsFavoris'
 import { capitalizeFirstLetter } from '../utils/text'
 import { defaultMedications } from '../data/defaultMedications'
@@ -225,7 +242,7 @@ function cancelAddForm() {
   addComboSearchMode.value = false
 }
 
-function saveAndClose() {
+function commitPendingForm() {
   if (!addPendingForm.value?.nom.trim()) return
   const f = addPendingForm.value
   medocs.addFromDefault({
@@ -237,12 +254,64 @@ function saveAndClose() {
     sideEffects: f.sideEffects,
     expectedEffects: f.expectedEffects,
   })
+  cancelAddForm()
+}
+
+function saveAndClose() {
+  if (!addPendingForm.value?.nom.trim()) return
+  commitPendingForm()
   emit('close')
 }
 
 function toggleAddComboSearchMode() {
   addComboSearchMode.value = !addComboSearchMode.value
   if (addComboSearchMode.value) nextTick(() => addComboInputRef.value?.focus())
+}
+
+// ─── Protection contre la perte de saisie ──────────────────────────────────
+
+const showUnsavedDialog = ref(false)
+const pendingAction = ref<(() => void) | null>(null)
+
+function guardAction(action: () => void) {
+  if (addPendingForm.value) {
+    pendingAction.value = action
+    showUnsavedDialog.value = true
+  } else {
+    action()
+  }
+}
+
+function requestClose() {
+  guardAction(() => emit('close'))
+}
+
+function requestBrowseCatalog() {
+  guardAction(() => { showCatalogBrowser.value = true })
+}
+
+function onCatalogSelect(med: DefaultMedication) {
+  showCatalogBrowser.value = false
+  selectDefaultMed(med)
+}
+
+function onUnsavedStay() {
+  showUnsavedDialog.value = false
+  pendingAction.value = null
+}
+
+function onUnsavedDiscard() {
+  cancelAddForm()
+  showUnsavedDialog.value = false
+  pendingAction.value?.()
+  pendingAction.value = null
+}
+
+function onUnsavedConfirm() {
+  commitPendingForm()
+  showUnsavedDialog.value = false
+  pendingAction.value?.()
+  pendingAction.value = null
 }
 </script>
 

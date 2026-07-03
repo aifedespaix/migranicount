@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
-  listMigraines, saveMigraine, deleteMigraine, getMigraine,
+  listMigraines, saveMigraine, deleteMigraine, getMigraine, restoreMigraine,
   listMedocsFavoris, registerMedocUsage, updateMedocFavoriDescription,
   listDeclencheursFavoris, registerDeclencheur, deleteDeclencheur,
   listSymptomesCustom, addSymptomeCustom, deleteSymptomeCustom, renameSymptomeCustom,
@@ -253,6 +253,22 @@ describe('tombstones', () => {
     const created = registerDeclencheur('stress')
     deleteDeclencheur(created.id)
     restoreDeclencheur(created)
+    expect(listTombstones()).toHaveLength(0)
+  })
+
+  it('restoreMigraine re-inserts with the same id and clears a matching tombstone', () => {
+    const m = saveMigraine({
+      date: '2026-06-24', heureDebut: '08:00', heureFin: null,
+      medocs: [], intensite: 5, avortee: false, symptomes: [],
+      zone: null, declencheurs: [],
+    })
+    deleteMigraine(m.id)
+    expect(listTombstones()).toHaveLength(1)
+
+    const restored = restoreMigraine(m)
+    expect(restored.id).toBe(m.id)
+    expect(listMigraines()).toHaveLength(1)
+    expect(getMigraine(m.id)).toBeTruthy()
     expect(listTombstones()).toHaveLength(0)
   })
 })

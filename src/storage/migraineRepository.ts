@@ -143,6 +143,16 @@ export function deleteMigraine(id: string): void {
   recordTombstone('migraine', id)
 }
 
+/** Réinsère une migraine en conservant son id d'origine (undo de suppression), au lieu d'en miner un nouveau. */
+export function restoreMigraine(m: Migraine): Migraine {
+  const all = listMigraines()
+  const existing = all.find((x) => x.id === m.id)
+  clearTombstone('migraine', m.id)
+  if (existing) return existing
+  setJSON(MIGRAINES_KEY, [...all, m])
+  return m
+}
+
 export function listMedocsFavoris(): MedocFavori[] {
   ensureMigrated()
   return getJSON<MedocFavori[]>(MEDOCS_KEY, [])
