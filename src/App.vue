@@ -35,11 +35,13 @@ import ConfirmDialog from './components/ConfirmDialog.vue'
 import ToastContainer from './components/ToastContainer.vue'
 import { useSettingsStore } from './stores/settings'
 import { useToastStore } from './stores/toast'
+import { useAnalytics } from './composables/useAnalytics'
 import { hasSavedDraft, clearDraft } from './components/MigraineForm/draft'
 import { pb } from './lib/pocketbase'
 import { useSync } from './composables/useSync'
 
 useSettingsStore()
+useAnalytics()
 
 const sync = useSync()
 
