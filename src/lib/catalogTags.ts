@@ -2,8 +2,8 @@ import { newId } from '../utils/uuid'
 import type { CatalogTag } from '../types/migraine'
 
 /** Clé de comparaison des noms de tags (les doublons issus de la sync diffèrent souvent par la casse ou des espaces). */
-export function normalizeNom(nom: string): string {
-  return nom.trim().toLocaleLowerCase('fr')
+export function normalizeNom(nom: string | null | undefined): string {
+  return (nom ?? '').trim().toLocaleLowerCase('fr')
 }
 
 /**
@@ -48,6 +48,11 @@ export function dedupeCatalogTags(
   const out: CatalogTag[] = []
   const remap = new Map<string, string>()
   for (const tag of tags) {
+    // Le local vient du localStorage et n'est pas garanti normalisé : un tag
+    // sans nom exploitable (données héritées ou merge bogué) est éliminé plutôt
+    // que de faire planter normalizeNom. Le résultat étant réécrit en storage,
+    // ça répare aussi la donnée corrompue.
+    if (!tag || typeof tag.nom !== 'string' || !tag.nom.trim()) continue
     const key = normalizeNom(tag.nom)
     const kept = keptByNom.get(key)
     if (kept) {

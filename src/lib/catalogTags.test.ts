@@ -63,6 +63,30 @@ describe('dedupeCatalogTags', () => {
   })
 })
 
+describe('robustesse aux entrées locales malformées', () => {
+  it('dedupeCatalogTags ignore un tag sans nom sans planter', () => {
+    const { tags } = dedupeCatalogTags([
+      { id: 'a', nom: 'Photophobie' },
+      { id: 'b' } as unknown as { id: string; nom: string },
+      { id: 'c', nom: undefined } as unknown as { id: string; nom: string },
+      { id: 'd', nom: 'Osmophobie' },
+    ])
+    expect(tags).toEqual([
+      { id: 'a', nom: 'Photophobie' },
+      { id: 'd', nom: 'Osmophobie' },
+    ])
+  })
+
+  it('mergeCatalogTags ne plante pas quand le local contient un tag sans nom', () => {
+    const local = [
+      { id: 'local-1', nom: 'Photophobie' },
+      { id: 'local-2' } as unknown as { id: string; nom: string },
+    ]
+    const merged = mergeCatalogTags(local, [{ id: 'remote-1', nom: 'Osmophobie' }], [])
+    expect(merged.map((t) => t.nom).sort()).toEqual(['Osmophobie', 'Photophobie'])
+  })
+})
+
 describe('mergeCatalogTags', () => {
   it('fusionne par id, le local gagne', () => {
     const merged = mergeCatalogTags(
