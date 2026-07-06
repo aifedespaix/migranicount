@@ -55,7 +55,7 @@
         @update:selected="selectedTreatments = $event"
       />
 
-      <button class="chart-card" @click="openDetail('heatmap')">
+      <button class="chart-card heatmap-card" @click="openDetail('heatmap')">
         <h2>Calendrier des crises</h2>
         <CalendarHeatmap :migraines="migraines.migraines" />
       </button>
@@ -492,8 +492,16 @@ const traitementFacts = computed(() => {
   position: relative;
 }
 .stats-buttons {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 0.5rem;
+}
+@media (min-width: 1024px) {
+  .stats-buttons {
+    grid-template-columns: 1fr 1fr;
+  }
+  .heatmap-card :deep(.heatmap-scroll) {
+    text-align: center;
+  }
 }
 </style>
