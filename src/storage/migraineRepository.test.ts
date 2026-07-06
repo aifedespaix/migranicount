@@ -273,6 +273,168 @@ describe('tombstones', () => {
   })
 })
 
+describe('migration réparation doublons + entrées invalides (schema v5)', () => {
+  function seedV4(data: {
+    symptomes?: unknown[]
+    declencheurs?: unknown[]
+    medocs?: unknown[]
+    migraines?: unknown[]
+  }) {
+    setJSON('schemaVersion', 4)
+    setJSON('symptomesCustom', data.symptomes ?? [])
+    setJSON('declencheursFavoris', data.declencheurs ?? [])
+    setJSON('medocsFavoris', data.medocs ?? [])
+    setJSON('migraines', data.migraines ?? [])
+  }
+
+  it('supprime les entrées invalides (strings, objets sans nom) laissées par un merge sync', () => {
+    seedV4({
+      symptomes: ['Photophobie', { id: 's1', nom: 'Osmophobie' }, {}, { id: 's2', nom: '' }],
+    })
+    const sympt = listSymptomesCustom()
+    expect(sympt.every((s) => typeof s.id === 'string' && s.id && typeof s.nom === 'string' && s.nom)).toBe(true)
+    expect(sympt.map((s) => s.nom).sort()).toEqual(['Osmophobie', 'Photophobie'])
+  })
+
+  it('dédoublonne les symptômes par nom, garde le premier id, tombstone les ids abandonnés', () => {
+    seedV4({
+      symptomes: [
+        { id: 's1', nom: 'Photophobie' },
+        { id: 's2', nom: 'photophobie' },
+      ],
+    })
+    const sympt = listSymptomesCustom()
+    expect(sympt).toEqual([{ id: 's1', nom: 'Photophobie' }])
+    expect(listTombstones()).toContainEqual(
+      expect.objectContaining({ entityType: 'symptome', entityId: 's2' }),
+    )
+  })
+
+  it('supprime un custom qui duplique un symptôme par défaut, sans tombstoner l\'id par défaut', () => {
+    seedV4({ symptomes: [{ id: 's1', nom: 'Nausée' }] })
+    expect(listSymptomesCustom()).toEqual([])
+    expect(listTombstones()).toContainEqual(
+      expect.objectContaining({ entityType: 'symptome', entityId: 's1' }),
+    )
+    expect(listTombstones().some((t) => t.entityId.startsWith('default-'))).toBe(false)
+  })
+
+  it('dédoublonne les déclencheurs par nom et tombstone les ids abandonnés', () => {
+    seedV4({
+      declencheurs: [
+        { id: 'd1', nom: 'Chocolat' },
+        { id: 'd2', nom: 'chocolat' },
+      ],
+    })
+    expect(listDeclencheursFavoris()).toEqual([{ id: 'd1', nom: 'Chocolat' }])
+    expect(listTombstones()).toContainEqual(
+      expect.objectContaining({ entityType: 'declencheur', entityId: 'd2' }),
+    )
+  })
+
+  it('fusionne les médocs dupliqués en gardant le maximum de données', () => {
+    seedV4({
+      medocs: [
+        { id: 'm1', nom: 'Doliprane', usageCount: 2, description: '' },
+        {
+          id: 'm2', nom: 'doliprane', usageCount: 5, description: 'antidouleur',
+          posologieParJour: 3, intervalleHeures: 6, isLongTermTreatment: true,
+          sideEffects: 'somnolence',
+          treatmentPeriods: [{ id: 'p1', startDate: '2026-01-01', endDate: null, updatedAt: '2026-01-01T00:00:00Z' }],
+        },
+      ],
+    })
+    const medocs = listMedocsFavoris()
+    expect(medocs).toHaveLength(1)
+    expect(medocs[0]).toMatchObject({
+      id: 'm1',
+      nom: 'Doliprane',
+      usageCount: 5,
+      description: 'antidouleur',
+      posologieParJour: 3,
+      intervalleHeures: 6,
+      isLongTermTreatment: true,
+      sideEffects: 'somnolence',
+    })
+    expect(medocs[0].treatmentPeriods).toEqual([
+      { id: 'p1', startDate: '2026-01-01', endDate: null, updatedAt: '2026-01-01T00:00:00Z' },
+    ])
+    expect(listTombstones()).toContainEqual(
+      expect.objectContaining({ entityType: 'medoc', entityId: 'm2' }),
+    )
+  })
+
+  it('remap les références historiques des migraines vers les ids conservés', () => {
+    seedV4({
+      symptomes: [
+        { id: 's1', nom: 'Photophobie' },
+        { id: 's2', nom: 'Photophobie' },
+      ],
+      declencheurs: [
+        { id: 'd1', nom: 'Chocolat' },
+        { id: 'd2', nom: 'Chocolat' },
+      ],
+      medocs: [
+        { id: 'm1', nom: 'Doliprane', usageCount: 1 },
+        { id: 'm2', nom: 'Doliprane', usageCount: 1 },
+      ],
+      migraines: [
+        {
+          id: 'mig1', date: '2026-01-01', heureDebut: '08:00', heureFin: null,
+          medocs: [{ id: 'p1', medocId: 'm2', nom: 'Doliprane', heure: '08:00' }],
+          intensite: 5, avortee: false,
+          symptomes: [{ id: 's2', nom: 'Photophobie' }, { id: 'default-nausee', nom: 'Nausée' }],
+          zone: null,
+          declencheurs: [{ id: 'd2', nom: 'Chocolat' }],
+          createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+        },
+      ],
+    })
+    const migraine = listMigraines()[0]
+    expect(migraine.symptomes).toEqual([
+      { id: 's1', nom: 'Photophobie' },
+      { id: 'default-nausee', nom: 'Nausée' },
+    ])
+    expect(migraine.declencheurs).toEqual([{ id: 'd1', nom: 'Chocolat' }])
+    expect(migraine.medocs[0].medocId).toBe('m1')
+  })
+
+  it('dédoublonne les références au sein d\'une même migraine après remap', () => {
+    seedV4({
+      symptomes: [
+        { id: 's1', nom: 'Photophobie' },
+        { id: 's2', nom: 'Photophobie' },
+      ],
+      migraines: [
+        {
+          id: 'mig1', date: '2026-01-01', heureDebut: '08:00', heureFin: null,
+          medocs: [], intensite: 5, avortee: false,
+          symptomes: [{ id: 's1', nom: 'Photophobie' }, { id: 's2', nom: 'Photophobie' }],
+          zone: null, declencheurs: [],
+          createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+        },
+      ],
+    })
+    expect(listMigraines()[0].symptomes).toEqual([{ id: 's1', nom: 'Photophobie' }])
+  })
+
+  it('est idempotente (une seconde exécution ne change rien et ne tombstone rien de plus)', () => {
+    seedV4({
+      symptomes: [
+        { id: 's1', nom: 'Photophobie' },
+        { id: 's2', nom: 'Photophobie' },
+      ],
+    })
+    listSymptomesCustom()
+    const symptAfterFirst = JSON.stringify(listSymptomesCustom())
+    const tombstonesAfterFirst = listTombstones().length
+    setJSON('schemaVersion', 4)
+    listSymptomesCustom()
+    expect(JSON.stringify(listSymptomesCustom())).toBe(symptAfterFirst)
+    expect(listTombstones().length).toBe(tombstonesAfterFirst)
+  })
+})
+
 describe('migration legacy -> id-based catalogs (schema v4)', () => {
   it('converts legacy string[] catalogs and migraine symptomes/declencheurs to {id, nom}, matching by name', () => {
     // Seed pre-v4 legacy shape directly in localStorage

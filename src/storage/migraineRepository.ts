@@ -1,6 +1,8 @@
 import { getJSON, setJSON } from './storage'
 import { newId } from '../utils/uuid'
 import { DEFAULT_SYMPTOMES, DEFAULT_DECLENCHEURS } from '../data/defaultTags'
+import { normalizeCatalogTags, dedupeCatalogTags, normalizeNom } from '../lib/catalogTags'
+import { mergeTreatmentPeriods } from '../lib/periodMerge'
 import type { Migraine, MedocFavori, TreatmentPeriod, CatalogTag } from '../types/migraine'
 import type { Tombstone, TombstoneEntityType } from '../types/sync'
 
@@ -10,7 +12,7 @@ const DECLENCHEURS_KEY = 'declencheursFavoris'
 const SYMPTOMES_KEY = 'symptomesCustom'
 const TOMBSTONES_KEY = 'tombstones'
 const SCHEMA_VERSION_KEY = 'schemaVersion'
-const SCHEMA_VERSION = 4
+const SCHEMA_VERSION = 5
 
 export function listTombstones(): Tombstone[] {
   return getJSON<Tombstone[]>(TOMBSTONES_KEY, [])
@@ -103,10 +105,116 @@ function migrateToV4(): void {
   setJSON(MIGRAINES_KEY, rawMigraines)
 }
 
+/** Fusionne deux médocs dupliqués en gardant le maximum de données de chacun. */
+function mergeMedocData(keep: MedocFavori, dup: MedocFavori): MedocFavori {
+  return {
+    ...keep,
+    description: keep.description || dup.description || undefined,
+    usageCount: Math.max(keep.usageCount ?? 0, dup.usageCount ?? 0),
+    posologieParJour: keep.posologieParJour ?? dup.posologieParJour,
+    intervalleHeures: keep.intervalleHeures ?? dup.intervalleHeures,
+    isLongTermTreatment: keep.isLongTermTreatment || dup.isLongTermTreatment || undefined,
+    treatmentPeriods:
+      keep.treatmentPeriods || dup.treatmentPeriods
+        ? mergeTreatmentPeriods(keep.treatmentPeriods ?? [], dup.treatmentPeriods ?? [])
+        : undefined,
+    sideEffects: keep.sideEffects || dup.sideEffects || undefined,
+    expectedEffects: keep.expectedEffects || dup.expectedEffects || undefined,
+  }
+}
+
+/** Répare un catalogue de tags : normalise les entrées héritées, dédoublonne par nom, tombstone les ids abandonnés. */
+function repairTagCatalog(
+  key: string,
+  entityType: TombstoneEntityType,
+  defaults: CatalogTag[],
+): Map<string, string> {
+  const { tags, remap } = dedupeCatalogTags(normalizeCatalogTags(getJSON<unknown>(key, [])), defaults)
+  setJSON(key, tags)
+  for (const droppedId of remap.keys()) recordTombstone(entityType, droppedId)
+  return remap
+}
+
+/** Répare les médocs favoris : dédoublonne par nom en fusionnant les données, tombstone les ids abandonnés. */
+function repairMedocs(): Map<string, string> {
+  const raw = getJSON<any[]>(MEDOCS_KEY, []).filter(
+    (m) => m && typeof m.nom === 'string' && m.nom.trim(),
+  )
+  const keptByNom = new Map<string, MedocFavori>()
+  const remap = new Map<string, string>()
+  for (const m of raw) {
+    if (!m.id) m.id = newId()
+    const key = normalizeNom(m.nom)
+    const kept = keptByNom.get(key)
+    if (kept) {
+      keptByNom.set(key, mergeMedocData(kept, m))
+      remap.set(m.id, kept.id)
+      recordTombstone('medoc', m.id)
+    } else {
+      keptByNom.set(key, m)
+    }
+  }
+  setJSON(MEDOCS_KEY, Array.from(keptByNom.values()))
+  return remap
+}
+
+/** Remap une liste de références {id, nom} d'une migraine vers les ids conservés, en dédoublonnant. */
+function remapTagRefs(
+  refs: unknown,
+  remap: Map<string, string>,
+  catalog: CatalogTag[],
+): CatalogTag[] {
+  const catalogById = new Map(catalog.map((t) => [t.id, t]))
+  const catalogByNom = new Map(catalog.map((t) => [normalizeNom(t.nom), t]))
+  const out: CatalogTag[] = []
+  const seen = new Set<string>()
+  for (const tag of normalizeCatalogTags(refs)) {
+    let id = remap.get(tag.id) ?? tag.id
+    // Référence orpheline (id inconnu du catalogue) : tente une réconciliation par nom.
+    if (!catalogById.has(id)) {
+      const match = catalogByNom.get(normalizeNom(tag.nom))
+      if (match) id = match.id
+    }
+    if (!seen.has(id)) {
+      seen.add(id)
+      out.push({ id, nom: catalogById.get(id)?.nom ?? tag.nom })
+    }
+  }
+  return out
+}
+
+/**
+ * Répare les dégâts causés par les anciens merges de sync non normalisés (avant cette version) :
+ * entrées héritées au format string, tags sans id/nom, doublons du même nom sous des ids
+ * différents (chaque appareil mintait les siens à la migration v4). Les ids abandonnés sont
+ * tombstonés pour que la sync nettoie aussi les copies distantes sans jamais les ressusciter.
+ */
+function migrateToV5(): void {
+  const symptRemap = repairTagCatalog(SYMPTOMES_KEY, 'symptome', DEFAULT_SYMPTOMES)
+  const declRemap = repairTagCatalog(DECLENCHEURS_KEY, 'declencheur', DEFAULT_DECLENCHEURS)
+  const medocRemap = repairMedocs()
+
+  const symptCatalog = [...DEFAULT_SYMPTOMES, ...getJSON<CatalogTag[]>(SYMPTOMES_KEY, [])]
+  const declCatalog = [...DEFAULT_DECLENCHEURS, ...getJSON<CatalogTag[]>(DECLENCHEURS_KEY, [])]
+
+  const migraines = getJSON<any[]>(MIGRAINES_KEY, [])
+  for (const m of migraines) {
+    m.symptomes = remapTagRefs(m.symptomes, symptRemap, symptCatalog)
+    m.declencheurs = remapTagRefs(m.declencheurs, declRemap, declCatalog)
+    if (Array.isArray(m.medocs)) {
+      for (const p of m.medocs) {
+        if (p.medocId && medocRemap.has(p.medocId)) p.medocId = medocRemap.get(p.medocId)
+      }
+    }
+  }
+  setJSON(MIGRAINES_KEY, migraines)
+}
+
 function ensureMigrated(): void {
   const version = getJSON<number>(SCHEMA_VERSION_KEY, 0)
   if (version >= SCHEMA_VERSION) return
-  migrateToV4()
+  if (version < 4) migrateToV4()
+  if (version < 5) migrateToV5()
   setJSON(SCHEMA_VERSION_KEY, SCHEMA_VERSION)
 }
 
@@ -160,7 +268,7 @@ export function listMedocsFavoris(): MedocFavori[] {
 
 export function registerMedocUsage(nom: string, description?: string): MedocFavori {
   const favoris = listMedocsFavoris()
-  const existing = favoris.find((f) => f.nom === nom)
+  const existing = favoris.find((f) => normalizeNom(f.nom) === normalizeNom(nom))
   if (existing) {
     existing.usageCount += 1
     if (description) existing.description = description
@@ -201,7 +309,7 @@ export function listDeclencheursFavoris(): CatalogTag[] {
 
 export function registerDeclencheur(nom: string): CatalogTag {
   const tags = listDeclencheursFavoris()
-  const existing = tags.find((t) => t.nom === nom)
+  const existing = tags.find((t) => normalizeNom(t.nom) === normalizeNom(nom))
   if (existing) return existing
   const created: CatalogTag = { id: newId(), nom }
   setJSON(DECLENCHEURS_KEY, [...tags, created])
@@ -215,7 +323,7 @@ export function deleteDeclencheur(id: string): void {
 
 export function addMedocFavori(nom: string, description?: string): MedocFavori {
   const favoris = listMedocsFavoris()
-  const existing = favoris.find((f) => f.nom === nom)
+  const existing = favoris.find((f) => normalizeNom(f.nom) === normalizeNom(nom))
   if (existing) return existing
   const created: MedocFavori = { id: newId(), nom, description, usageCount: 0 }
   favoris.push(created)
@@ -243,7 +351,7 @@ export function listSymptomesCustom(): CatalogTag[] {
 
 export function addSymptomeCustom(nom: string): CatalogTag {
   const items = listSymptomesCustom()
-  const existing = items.find((s) => s.nom === nom)
+  const existing = items.find((s) => normalizeNom(s.nom) === normalizeNom(nom))
   if (existing) return existing
   const created: CatalogTag = { id: newId(), nom }
   setJSON(SYMPTOMES_KEY, [...items, created])
@@ -283,7 +391,7 @@ export function addMedocFavoriWithDetails(
   med: Omit<MedocFavori, 'id' | 'usageCount'> & { id?: string; usageCount?: number },
 ): MedocFavori {
   const favoris = listMedocsFavoris()
-  const existing = favoris.find((f) => f.nom === med.nom)
+  const existing = favoris.find((f) => normalizeNom(f.nom) === normalizeNom(med.nom))
   if (existing) return existing
   const created: MedocFavori = { ...med, id: med.id ?? newId(), usageCount: med.usageCount ?? 0 }
   favoris.push(created)

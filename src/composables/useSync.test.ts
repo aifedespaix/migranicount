@@ -28,7 +28,7 @@ vi.mock('../lib/pocketbase', () => ({
 import { useSync } from './useSync'
 import { useMigrainesStore } from '../stores/migraines'
 import { useToastStore } from '../stores/toast'
-import { listMigraines } from '../storage/migraineRepository'
+import { listMigraines, listSymptomesCustom, addSymptomeCustom } from '../storage/migraineRepository'
 
 function remoteMigraine(localId: string) {
   return {
@@ -88,5 +88,29 @@ describe('useSync mergeOnLogin resilience', () => {
     await sync.mergeOnLogin()
 
     expect(migrainesCol.getFullList).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('useSync _mergePreferences integrity', () => {
+  it('normalise et dédoublonne les symptômes distants hérités (strings, doublons par nom)', async () => {
+    const local = addSymptomeCustom('Photophobie')
+    prefsCol.getFirstListItem.mockResolvedValue({
+      id: 'prefs1',
+      userId: authRecordId,
+      // Ancien format pré-refonte : strings brutes + doublon du même nom sous un autre id
+      symptomesCustom: ['Photophobie', 'Osmophobie', '', { id: 'remote-1', nom: 'photophobie' }, { id: 'remote-2', nom: 'Nausée' }],
+      declencheursFavoris: [],
+      theme: 'auto',
+      dyslexicFont: 'none',
+    })
+    prefsCol.update.mockResolvedValue({})
+
+    await useSync().mergeOnLogin()
+
+    const sympt = listSymptomesCustom()
+    // Pas d'entrée vide/sans id, pas de doublon par nom, pas de copie d'un défaut ('Nausée')
+    expect(sympt.every((s) => typeof s.id === 'string' && s.id && typeof s.nom === 'string' && s.nom)).toBe(true)
+    expect(sympt.map((s) => s.nom.toLowerCase()).sort()).toEqual(['osmophobie', 'photophobie'])
+    expect(sympt.find((s) => s.nom === 'Photophobie')?.id).toBe(local.id)
   })
 })
