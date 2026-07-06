@@ -58,7 +58,7 @@
                     class="catalog-item"
                   >
                     <div
-                      v-if="editingMedoc?.id === item.id"
+                      v-if="editingMedoc !== null && editingMedoc.id === item.id"
                       class="catalog-edit-form"
                     >
                       <input
@@ -190,7 +190,7 @@
                     class="catalog-item catalog-item--fond"
                   >
                     <div
-                      v-if="editingMedoc?.id === item.id"
+                      v-if="editingMedoc !== null && editingMedoc.id === item.id"
                       class="catalog-edit-form"
                     >
                       <input
@@ -471,7 +471,7 @@
                     class="catalog-item"
                   >
                     <div
-                      v-if="editingSymptome?.id === tag.id"
+                      v-if="editingSymptome !== null && editingSymptome.id === tag.id"
                       class="catalog-edit-form"
                     >
                       <input

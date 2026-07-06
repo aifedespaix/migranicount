@@ -24,8 +24,10 @@ import {
 import { pushTombstone } from '../lib/pbSync'
 import { processOutbox } from '../lib/syncOutbox'
 import { mergeTreatmentPeriods } from '../lib/periodMerge'
+import { mergeCatalogTags, normalizeCatalogTags, normalizeNom } from '../lib/catalogTags'
+import { DEFAULT_SYMPTOMES, DEFAULT_DECLENCHEURS } from '../data/defaultTags'
 import { getJSON, setJSON } from '../storage/storage'
-import type { Migraine, MedocFavori, CatalogTag, TreatmentPeriod } from '../types/migraine'
+import type { Migraine, MedocFavori, TreatmentPeriod } from '../types/migraine'
 import type { Tombstone, TombstoneEntityType } from '../types/sync'
 import type { RecordModel } from 'pocketbase'
 
@@ -36,13 +38,6 @@ const TOMBSTONES_KEY = 'tombstones'
 
 function tombstonedIds(type: TombstoneEntityType): Set<string> {
   return new Set(listTombstones().filter((t) => t.entityType === type).map((t) => t.entityId))
-}
-
-function mergeCatalogTags(local: CatalogTag[], remote: CatalogTag[]): CatalogTag[] {
-  const map = new Map<string, CatalogTag>()
-  for (const t of remote) map.set(t.id, t)
-  for (const t of local) map.set(t.id, t)
-  return Array.from(map.values())
 }
 
 let realtimeUnsubscribers: Array<() => void> = []
@@ -343,14 +338,17 @@ export function useSync() {
 
     const deletedDeclIds = tombstonedIds('declencheur')
     const deletedSymptIds = tombstonedIds('symptome')
-    const remoteDeclencheurs = ((remotePrefs['declencheursFavoris'] as CatalogTag[]) || [])
+    // normalizeCatalogTags absorbe l'ancien format distant (strings, entrées sans id/nom)
+    // et mergeCatalogTags dédoublonne par nom : sans ça, chaque appareil ayant minté ses
+    // propres ids à la migration v4 crée des doublons à chaque merge.
+    const remoteDeclencheurs = normalizeCatalogTags(remotePrefs['declencheursFavoris'])
       .filter((d) => !deletedDeclIds.has(d.id))
-    const remoteSymptomes = ((remotePrefs['symptomesCustom'] as CatalogTag[]) || [])
+    const remoteSymptomes = normalizeCatalogTags(remotePrefs['symptomesCustom'])
       .filter((s) => !deletedSymptIds.has(s.id))
 
-    const mergedDeclencheurs = mergeCatalogTags(localDeclencheurs, remoteDeclencheurs)
+    const mergedDeclencheurs = mergeCatalogTags(localDeclencheurs, remoteDeclencheurs, DEFAULT_DECLENCHEURS)
       .filter((d) => !deletedDeclIds.has(d.id))
-    const mergedSymptomes = mergeCatalogTags(localSymptomes, remoteSymptomes)
+    const mergedSymptomes = mergeCatalogTags(localSymptomes, remoteSymptomes, DEFAULT_SYMPTOMES)
       .filter((s) => !deletedSymptIds.has(s.id))
     const mergedTheme = (remotePrefs['theme'] as string) || localSettings.theme
     const mergedFont = (remotePrefs['dyslexicFont'] as string) || localSettings.dyslexicFont
@@ -446,27 +444,33 @@ export function useSync() {
       if ((e.record['userId'] as string) !== userId) return
       const deletedDeclIds = tombstonedIds('declencheur')
       const deletedSymptIds = tombstonedIds('symptome')
-      const remoteDeclencheurs = ((e.record['declencheursFavoris'] as CatalogTag[]) || [])
+      const remoteDeclencheurs = normalizeCatalogTags(e.record['declencheursFavoris'])
         .filter((d) => !deletedDeclIds.has(d.id))
-      const remoteSymptomes = ((e.record['symptomesCustom'] as CatalogTag[]) || [])
+      const remoteSymptomes = normalizeCatalogTags(e.record['symptomesCustom'])
         .filter((s) => !deletedSymptIds.has(s.id))
 
       const localDecl = listDeclencheursFavoris()
       const localSympt = listSymptomesCustom()
       const localDeclIds = new Set(localDecl.map((d) => d.id))
       const localSymptIds = new Set(localSympt.map((s) => s.id))
+      // Dédoublonnage par nom en plus de l'id : un même tag peut exister sous un autre id
+      // sur l'autre appareil (ids mintés indépendamment à la migration v4).
+      const localDeclNoms = new Set([...DEFAULT_DECLENCHEURS, ...localDecl].map((d) => normalizeNom(d.nom)))
+      const localSymptNoms = new Set([...DEFAULT_SYMPTOMES, ...localSympt].map((s) => normalizeNom(s.nom)))
 
       const mergedDecl = [...localDecl]
       for (const d of remoteDeclencheurs) {
-        if (!localDeclIds.has(d.id)) {
+        if (!localDeclIds.has(d.id) && !localDeclNoms.has(normalizeNom(d.nom))) {
           mergedDecl.push(d)
+          localDeclNoms.add(normalizeNom(d.nom))
           diffAccumulator.catalogueItems.push(`Déclencheur « ${d.nom} » ajouté`)
         }
       }
       const mergedSympt = [...localSympt]
       for (const s of remoteSymptomes) {
-        if (!localSymptIds.has(s.id)) {
+        if (!localSymptIds.has(s.id) && !localSymptNoms.has(normalizeNom(s.nom))) {
           mergedSympt.push(s)
+          localSymptNoms.add(normalizeNom(s.nom))
           diffAccumulator.catalogueItems.push(`Symptôme « ${s.nom} » ajouté`)
         }
       }
