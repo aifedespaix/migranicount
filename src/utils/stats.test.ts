@@ -3,7 +3,9 @@ import {
   monthlyFrequency, averageIntensityByMonth, medocEfficacy, averageDurationMinutes,
   frequencyTrendStats, intensityDistribution, averageIntensity, efficacyRanking,
   dailyFrequency, weeklyFrequency, averageIntensityByDay, averageIntensityByWeek, defaultPeriod,
-  treatmentEfficacyAnalysis,
+  treatmentEfficacyAnalysis, durationStats, durationDistribution,
+  symptomFrequency, zoneDistribution, startHourDistribution, weekdayDistribution,
+  medicationDaysPerMonth, abortionRateByDelay, reliefStats,
 } from './stats'
 import type { Migraine, MedocFavori } from '../types/migraine'
 
@@ -192,10 +194,10 @@ describe('weeklyFrequency', () => {
 })
 
 describe('averageIntensityByDay', () => {
-  it('returns 0 avg for days with no migraines', () => {
+  it('returns null avg for days with no migraines', () => {
     const from = new Date(2026, 5, 25)
     const result = averageIntensityByDay([], from, 3)
-    expect(result.every(r => r.avg === 0)).toBe(true)
+    expect(result.every(r => r.avg === null)).toBe(true)
   })
 
   it('averages intensity on a given day', () => {
@@ -239,6 +241,202 @@ describe('treatmentEfficacyAnalysis', () => {
     // intervalle fusionné 01-01 → 02-15 = 45 jours ≈ 1,48 mois -> ≈0,7 crise/mois
     // (un calcul buggé qui somme 30+31=61 jours ≈ 2,00 mois donnerait 0,5)
     expect(result[0].inPeriod.avgFreqPerMonth).toBe(0.7)
+  })
+})
+
+describe('durées à cheval sur minuit', () => {
+  it('averageDurationMinutes ajoute 24h quand la fin précède le début', () => {
+    // 22:00 -> 06:00 = 8h = 480 min
+    const data = [makeMigraine({ heureDebut: '22:00', heureFin: '06:00' })]
+    expect(averageDurationMinutes(data)).toBe(480)
+  })
+
+  it('durationStats gère une crise nocturne', () => {
+    const data = [
+      makeMigraine({ heureDebut: '23:00', heureFin: '01:30' }), // 150 min
+      makeMigraine({ heureDebut: '08:00', heureFin: '09:00' }), // 60 min
+    ]
+    const result = durationStats(data)
+    expect(result.avgMin).toBe(105)
+    expect(result.maxMin).toBe(150)
+  })
+
+  it('durationDistribution classe une crise nocturne dans le bon bucket', () => {
+    const data = [makeMigraine({ heureDebut: '22:00', heureFin: '03:00' })] // 5h -> 4-8h
+    const result = durationDistribution(data)
+    expect(result.find((b) => b.label === '4-8h')?.count).toBe(1)
+  })
+})
+
+describe('fréquence avec intensité', () => {
+  it('dailyFrequency renvoie l\'intensité max du jour', () => {
+    const from = new Date(2026, 5, 25)
+    const data = [
+      makeMigraine({ date: '2026-06-24', intensite: 4 }),
+      makeMigraine({ date: '2026-06-24', intensite: 7 }),
+    ]
+    const result = dailyFrequency(data, from, 7)
+    expect(result.find((r) => r.day === '2026-06-24')?.maxIntensity).toBe(7)
+    expect(result.find((r) => r.day === '2026-06-23')?.maxIntensity).toBe(0)
+  })
+
+  it('weeklyFrequency renvoie l\'intensité moyenne de la semaine', () => {
+    const from = new Date(2026, 5, 25)
+    const data = [
+      makeMigraine({ date: '2026-06-22', intensite: 4 }),
+      makeMigraine({ date: '2026-06-24', intensite: 7 }),
+    ]
+    const result = weeklyFrequency(data, from, 2)
+    expect(result.find((r) => r.week === '2026-06-22')?.avgIntensity).toBe(5.5)
+  })
+
+  it('monthlyFrequency renvoie l\'intensité moyenne du mois', () => {
+    const data = [
+      makeMigraine({ date: '2026-06-01', intensite: 3 }),
+      makeMigraine({ date: '2026-06-15', intensite: 8 }),
+    ]
+    const result = monthlyFrequency(data, new Date(2026, 5, 24))
+    expect(result.find((r) => r.month === '2026-06')?.avgIntensity).toBe(5.5)
+    expect(result.find((r) => r.month === '2026-05')?.avgIntensity).toBe(0)
+  })
+})
+
+describe('efficacyRanking (lissage)', () => {
+  it('un médoc 8/10 passe devant un médoc 1/1', () => {
+    const dix = Array.from({ length: 10 }, (_, i) =>
+      makeMigraine({
+        medocs: [{ id: `a${i}`, nom: 'Triptan', heure: '08:00', medocId: null }],
+        avortee: i < 8,
+      }),
+    )
+    const un = makeMigraine({
+      medocs: [{ id: 'b', nom: 'Nouveau', heure: '08:00', medocId: null }],
+      avortee: true,
+    })
+    const result = efficacyRanking([...dix, un])
+    expect(result[0].nom).toBe('Triptan')
+  })
+})
+
+describe('symptomFrequency', () => {
+  it('compte les symptômes groupés par id, triés par fréquence', () => {
+    const data = [
+      makeMigraine({ symptomes: [{ id: 's1', nom: 'Nausée' }, { id: 's2', nom: 'Aura' }] }),
+      makeMigraine({ symptomes: [{ id: 's1', nom: 'Nausée' }] }),
+    ]
+    const result = symptomFrequency(data)
+    expect(result[0]).toEqual({ tag: 'Nausée', count: 2 })
+    expect(result[1]).toEqual({ tag: 'Aura', count: 1 })
+  })
+})
+
+describe('zoneDistribution', () => {
+  it('compte les crises par zone, en ignorant les zones nulles', () => {
+    const data = [
+      makeMigraine({ zone: 'gauche' }),
+      makeMigraine({ zone: 'gauche' }),
+      makeMigraine({ zone: 'nuque' }),
+      makeMigraine({ zone: null }),
+    ]
+    const result = zoneDistribution(data)
+    expect(result.find((z) => z.zone === 'gauche')?.count).toBe(2)
+    expect(result.find((z) => z.zone === 'nuque')?.count).toBe(1)
+    expect(result.find((z) => z.zone === 'droite')?.count).toBe(0)
+  })
+})
+
+describe('startHourDistribution', () => {
+  it('classe les heures de début en 4 tranches', () => {
+    const data = [
+      makeMigraine({ heureDebut: '03:00' }), // nuit
+      makeMigraine({ heureDebut: '07:30' }), // matin
+      makeMigraine({ heureDebut: '11:59' }), // matin
+      makeMigraine({ heureDebut: '14:00' }), // après-midi
+      makeMigraine({ heureDebut: '23:00' }), // soir
+    ]
+    const result = startHourDistribution(data)
+    expect(result.map((b) => b.count)).toEqual([1, 2, 1, 1])
+  })
+})
+
+describe('weekdayDistribution', () => {
+  it('compte les crises par jour de la semaine, lundi en premier', () => {
+    const data = [
+      makeMigraine({ date: '2026-06-22' }), // lundi
+      makeMigraine({ date: '2026-06-22' }),
+      makeMigraine({ date: '2026-06-28' }), // dimanche
+    ]
+    const result = weekdayDistribution(data)
+    expect(result[0]).toEqual({ label: 'Lun', count: 2 })
+    expect(result[6]).toEqual({ label: 'Dim', count: 1 })
+  })
+})
+
+describe('medicationDaysPerMonth', () => {
+  it('compte les jours distincts avec au moins une prise', () => {
+    const medoc = { id: 'p', nom: 'Triptan', heure: '08:00', medocId: null }
+    const data = [
+      makeMigraine({ date: '2026-06-01', medocs: [medoc] }),
+      makeMigraine({ date: '2026-06-01', medocs: [medoc, { ...medoc, id: 'p2' }] }), // même jour
+      makeMigraine({ date: '2026-06-15', medocs: [medoc] }),
+      makeMigraine({ date: '2026-06-20', medocs: [] }), // sans médoc
+    ]
+    const result = medicationDaysPerMonth(data, new Date(2026, 5, 24))
+    expect(result).toHaveLength(12)
+    expect(result.find((r) => r.month === '2026-06')?.days).toBe(2)
+  })
+})
+
+describe('abortionRateByDelay', () => {
+  it('calcule le taux d\'avortement par tranche de délai de première prise', () => {
+    const data = [
+      makeMigraine({ heureDebut: '08:00', medocs: [{ id: '1', nom: 'T', heure: '08:15', medocId: null }], avortee: true }),
+      makeMigraine({ heureDebut: '08:00', medocs: [{ id: '2', nom: 'T', heure: '08:20', medocId: null }], avortee: false }),
+      makeMigraine({ heureDebut: '08:00', medocs: [{ id: '3', nom: 'T', heure: '10:30', medocId: null }], avortee: false }),
+      makeMigraine({ heureDebut: '08:00', medocs: [] }), // ignorée
+    ]
+    const result = abortionRateByDelay(data)
+    const first = result.find((b) => b.label === '<30 min')
+    expect(first?.total).toBe(2)
+    expect(first?.pct).toBe(50)
+    const late = result.find((b) => b.label === '>2h')
+    expect(late?.total).toBe(1)
+    expect(late?.pct).toBe(0)
+  })
+
+  it('prend la première prise et gère le passage de minuit', () => {
+    const data = [
+      makeMigraine({
+        heureDebut: '23:30',
+        medocs: [
+          { id: '1', nom: 'T', heure: '00:10', medocId: null }, // +40 min (après minuit)
+          { id: '2', nom: 'D', heure: '02:00', medocId: null },
+        ],
+        avortee: true,
+      }),
+    ]
+    const result = abortionRateByDelay(data)
+    expect(result.find((b) => b.label === '30-60 min')?.total).toBe(1)
+  })
+})
+
+describe('reliefStats', () => {
+  it('compte les soulagements renseignés par médicament', () => {
+    const data = [
+      makeMigraine({ medocs: [{ id: '1', nom: 'Triptan', heure: '08:00', medocId: 'm1', soulagement: 'oui' }] }),
+      makeMigraine({ medocs: [{ id: '2', nom: 'Triptan', heure: '08:00', medocId: 'm1', soulagement: 'partiel' }] }),
+      makeMigraine({ medocs: [{ id: '3', nom: 'Triptan', heure: '08:00', medocId: 'm1' }] }), // non renseigné
+    ]
+    const result = reliefStats(data)
+    const triptan = result.find((r) => r.nom === 'Triptan')
+    expect(triptan).toEqual({ nom: 'Triptan', oui: 1, partiel: 1, non: 0, total: 2 })
+  })
+
+  it('ignore les médicaments sans aucune donnée de soulagement', () => {
+    const data = [
+      makeMigraine({ medocs: [{ id: '1', nom: 'Doliprane', heure: '08:00', medocId: null }] }),
+    ]
+    expect(reliefStats(data)).toEqual([])
   })
 })
 

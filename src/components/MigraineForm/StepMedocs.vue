@@ -80,12 +80,27 @@
     <!-- Prises enregistrées -->
     <div v-if="model.medocs.length > 0" class="prises-section">
       <p class="field-label">Prises enregistrées</p>
-      <div v-for="(p, i) in model.medocs" :key="p.id" class="form-card medoc-row">
-        <span class="medoc-nom">{{ p.nom }}</span>
-        <TimeField v-model="model.medocs[i].heure" class="medoc-heure-inline" />
-        <button type="button" class="icon-btn" @click="remove(i)" aria-label="Supprimer">
-          <X :size="14" />
-        </button>
+      <div v-for="(p, i) in model.medocs" :key="p.id" class="form-card medoc-card">
+        <div class="medoc-row">
+          <span class="medoc-nom">{{ p.nom }}</span>
+          <TimeField v-model="model.medocs[i].heure" class="medoc-heure-inline" />
+          <button type="button" class="icon-btn" @click="remove(i)" aria-label="Supprimer">
+            <X :size="14" />
+          </button>
+        </div>
+        <div class="soulagement-row">
+          <span class="soulagement-label">Soulagement ?</span>
+          <div class="pill-group">
+            <button
+              v-for="s in soulagementOptions"
+              :key="s.value"
+              type="button"
+              class="pill-btn pill-btn--small"
+              :class="{ active: p.soulagement === s.value }"
+              @click="toggleSoulagement(i, s.value)"
+            >{{ s.label }}</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -101,7 +116,7 @@ import { capitalizeFirstLetter } from '../../utils/text'
 import { useMedocsFavorisStore } from '../../stores/medocsFavoris'
 import TimeField from '../TimeField.vue'
 import type { MigraineDraft } from './draft'
-import type { MedocFavori } from '../../types/migraine'
+import type { MedocFavori, Soulagement } from '../../types/migraine'
 
 const model = defineModel<MigraineDraft>({ required: true })
 const favoris = useMedocsFavorisStore()
@@ -170,6 +185,17 @@ function addNew() {
 
 function remove(index: number) {
   model.value.medocs.splice(index, 1)
+}
+
+const soulagementOptions: { value: Soulagement; label: string }[] = [
+  { value: 'oui', label: 'Oui' },
+  { value: 'partiel', label: 'Partiel' },
+  { value: 'non', label: 'Non' },
+]
+
+function toggleSoulagement(index: number, value: Soulagement) {
+  const p = model.value.medocs[index]
+  p.soulagement = p.soulagement === value ? undefined : value
 }
 
 function hasPendingEntry(): boolean {
@@ -303,10 +329,29 @@ defineExpose({ hasPendingEntry, submitPending })
   display: flex;
   align-items: center;
 }
+.medoc-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
 .medoc-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+.soulagement-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.soulagement-label {
+  font-size: 0.72rem;
+  color: var(--color-muted);
+  flex-shrink: 0;
+}
+.pill-btn--small {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
 }
 .medoc-nom {
   flex: 1;

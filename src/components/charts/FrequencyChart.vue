@@ -8,6 +8,7 @@ import { Bar } from 'vue-chartjs'
 import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, type Plugin } from 'chart.js'
 import { monthlyFrequency, dailyFrequency, weeklyFrequency, type Period } from '../../utils/stats'
 import { useChartThemeColors, withAlpha } from '../../utils/chartTheme'
+import { intensityColor, intensityLabel } from '../../utils/intensity'
 import type { Migraine } from '../../types/migraine'
 import type { TreatmentEntry } from '../../utils/treatmentColors'
 
@@ -57,18 +58,21 @@ const barItems = computed(() => {
       fullDate: d.day,
       label: d.day.slice(5),
       count: d.count,
+      intensity: d.maxIntensity,
     }))
   } else if (p === 'week') {
     return weeklyFrequency(props.migraines).map((d) => ({
       fullDate: d.week,
       label: d.week.slice(5),
       count: d.count,
+      intensity: d.avgIntensity,
     }))
   } else {
     return monthlyFrequency(props.migraines).map((d) => ({
       fullDate: d.month + '-01',
       label: d.month.slice(5),
       count: d.count,
+      intensity: d.avgIntensity,
     }))
   }
 })
@@ -105,9 +109,23 @@ const treatmentBandData = computed(() => {
   })
 })
 
+const isDayView = computed(() => (props.period ?? 'month') === 'day')
+
+// En vue jour, il n'y a au plus qu'une crise par jour : la hauteur encode
+// l'intensité (0-10) plutôt qu'un compte toujours égal à 1. En vue
+// semaine/mois, la hauteur reste le nombre de crises et la couleur encode
+// l'intensité moyenne de la période.
 const chartData = computed(() => ({
   labels: barItems.value.map((d) => d.label),
-  datasets: [{ label: 'Crises', data: barItems.value.map((d) => d.count), backgroundColor: themeColors.accent.value }],
+  datasets: [
+    {
+      label: 'Crises',
+      data: barItems.value.map((d) => (isDayView.value ? d.intensity : d.count)),
+      backgroundColor: barItems.value.map((d) =>
+        d.count > 0 ? intensityColor(d.intensity) : themeColors.accent.value
+      ),
+    },
+  ],
 }))
 
 const options = computed(() => ({
@@ -116,6 +134,16 @@ const options = computed(() => ({
   plugins: {
     legend: { display: false },
     treatmentBands: { treatments: treatmentBandData.value },
+    tooltip: {
+      callbacks: {
+        label: (ctx: { dataIndex: number }) => {
+          const item = barItems.value[ctx.dataIndex]
+          if (!item || item.count === 0) return 'Aucune crise'
+          if (isDayView.value) return `${item.intensity}/10 — ${intensityLabel(item.intensity)}`
+          return `${item.count} crise(s) — intensité moy. ${item.intensity}/10`
+        },
+      },
+    },
   },
   scales: {
     x: {
@@ -123,6 +151,8 @@ const options = computed(() => ({
       grid: { color: withAlpha(themeColors.muted.value, 0.2) },
     },
     y: {
+      beginAtZero: true,
+      ...(isDayView.value ? { max: 10 } : {}),
       ticks: { color: themeColors.muted.value },
       grid: { color: withAlpha(themeColors.muted.value, 0.2) },
     },

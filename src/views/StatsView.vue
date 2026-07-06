@@ -55,6 +55,11 @@
         @update:selected="selectedTreatments = $event"
       />
 
+      <button class="chart-card" @click="openDetail('heatmap')">
+        <h2>Calendrier des crises</h2>
+        <CalendarHeatmap :migraines="migraines.migraines" />
+      </button>
+
       <div class="stats-buttons">
         <StatsButton
           title="Intensité"
@@ -75,6 +80,31 @@
           title="Durée des crises"
           :facts="durationFacts"
           @click="openDetail('duration')"
+        />
+        <StatsButton
+          title="Déclencheurs"
+          :facts="triggerFacts"
+          @click="openDetail('triggers')"
+        />
+        <StatsButton
+          title="Symptômes"
+          :facts="symptomFacts"
+          @click="openDetail('symptoms')"
+        />
+        <StatsButton
+          title="Zones touchées"
+          :facts="zoneFacts"
+          @click="openDetail('zones')"
+        />
+        <StatsButton
+          title="Patterns temporels"
+          :facts="timePatternFacts"
+          @click="openDetail('time-patterns')"
+        />
+        <StatsButton
+          title="Suivi médicamenteux"
+          :facts="medicationFacts"
+          @click="openDetail('medication')"
         />
         <StatsButton
           v-if="hasTraitementData"
@@ -115,6 +145,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import CalendarHeatmap from "../components/charts/CalendarHeatmap.vue";
 import ChartDetailModal from "../components/charts/ChartDetailModal.vue";
 import FrequencyChart from "../components/charts/FrequencyChart.vue";
 import StatsButton from "../components/charts/StatsButton.vue";
@@ -134,8 +165,15 @@ import {
   efficacyRanking,
   intensityDistribution,
   intensityStats,
+  medicationDaysPerMonth,
+  startHourDistribution,
+  symptomFrequency,
   treatmentEfficacyAnalysis,
+  triggerFrequency,
+  weekdayDistribution,
+  zoneDistribution,
   type Period,
+  type Zone,
 } from "../utils/stats";
 import { colorForIndex, type TreatmentEntry } from "../utils/treatmentColors";
 
@@ -144,7 +182,13 @@ type ChartType =
   | "intensity"
   | "intensity-distribution"
   | "medoc-efficacy"
-  | "duration";
+  | "duration"
+  | "heatmap"
+  | "triggers"
+  | "symptoms"
+  | "zones"
+  | "time-patterns"
+  | "medication";
 
 const migraines = useMigrainesStore();
 const medocsFavoris = useMedocsFavorisStore();
@@ -222,6 +266,70 @@ const durationFacts = computed(() => [
     label: "max",
   },
 ]);
+
+const triggerFacts = computed(() => {
+  const top = triggerFrequency(migraines.migraines)[0];
+  return [
+    { value: top ? top.tag : "-", label: "plus fréquent" },
+    { value: top ? String(top.count) : "-", label: "crise(s)" },
+  ];
+});
+
+const symptomFacts = computed(() => {
+  const top = symptomFrequency(migraines.migraines)[0];
+  return [
+    { value: top ? top.tag : "-", label: "plus fréquent" },
+    { value: top ? String(top.count) : "-", label: "crise(s)" },
+  ];
+});
+
+const zoneLabels: Record<Zone, string> = {
+  gauche: "Gauche",
+  droite: "Droite",
+  bilaterale: "Bilatérale",
+  nuque: "Nuque",
+};
+
+const zoneFacts = computed(() => {
+  const withData = zoneDistribution(migraines.migraines).filter(
+    (z) => z.count > 0,
+  );
+  if (!withData.length) return [{ value: "-", label: "zone dominante" }];
+  const top = withData.reduce((max, z) => (z.count > max.count ? z : max));
+  return [
+    { value: zoneLabels[top.zone], label: "zone dominante" },
+    { value: String(top.count), label: "crise(s)" },
+  ];
+});
+
+const timePatternFacts = computed(() => {
+  const hours = startHourDistribution(migraines.migraines);
+  const topHour = hours.reduce((max, b) => (b.count > max.count ? b : max));
+  const days = weekdayDistribution(migraines.migraines);
+  const topDay = days.reduce((max, b) => (b.count > max.count ? b : max));
+  return [
+    {
+      value: topHour.count > 0 ? topHour.label.split(" ")[0] : "-",
+      label: "moment le plus fréquent",
+    },
+    {
+      value: topDay.count > 0 ? topDay.label : "-",
+      label: "jour le plus fréquent",
+    },
+  ];
+});
+
+const medicationFacts = computed(() => {
+  const months = medicationDaysPerMonth(migraines.migraines);
+  const current = months[months.length - 1];
+  const facts = [
+    { value: String(current?.days ?? 0), label: "jour(s) avec médoc ce mois" },
+  ];
+  if ((current?.days ?? 0) >= 8) {
+    facts.push({ value: "⚠", label: "seuil de vigilance atteint" });
+  }
+  return facts;
+});
 
 const allTreatments = computed<TreatmentEntry[]>(() =>
   buildPerTreatmentTimelines(medocsFavoris.favoris).map((t, i) => ({

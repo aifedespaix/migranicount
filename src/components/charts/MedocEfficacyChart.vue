@@ -15,24 +15,33 @@ ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip)
 const props = defineProps<{ migraines: Migraine[] }>()
 const themeColors = useChartThemeColors()
 
-const chartData = computed(() => {
-  const ranking = efficacyRanking(props.migraines).slice(0, 8)
-  return {
-    labels: ranking.map((r) => r.nom),
-    datasets: [{
-      label: '% avortée',
-      data: ranking.map((r) => r.pctAvortee),
-      backgroundColor: themeColors.accent.value,
-      borderRadius: 4,
-    }],
-  }
-})
+const ranking = computed(() => efficacyRanking(props.migraines).slice(0, 8))
+
+const chartData = computed(() => ({
+  labels: ranking.value.map((r) => `${r.nom} (n=${r.total})`),
+  datasets: [{
+    label: '% avortée',
+    data: ranking.value.map((r) => r.pctAvortee),
+    backgroundColor: themeColors.accent.value,
+    borderRadius: 4,
+  }],
+}))
 
 const options = computed(() => ({
   indexAxis: 'y' as const,
   responsive: true,
   maintainAspectRatio: false,
-  plugins: { legend: { display: false } },
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: {
+        label: (ctx: { dataIndex: number }) => {
+          const r = ranking.value[ctx.dataIndex]
+          return r ? `${r.avortee} avortée(s) / ${r.total} prise(s) (${r.pctAvortee}%)` : ''
+        },
+      },
+    },
+  },
   scales: {
     x: {
       max: 100,

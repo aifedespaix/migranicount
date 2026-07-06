@@ -3,6 +3,8 @@ export interface CatalogTag {
   nom: string
 }
 
+export type Soulagement = 'oui' | 'partiel' | 'non'
+
 export interface MedocPris {
   id: string
   medocId: string | null
@@ -11,6 +13,7 @@ export interface MedocPris {
   heure: string
   posologieParJour?: number
   intervalleHeures?: number
+  soulagement?: Soulagement
 }
 
 export interface Migraine {

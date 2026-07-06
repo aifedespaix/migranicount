@@ -6,44 +6,43 @@
 import { computed } from 'vue'
 import { Bar } from 'vue-chartjs'
 import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip } from 'chart.js'
-import { intensityDistribution } from '../../utils/stats'
+import { triggerFrequency, symptomFrequency } from '../../utils/stats'
 import { useChartThemeColors, withAlpha } from '../../utils/chartTheme'
-import { intensityColor } from '../../utils/intensity'
 import type { Migraine } from '../../types/migraine'
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip)
 
-const props = defineProps<{ migraines: Migraine[] }>()
+const props = defineProps<{ migraines: Migraine[]; source: 'declencheurs' | 'symptomes' }>()
 const themeColors = useChartThemeColors()
 
-const chartData = computed(() => {
-  const dist = intensityDistribution(props.migraines)
-  const levels = Array.from({ length: 10 }, (_, i) => i + 1)
-  const counts = levels.map((l) => dist.find((d) => d.level === l)?.count ?? 0)
-  return {
-    labels: levels.map(String),
-    datasets: [{
-      label: 'Crises',
-      data: counts,
-      backgroundColor: levels.map((l) => intensityColor(l)),
-      borderRadius: 4,
-    }],
-  }
-})
+const items = computed(() =>
+  props.source === 'declencheurs' ? triggerFrequency(props.migraines) : symptomFrequency(props.migraines)
+)
+
+const chartData = computed(() => ({
+  labels: items.value.map((d) => d.tag),
+  datasets: [{
+    label: 'Crises',
+    data: items.value.map((d) => d.count),
+    backgroundColor: themeColors.accent.value,
+    borderRadius: 4,
+  }],
+}))
 
 const options = computed(() => ({
+  indexAxis: 'y' as const,
   responsive: true,
   maintainAspectRatio: false,
   plugins: { legend: { display: false } },
   scales: {
     x: {
-      ticks: { color: themeColors.muted.value },
-      grid: { color: withAlpha(themeColors.muted.value, 0.2) },
-    },
-    y: {
       beginAtZero: true,
       ticks: { color: themeColors.muted.value, stepSize: 1 },
       grid: { color: withAlpha(themeColors.muted.value, 0.2) },
+    },
+    y: {
+      ticks: { color: themeColors.muted.value },
+      grid: { display: false },
     },
   },
 }))

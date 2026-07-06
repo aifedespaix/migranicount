@@ -13,17 +13,33 @@ function last12Months(from: Date): string[] {
   return months
 }
 
-export function monthlyFrequency(migraines: Migraine[], from: Date = new Date()): { month: string; count: number }[] {
+export function monthlyFrequency(
+  migraines: Migraine[],
+  from: Date = new Date()
+): { month: string; count: number; avgIntensity: number }[] {
   const months = last12Months(from)
-  const counts = new Map(months.map((m) => [m, 0]))
+  const buckets = new Map(months.map((m) => [m, { count: 0, totalIntensity: 0 }]))
   for (const m of migraines) {
-    const key = m.date.slice(0, 7)
-    if (counts.has(key)) counts.set(key, counts.get(key)! + 1)
+    const bucket = buckets.get(m.date.slice(0, 7))
+    if (bucket) {
+      bucket.count += 1
+      bucket.totalIntensity += m.intensite
+    }
   }
-  return months.map((month) => ({ month, count: counts.get(month) ?? 0 }))
+  return months.map((month) => {
+    const b = buckets.get(month)!
+    return {
+      month,
+      count: b.count,
+      avgIntensity: b.count === 0 ? 0 : Math.round((b.totalIntensity / b.count) * 10) / 10,
+    }
+  })
 }
 
-export function averageIntensityByMonth(migraines: Migraine[], from: Date = new Date()): { month: string; avg: number }[] {
+export function averageIntensityByMonth(
+  migraines: Migraine[],
+  from: Date = new Date()
+): { month: string; avg: number | null }[] {
   const months = last12Months(from)
   const sums = new Map(months.map((m) => [m, { total: 0, count: 0 }]))
   for (const m of migraines) {
@@ -36,11 +52,13 @@ export function averageIntensityByMonth(migraines: Migraine[], from: Date = new 
   }
   return months.map((month) => {
     const bucket = sums.get(month)!
-    return { month, avg: bucket.count === 0 ? 0 : Math.round((bucket.total / bucket.count) * 10) / 10 }
+    return { month, avg: bucket.count === 0 ? null : Math.round((bucket.total / bucket.count) * 10) / 10 }
   })
 }
 
-export function medocEfficacy(migraines: Migraine[]): { nom: string; pctAvortee: number; total: number }[] {
+export function medocEfficacy(
+  migraines: Migraine[]
+): { nom: string; pctAvortee: number; total: number; avortee: number }[] {
   // Regroupe par medocId (stable) plutôt que par nom : un renommage du médicament au catalogue
   // ne doit pas scinder son historique en deux entités distinctes.
   const byMedoc = new Map<string, { nom: string; total: number; avortee: number }>()
@@ -58,6 +76,7 @@ export function medocEfficacy(migraines: Migraine[]): { nom: string; pctAvortee:
   return Array.from(byMedoc.values()).map(({ nom, total, avortee }) => ({
     nom,
     total,
+    avortee,
     pctAvortee: Math.round((avortee / total) * 100),
   }))
 }
@@ -65,7 +84,7 @@ export function medocEfficacy(migraines: Migraine[]): { nom: string; pctAvortee:
 export function averageDurationMinutes(migraines: Migraine[]): number {
   const durations = migraines
     .filter((m) => m.heureFin !== null)
-    .map((m) => toMinutes(m.heureFin!) - toMinutes(m.heureDebut))
+    .map((m) => crisisDurationMin(m.heureDebut, m.heureFin!))
   if (durations.length === 0) return 0
   return Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
 }
@@ -73,6 +92,12 @@ export function averageDurationMinutes(migraines: Migraine[]): number {
 function toMinutes(hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number)
   return h * 60 + m
+}
+
+/** Durée en minutes entre deux heures HH:mm ; une fin avant le début signifie un passage de minuit. */
+function crisisDurationMin(debut: string, fin: string): number {
+  const diff = toMinutes(fin) - toMinutes(debut)
+  return diff < 0 ? diff + 1440 : diff
 }
 
 export function frequencyTrendStats(
@@ -83,7 +108,7 @@ export function frequencyTrendStats(
   const total = months.reduce((sum, m) => sum + m.count, 0)
   const busiestMonth = months.reduce<{ month: string; count: number } | null>((best, m) => {
     if (m.count === 0) return best
-    if (!best || m.count > best.count) return m
+    if (!best || m.count > best.count) return { month: m.month, count: m.count }
     return best
   }, null)
   const last3 = months.slice(-3).reduce((sum, m) => sum + m.count, 0)
@@ -107,10 +132,15 @@ export function averageIntensity(migraines: Migraine[]): number {
   return Math.round((migraines.reduce((sum, m) => sum + m.intensite, 0) / migraines.length) * 10) / 10
 }
 
-export function efficacyRanking(migraines: Migraine[]): { nom: string; pctAvortee: number; total: number }[] {
+export function efficacyRanking(
+  migraines: Migraine[]
+): { nom: string; pctAvortee: number; total: number; avortee: number }[] {
+  // Tri par estimateur lissé (Laplace) : un médoc pris une seule fois avec succès
+  // ne doit pas passer devant un médoc efficace sur un historique fourni.
+  const smoothed = (d: { avortee: number; total: number }) => (d.avortee + 1) / (d.total + 2)
   return medocEfficacy(migraines)
     .filter((d) => d.total >= 1)
-    .sort((a, b) => b.pctAvortee - a.pctAvortee)
+    .sort((a, b) => smoothed(b) - smoothed(a))
 }
 
 function dayToISO(d: Date): string {
@@ -128,16 +158,19 @@ export function dailyFrequency(
   migraines: Migraine[],
   from: Date = new Date(),
   days: number = 30
-): { day: string; count: number }[] {
-  const result: { day: string; count: number }[] = []
+): { day: string; count: number; maxIntensity: number }[] {
+  const result: { day: string; count: number; maxIntensity: number }[] = []
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(from.getFullYear(), from.getMonth(), from.getDate() - i)
-    result.push({ day: dayToISO(d), count: 0 })
+    result.push({ day: dayToISO(d), count: 0, maxIntensity: 0 })
   }
   const map = new Map(result.map((r) => [r.day, r]))
   for (const m of migraines) {
     const bucket = map.get(m.date)
-    if (bucket) bucket.count++
+    if (bucket) {
+      bucket.count++
+      bucket.maxIntensity = Math.max(bucket.maxIntensity, m.intensite)
+    }
   }
   return result
 }
@@ -146,28 +179,35 @@ export function weeklyFrequency(
   migraines: Migraine[],
   from: Date = new Date(),
   weeks: number = 12
-): { week: string; count: number }[] {
+): { week: string; count: number; avgIntensity: number }[] {
   const thisMonday = mondayOf(from)
-  const result: { week: string; count: number }[] = []
+  const result: { week: string; count: number; totalIntensity: number }[] = []
   for (let i = weeks - 1; i >= 0; i--) {
     const d = new Date(thisMonday.getFullYear(), thisMonday.getMonth(), thisMonday.getDate() - i * 7)
-    result.push({ week: dayToISO(d), count: 0 })
+    result.push({ week: dayToISO(d), count: 0, totalIntensity: 0 })
   }
   const map = new Map(result.map((r) => [r.week, r]))
   for (const m of migraines) {
     const d = new Date(m.date + 'T00:00:00')
     const key = dayToISO(mondayOf(d))
     const bucket = map.get(key)
-    if (bucket) bucket.count++
+    if (bucket) {
+      bucket.count++
+      bucket.totalIntensity += m.intensite
+    }
   }
-  return result
+  return result.map(({ week, count, totalIntensity }) => ({
+    week,
+    count,
+    avgIntensity: count === 0 ? 0 : Math.round((totalIntensity / count) * 10) / 10,
+  }))
 }
 
 export function averageIntensityByDay(
   migraines: Migraine[],
   from: Date = new Date(),
   days: number = 30
-): { day: string; avg: number }[] {
+): { day: string; avg: number | null }[] {
   const result: { day: string; total: number; count: number }[] = []
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(from.getFullYear(), from.getMonth(), from.getDate() - i)
@@ -178,14 +218,14 @@ export function averageIntensityByDay(
     const bucket = map.get(m.date)
     if (bucket) { bucket.total += m.intensite; bucket.count++ }
   }
-  return result.map(({ day, total, count }) => ({ day, avg: count === 0 ? 0 : Math.round((total / count) * 10) / 10 }))
+  return result.map(({ day, total, count }) => ({ day, avg: count === 0 ? null : Math.round((total / count) * 10) / 10 }))
 }
 
 export function averageIntensityByWeek(
   migraines: Migraine[],
   from: Date = new Date(),
   weeks: number = 12
-): { week: string; avg: number }[] {
+): { week: string; avg: number | null }[] {
   const thisMonday = mondayOf(from)
   const result: { week: string; total: number; count: number }[] = []
   for (let i = weeks - 1; i >= 0; i--) {
@@ -199,7 +239,7 @@ export function averageIntensityByWeek(
     const bucket = map.get(key)
     if (bucket) { bucket.total += m.intensite; bucket.count++ }
   }
-  return result.map(({ week, total, count }) => ({ week, avg: count === 0 ? 0 : Math.round((total / count) * 10) / 10 }))
+  return result.map(({ week, total, count }) => ({ week, avg: count === 0 ? null : Math.round((total / count) * 10) / 10 }))
 }
 
 export function durationDistribution(migraines: Migraine[]): { label: string; count: number }[] {
@@ -212,7 +252,7 @@ export function durationDistribution(migraines: Migraine[]): { label: string; co
   const counts = buckets.map((b) => ({ label: b.label, count: 0 }))
   for (const m of migraines) {
     if (!m.heureFin) continue
-    const dur = toMinutes(m.heureFin) - toMinutes(m.heureDebut)
+    const dur = crisisDurationMin(m.heureDebut, m.heureFin)
     const idx = buckets.findIndex((b) => dur >= b.min && dur < b.max)
     if (idx >= 0) counts[idx].count++
   }
@@ -236,6 +276,120 @@ export function triggerFrequency(migraines: Migraine[]): { tag: string; count: n
     .slice(0, 10)
 }
 
+export function symptomFrequency(migraines: Migraine[]): { tag: string; count: number }[] {
+  // Regroupe par id (stable) plutôt que par nom : un renommage du symptôme
+  // ne doit pas scinder son historique en deux entités distinctes.
+  const map = new Map<string, { tag: string; count: number }>()
+  for (const m of migraines) {
+    for (const s of m.symptomes) {
+      const bucket = map.get(s.id) ?? { tag: s.nom, count: 0 }
+      bucket.tag = s.nom
+      bucket.count += 1
+      map.set(s.id, bucket)
+    }
+  }
+  return Array.from(map.values())
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10)
+}
+
+export type Zone = NonNullable<Migraine['zone']>
+
+export function zoneDistribution(migraines: Migraine[]): { zone: Zone; count: number }[] {
+  const zones: Zone[] = ['gauche', 'droite', 'bilaterale', 'nuque']
+  const counts = new Map<Zone, number>(zones.map((z) => [z, 0]))
+  for (const m of migraines) {
+    if (m.zone) counts.set(m.zone, (counts.get(m.zone) ?? 0) + 1)
+  }
+  return zones.map((zone) => ({ zone, count: counts.get(zone)! }))
+}
+
+export function startHourDistribution(migraines: Migraine[]): { label: string; count: number }[] {
+  const buckets = [
+    { label: 'Nuit (0-6h)', min: 0, max: 360 },
+    { label: 'Matin (6-12h)', min: 360, max: 720 },
+    { label: 'Après-midi (12-18h)', min: 720, max: 1080 },
+    { label: 'Soir (18-24h)', min: 1080, max: 1440 },
+  ]
+  const counts = buckets.map((b) => ({ label: b.label, count: 0 }))
+  for (const m of migraines) {
+    const t = toMinutes(m.heureDebut)
+    const idx = buckets.findIndex((b) => t >= b.min && t < b.max)
+    if (idx >= 0) counts[idx].count++
+  }
+  return counts
+}
+
+export function weekdayDistribution(migraines: Migraine[]): { label: string; count: number }[] {
+  const labels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+  const counts = labels.map((label) => ({ label, count: 0 }))
+  for (const m of migraines) {
+    const dow = new Date(m.date + 'T00:00:00').getDay()
+    counts[dow === 0 ? 6 : dow - 1].count++
+  }
+  return counts
+}
+
+/** Jours distincts avec au moins une prise de médicament, par mois sur les 12 derniers. */
+export function medicationDaysPerMonth(
+  migraines: Migraine[],
+  from: Date = new Date()
+): { month: string; days: number }[] {
+  const months = last12Months(from)
+  const daysByMonth = new Map<string, Set<string>>(months.map((m) => [m, new Set()]))
+  for (const m of migraines) {
+    if (!m.medocs.length) continue
+    daysByMonth.get(m.date.slice(0, 7))?.add(m.date)
+  }
+  return months.map((month) => ({ month, days: daysByMonth.get(month)!.size }))
+}
+
+/** Taux d'avortement selon le délai entre le début de crise et la première prise. */
+export function abortionRateByDelay(
+  migraines: Migraine[]
+): { label: string; total: number; avortee: number; pct: number | null }[] {
+  const buckets = [
+    { label: '<30 min', min: 0, max: 30 },
+    { label: '30-60 min', min: 30, max: 60 },
+    { label: '1-2h', min: 60, max: 120 },
+    { label: '>2h', min: 120, max: Infinity },
+  ]
+  const counts = buckets.map((b) => ({ label: b.label, total: 0, avortee: 0 }))
+  for (const m of migraines) {
+    if (!m.medocs.length) continue
+    const delay = Math.min(...m.medocs.map((p) => crisisDurationMin(m.heureDebut, p.heure)))
+    const idx = buckets.findIndex((b) => delay >= b.min && delay < b.max)
+    if (idx < 0) continue
+    counts[idx].total++
+    if (m.avortee === true || m.avortee === 'probable') counts[idx].avortee++
+  }
+  return counts.map(({ label, total, avortee }) => ({
+    label,
+    total,
+    avortee,
+    pct: total === 0 ? null : Math.round((avortee / total) * 100),
+  }))
+}
+
+/** Décomptes de soulagement renseigné par médicament (prises sans réponse exclues). */
+export function reliefStats(
+  migraines: Migraine[]
+): { nom: string; oui: number; partiel: number; non: number; total: number }[] {
+  const map = new Map<string, { nom: string; oui: number; partiel: number; non: number; total: number }>()
+  for (const m of migraines) {
+    for (const p of m.medocs) {
+      if (!p.soulagement) continue
+      const key = p.medocId ?? p.nom
+      const bucket = map.get(key) ?? { nom: p.nom, oui: 0, partiel: 0, non: 0, total: 0 }
+      bucket.nom = p.nom
+      bucket[p.soulagement]++
+      bucket.total++
+      map.set(key, bucket)
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => b.total - a.total)
+}
+
 export function intensityStats(migraines: Migraine[]): { avg: number; max: number; severeCount: number } {
   if (!migraines.length) return { avg: 0, max: 0, severeCount: 0 }
   const avg = averageIntensity(migraines)
@@ -247,7 +401,7 @@ export function intensityStats(migraines: Migraine[]): { avg: number; max: numbe
 export function durationStats(migraines: Migraine[]): { avgMin: number; maxMin: number } {
   const durations = migraines
     .filter((m) => m.heureFin)
-    .map((m) => toMinutes(m.heureFin!) - toMinutes(m.heureDebut))
+    .map((m) => crisisDurationMin(m.heureDebut, m.heureFin!))
   if (!durations.length) return { avgMin: 0, maxMin: 0 }
   const avg = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
   const max = Math.max(...durations)

@@ -85,7 +85,7 @@ const treatmentBandData = computed(() => {
 
 const chartData = computed(() => {
   const p = props.period ?? 'month'
-  let items: { label: string; avg: number }[]
+  let items: { label: string; avg: number | null }[]
   if (p === 'day') {
     items = averageIntensityByDay(props.migraines).map((d) => ({ label: d.day.slice(5), avg: d.avg }))
   } else if (p === 'week') {
@@ -98,10 +98,13 @@ const chartData = computed(() => {
     datasets: [
       {
         label: 'Intensité moyenne',
+        // null pour les périodes sans crise : la courbe saute ces points
+        // (spanGaps) au lieu de plonger à un zéro trompeur.
         data: items.map((d) => d.avg),
         borderColor: themeColors.accent.value,
         backgroundColor: themeColors.accent.value,
         tension: 0.3,
+        spanGaps: true,
       },
     ],
   }
