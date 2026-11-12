@@ -1,14 +1,24 @@
 <template>
   <HeaderNav @add="openForm" :has-draft="hasDraft" :is-catalog-open="catalogOpen" @catalog="toggleCatalog" />
-  <main class="app-main" ref="mainRef">
-    <RouterView v-slot="{ Component }">
-      <Transition :name="pageTransition">
-        <component :is="Component" :key="$route.name" />
-      </Transition>
-    </RouterView>
+  <main class="app-main">
+    <OngoingMigraineBanner @edit="editId = $event" />
+    <div class="app-view" ref="mainRef">
+      <RouterView v-slot="{ Component }">
+        <Transition :name="pageTransition">
+          <component :is="Component" :key="$route.name" />
+        </Transition>
+      </RouterView>
+    </div>
   </main>
   <BottomNav @add="openForm" :has-draft="hasDraft" />
   <MigraineFormModal v-if="formOpen" @close="onFormClose" @saved="onFormSaved" />
+  <MigraineFormModal
+    v-if="editId"
+    :edit-id="editId"
+    @close="editId = null"
+    @saved="onEditSaved"
+    @deleted="editId = null"
+  />
   <CatalogModal v-if="catalogOpen" @close="catalogOpen = false" />
   <ConfirmDialog
     v-if="showDraftDialog"
@@ -31,6 +41,7 @@ import { useSwipe } from '@vueuse/core'
 import HeaderNav from './components/HeaderNav.vue'
 import BottomNav from './components/BottomNav.vue'
 import MigraineFormModal from './components/MigraineForm/MigraineFormModal.vue'
+import OngoingMigraineBanner from './components/OngoingMigraineBanner.vue'
 import CatalogModal from './components/CatalogModal.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
 import ToastContainer from './components/ToastContainer.vue'
@@ -68,6 +79,7 @@ const router = useRouter()
 const toastStore = useToastStore()
 const formOpen = ref(false)
 const catalogOpen = ref(false)
+const editId = ref<string | null>(null)
 const showDraftDialog = ref(false)
 const hasDraft = ref(hasSavedDraft())
 const mainRef = ref<HTMLElement | null>(null)
@@ -101,6 +113,11 @@ function onFormSaved() {
   hasDraft.value = false
 }
 
+function onEditSaved() {
+  editId.value = null
+  toastStore.add({ message: 'Migraine mise à jour !', type: 'info' })
+}
+
 function toggleCatalog() {
   catalogOpen.value = !catalogOpen.value
 }
@@ -112,7 +129,7 @@ function onFormClose() {
 
 useSwipe(mainRef, {
   onSwipeEnd(_event, direction) {
-    if (formOpen.value || catalogOpen.value) return
+    if (formOpen.value || catalogOpen.value || editId.value) return
     const currentOrder = routeOrder[router.currentRoute.value.name as string]
     if (currentOrder === undefined) return
     if (direction === 'left' && currentOrder < 1) {
@@ -130,6 +147,12 @@ useSwipe(mainRef, {
 .app-main {
   margin-top: 3.5rem;
   height: calc(100dvh - 3.5rem);
+  display: flex;
+  flex-direction: column;
+}
+.app-view {
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
   position: relative;
 }
