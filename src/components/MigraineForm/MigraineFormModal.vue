@@ -41,7 +41,7 @@
             @before-enter="onBeforeEnter"
             @after-leave="onAfterLeave"
           >
-            <component :is="steps[stepIndex]" ref="activeStepRef" v-model="draft" :key="stepIndex" :edit-id="props.editId" @delete="executeDelete" />
+            <component :is="steps[stepIndex]" v-model="draft" :key="stepIndex" :edit-id="props.editId" @delete="executeDelete" @manage="showCatalog = true" />
           </Transition>
         </div>
       </div>
@@ -70,7 +70,7 @@
         </AppButton>
         <AppButton
           v-else
-          :variant="hasPendingMedoc ? 'warning' : 'info'"
+          variant="info"
           size="lg"
           style="flex:1"
           @click="goNext"
@@ -80,12 +80,7 @@
         </AppButton>
       </div>
     </div>
-    <PendingMedocDialog
-      v-if="showPendingMedocDialog"
-      @stay="onPendingStay"
-      @skip="onPendingSkip"
-      @add-and-continue="onPendingAddAndContinue"
-    />
+    <CatalogModal v-if="showCatalog" class="form-catalog" @close="showCatalog = false" />
   </div>
 </template>
 
@@ -109,7 +104,7 @@ import { useMigrainesStore } from '../../stores/migraines'
 import { useToastStore } from '../../stores/toast'
 import { formatMigraineTitleDate } from '../../utils/date'
 import { stepMissingCount } from '../../utils/stepValidation'
-import PendingMedocDialog from '../PendingMedocDialog.vue'
+import CatalogModal from '../CatalogModal.vue'
 
 const props = defineProps<{ editId?: string }>()
 const emit = defineEmits<{ close: []; saved: []; deleted: [] }>()
@@ -124,15 +119,7 @@ const stepIcons = [Clock, Gauge, Pill, Heart, Brain, Zap, FileText, CheckSquare]
 const stepIndex = ref(props.editId ? steps.length - 1 : loadDraftStep())
 const draft = ref(props.editId ? { ...migraines.getById(props.editId)! } : loadDraft())
 
-const activeStepRef = ref<{ hasPendingEntry?: () => boolean; submitPending?: () => void } | null>(null)
-const showPendingMedocDialog = ref(false)
-
-const MEDOCS_STEP_INDEX = 2
-
-const hasPendingMedoc = computed(() => {
-  if (stepIndex.value !== MEDOCS_STEP_INDEX) return false
-  return activeStepRef.value?.hasPendingEntry?.() ?? false
-})
+const showCatalog = ref(false)
 
 const progressPercent = computed(() => ((stepIndex.value + 1) / steps.length) * 100)
 const canSave = computed(() => canSaveDraft(draft.value))
@@ -176,36 +163,13 @@ function saveIfPossible() {
   if (!props.editId) clearDraft()
 }
 
-function _performGoNext() {
+function goNext() {
   saveIfPossible()
   const next = nextStepIndex(stepIndex.value, steps.length)
   if (next === stepIndex.value) return
   transitionName.value = 'slide-next'
   stepIndex.value = next
   if (!props.editId) saveDraftStep(stepIndex.value)
-}
-
-function goNext() {
-  if (hasPendingMedoc.value) {
-    showPendingMedocDialog.value = true
-    return
-  }
-  _performGoNext()
-}
-
-function onPendingStay() {
-  showPendingMedocDialog.value = false
-}
-
-function onPendingSkip() {
-  showPendingMedocDialog.value = false
-  _performGoNext()
-}
-
-function onPendingAddAndContinue() {
-  activeStepRef.value?.submitPending?.()
-  showPendingMedocDialog.value = false
-  _performGoNext()
 }
 
 function goPrev() {
@@ -237,7 +201,7 @@ useSwipe(modalBodyRef, {
     rangeSwipeBlocked = !!(e.target as HTMLElement)?.closest('input[type="range"]')
   },
   onSwipeEnd(_event, direction) {
-    if (rangeSwipeBlocked) return
+    if (rangeSwipeBlocked || showCatalog.value) return
     if (direction === 'left') goNext()
     else if (direction === 'right') goPrev()
   },
@@ -429,6 +393,7 @@ function executeDelete() {
   box-sizing: border-box;
   flex-shrink: 0;
   position: relative;
+  text-align: left;
 }
 .slide-next-enter-active,
 .slide-next-leave-active,
@@ -462,9 +427,13 @@ function executeDelete() {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 1rem max(0.75rem, env(safe-area-inset-bottom));
   border-top: 1px solid var(--color-bg);
   flex-shrink: 0;
+}
+/* Le répertoire s'ouvre par-dessus la saisie : il doit recouvrir la feuille, y compris sur desktop. */
+.form-catalog {
+  z-index: 35;
 }
 @media (min-width: 1024px) {
   .modal-backdrop {

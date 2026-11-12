@@ -28,9 +28,9 @@ export const useMedocsFavorisStore = defineStore('medocsFavoris', () => {
   }
 
   function registerUsage(nom: string, description?: string): MedocFavori {
-    registerMedocUsage(nom, description)
+    const { id } = registerMedocUsage(nom, description)
     favoris.value = listMedocsFavoris()
-    const updated = favoris.value.find((f) => f.nom === nom)!
+    const updated = favoris.value.find((f) => f.id === id)!
     pushIfOnline(updated)
     return updated
   }

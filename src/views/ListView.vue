@@ -69,6 +69,7 @@
           :key="m.id"
           :migraine="m"
           @click="editId = m.id"
+          @end="ending = m"
         />
       </ul>
     </template>
@@ -80,6 +81,7 @@
       @saved="onEditSaved"
       @deleted="onMigraineDeleted"
     />
+    <EndMigraineSheet v-if="ending" :migraine="ending" @close="ending = null" />
     <MigraineFormModal
       v-if="addFormOpen"
       @close="addFormOpen = false"
@@ -93,6 +95,8 @@ import { computed, ref } from "vue";
 import DateField from "../components/DateField.vue";
 import MigraineFormModal from "../components/MigraineForm/MigraineFormModal.vue";
 import MigraineListItem from "../components/MigraineListItem.vue";
+import EndMigraineSheet from "../components/EndMigraineSheet.vue";
+import type { Migraine } from "../types/migraine";
 import { useMigrainesStore } from "../stores/migraines";
 import { useToastStore } from "../stores/toast";
 import { filterMigraines } from "../utils/migraineFilters";
@@ -101,6 +105,7 @@ const migraines = useMigrainesStore();
 const toastStore = useToastStore();
 const editId = ref<string | null>(null);
 const addFormOpen = ref(false);
+const ending = ref<Migraine | null>(null);
 const keyword = ref("");
 const dateFrom = ref("");
 const dateTo = ref("");

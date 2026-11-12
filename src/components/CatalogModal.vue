@@ -1137,6 +1137,7 @@ function onUnsavedConfirm() {
   box-sizing: border-box;
   flex-shrink: 0;
   position: relative;
+  text-align: left;
 }
 .step-content {
   min-height: 100%;
@@ -1275,8 +1276,8 @@ function onUnsavedConfirm() {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.75rem;
+  height: 2.75rem;
   border-radius: 0.4rem;
   border: none;
   background: none;

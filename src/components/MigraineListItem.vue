@@ -11,8 +11,13 @@
       </div>
 
       <div class="card-duration">
-        <span class="duration">{{ durationLabel }}</span>
+        <span v-if="!migraine.heureFin" class="badge-ongoing">En cours</span>
+        <span v-else class="duration">{{ durationLabel }}</span>
         <span v-if="migraine.avortee" class="badge-avortee">Avortée</span>
+        <button v-if="!migraine.heureFin" type="button" class="end-btn" @click.stop="$emit('end')">
+          <Check :size="14" />
+          Terminer
+        </button>
       </div>
 
       <div v-if="migraine.symptomes.length || migraine.medocs.length" class="card-details">
@@ -51,17 +56,16 @@ import type { Migraine } from '../types/migraine'
 import { intensityColor as intensityColorFn } from '../utils/intensity'
 import { zoneLabel as zoneLabelFn } from '../utils/zone'
 import { stepMissingCount } from '../utils/stepValidation'
-import { AlertCircle } from 'lucide-vue-next'
+import { AlertCircle, Check } from 'lucide-vue-next'
+import { durationMinutes } from '../utils/ongoing'
 import AppTooltip from './AppTooltip.vue'
 
 const props = defineProps<{ migraine: Migraine }>()
-defineEmits<{ click: [] }>()
+defineEmits<{ click: []; end: [] }>()
 
 const durationLabel = computed(() => {
   if (!props.migraine.heureFin) return 'En cours'
-  const [h1, m1] = props.migraine.heureDebut.split(':').map(Number)
-  const [h2, m2] = props.migraine.heureFin.split(':').map(Number)
-  return formatDuration(h2 * 60 + m2 - (h1 * 60 + m1))
+  return formatDuration(durationMinutes(props.migraine.heureDebut, props.migraine.heureFin))
 })
 
 const intensityColorValue = computed(() => intensityColorFn(props.migraine.intensite))
@@ -142,6 +146,31 @@ const incompleteTooltip = computed(() => {
 .duration {
   font-size: 0.82rem;
   color: var(--color-muted);
+}
+.badge-ongoing {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--color-warning) 22%, transparent);
+  border: 1px solid var(--color-warning);
+  color: var(--color-text);
+  font-weight: 600;
+}
+.end-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 2.5rem;
+  padding: 0 0.85rem;
+  border-radius: 1.5rem;
+  border: 1px solid var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
 }
 .badge-avortee {
   font-size: 0.68rem;
